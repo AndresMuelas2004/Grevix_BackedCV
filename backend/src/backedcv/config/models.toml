@@ -1,0 +1,14 @@
+# List prices in USD per million tokens, used only to show the cost of each analysis.
+[prices."gpt-6-luna"]
+input = 0.10
+output = 0.50
+
+[prices."gpt-6.1-sol"]
+input = 2.00
+output = 10.00
+
+# Reasoning effort per call.
+[effort]
+structure_cv = "low"
+extract_job = "low"
+match_requirements = "low"
