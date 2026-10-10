@@ -1,0 +1,50 @@
+# Published scoring weights. Explained in docs/scoring.md.
+# w = category_weight x importance_multiplier
+
+# Requirements whose terms count for Keyword coverage (soft skills excluded on purpose:
+# counting them literally would reward keyword stuffing).
+coverage_categories = [
+    "hard_skill",
+    "job_title",
+    "education",
+    "certification_license",
+    "language",
+]
+
+[category_weights]
+hard_skill = 3
+experience_years = 3
+job_title = 2
+education = 2
+certification_license = 2
+language = 2
+soft_skill = 1
+other = 1
+# Gates: screening questions, verdict only, never points.
+work_authorization = 0
+location = 0
+clearance = 0
+availability = 0
+
+[importance_multipliers]
+required = 2
+preferred = 1
+
+[credit]
+met = 1.0
+partial = 0.5
+missing = 0.0
+unknown = 0.0
+
+[verdict]
+apply_min_fit = 75
+stretch_min_fit = 55
+# "Tailor first" when Keyword coverage trails Fit by at least this many points.
+tailor_first_gap = 15
+# A missing required item of at least this category weight blocks "Apply".
+blocking_min_category_weight = 2
+
+[rules]
+# R1: entry-level postings asking for at least this many years.
+r1_min_years = 3
+r1_seniority_words = ["entry", "junior", "graduate", "intern", "trainee", "jr", "becario", "prácticas"]

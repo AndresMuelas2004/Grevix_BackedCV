@@ -1,0 +1,98 @@
+"""The CV as read by the app: numbered lines plus structure that only points at line IDs."""
+
+from typing import Literal
+
+from pydantic import BaseModel, Field
+
+LineSource = Literal["body", "header", "footer", "textbox", "table"]
+SectionType = Literal[
+    "contact",
+    "summary",
+    "experience",
+    "education",
+    "skills",
+    "projects",
+    "certifications",
+    "languages",
+    "other",
+]
+EntryKind = Literal["job", "education", "project"]
+
+
+class CVLine(BaseModel):
+    id: str  # L001, L002, ...
+    text: str
+    page: int = 1
+    source: LineSource = "body"
+    bold: bool = False
+    size: float | None = None
+
+
+class ComputedFact(BaseModel):
+    """A number computed by code that suggestions and the verifier may cite (F01, F02, ...)."""
+
+    id: str
+    text: str
+    derived_from: list[str] = Field(default_factory=list)
+
+
+class CVSection(BaseModel):
+    id: str
+    heading_line_id: str | None
+    type: SectionType
+    line_ids: list[str]
+
+
+class CVEntry(BaseModel):
+    id: str
+    section_id: str
+    kind: EntryKind
+    title: str | None = None
+    organization: str | None = None
+    location: str | None = None
+    start: str | None = None  # YYYY-MM
+    end: str | None = None  # YYYY-MM or "present"
+    date_source: Literal["parser", "model", "none"] = "none"
+    line_ids: list[str] = Field(default_factory=list)
+
+
+class ContactField(BaseModel):
+    value: str
+    line_id: str
+
+
+class Contact(BaseModel):
+    name: ContactField | None = None
+    email: ContactField | None = None
+    phone: ContactField | None = None
+    location: ContactField | None = None
+    links: list[ContactField] = Field(default_factory=list)
+
+
+class ParseWarning(BaseModel):
+    code: str
+    severity: Literal["info", "warning", "error"]
+    message: str
+    line_ids: list[str] = Field(default_factory=list)
+
+
+class ParsedCV(BaseModel):
+    lines: list[CVLine]
+    facts: list[ComputedFact] = Field(default_factory=list)
+    sections: list[CVSection] = Field(default_factory=list)
+    entries: list[CVEntry] = Field(default_factory=list)
+    contact: Contact = Field(default_factory=Contact)
+    total_years: float | None = None
+
+    def texts_by_ref(self) -> dict[str, str]:
+        """Every citable reference (L and F IDs) mapped to its text."""
+        refs = {line.id: line.text for line in self.lines}
+        refs.update({fact.id: fact.text for fact in self.facts})
+        return refs
+
+    def numbered(self, include_facts: bool = True) -> str:
+        """The CV in the only format the model sees: `L012 | text`, then the computed facts."""
+        rows = [f"{line.id} | {line.text}" for line in self.lines]
+        if include_facts:
+            rows += [f"{fact.id} | {fact.text}" for fact in self.facts]
+        return "\n".join(rows)
