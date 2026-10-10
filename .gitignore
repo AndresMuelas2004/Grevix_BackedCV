@@ -1,6 +1,8 @@
 # Local-only files (never published)
 CLAUDE.local.md
 .scratch/
+.claude/hooks/
+.claude/settings.local.json
 
 # Secrets
 .env
