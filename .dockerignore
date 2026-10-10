@@ -1,0 +1,13 @@
+.git
+.gitignore
+.env
+.env.*
+CLAUDE.local.md
+.scratch
+data
+**/__pycache__
+**/.venv
+**/.pytest_cache
+**/.ruff_cache
+**/node_modules
+frontend/dist
