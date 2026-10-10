@@ -1,0 +1,19 @@
+Alex Rivera
+Madrid, Spain · alex.rivera@example.com · +1 555 0134 · linkedin.com/in/alex-rivera-example
+SUMMARY
+Junior software engineer focused on data pipelines and LLM applications.
+EXPERIENCE
+Software Engineer Intern, Northwind Labs, Madrid
+Jun 2024 - Present
+Built a customer-support assistant with LangGraph and the OpenAI API, cutting first-response time by 30%
+Wrote ETL jobs in Python that load 2 million rows a day into PostgreSQL
+Containerized three internal services with Docker
+Teaching Assistant, Universidad Example, Madrid
+Sep 2022 - May 2024
+Taught weekly SQL labs to 40 students
+EDUCATION
+BSc Computer Science, Universidad Example, 2024
+SKILLS
+Python, SQL, PostgreSQL, Docker, Git, LangGraph, OpenAI API
+LANGUAGES
+Spanish (native), English (C1)

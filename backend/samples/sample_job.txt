@@ -1,0 +1,19 @@
+Junior AI Engineer - Brightpath Analytics (New York, NY · On-site)
+
+About the role
+Brightpath Analytics is hiring a Junior AI Engineer to build LLM-powered tools for our analytics team. You will work with data engineers and product managers to ship internal assistants.
+
+Requirements
+- Bachelor's degree in Computer Science or a related field.
+- Strong Python and SQL skills.
+- Experience with agent frameworks such as LangChain.
+- 5+ years of experience with LangGraph.
+- Experience with Kubernetes in production.
+- Excellent communication skills.
+- Must be authorized to work in the United States without visa sponsorship.
+
+Nice to have
+- Experience with AWS.
+- Familiarity with vector databases.
+
+We offer a hybrid learning budget, health insurance and a friendly team.

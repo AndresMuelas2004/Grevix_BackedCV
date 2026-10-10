@@ -1,4 +1,26 @@
-# First public release year of common technologies, for rule R2
-# ("years asked exceed the technology's age"). Filled from official sources only.
+# First public release year (first public version, beta or open-source release, not 1.0),
+# for rule R2: "years asked exceed the technology's age". Checked on 2026-10-11 against
+# official release notes, repositories, blogs or package indexes; Swift from Wikipedia
+# citing Apple's announcement.
 
 [technologies]
+"Docker" = 2013
+"Kubernetes" = 2014
+"React" = 2013
+"TypeScript" = 2012
+"Swift" = 2014
+"Rust" = 2012
+"Kotlin" = 2011
+"FastAPI" = 2018
+"LangChain" = 2022
+"LangGraph" = 2024
+"TensorFlow" = 2015
+"PyTorch" = 2016
+"Terraform" = 2014
+"Flutter" = 2017
+"Next.js" = 2016
+"GitHub Actions" = 2018
+"Model Context Protocol" = 2024
+"MCP" = 2024
+"LlamaIndex" = 2022
+"GPT-4" = 2023

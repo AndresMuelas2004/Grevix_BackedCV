@@ -217,6 +217,8 @@ def build_assessments(
             status = "partial"
         if req.category in GATE_CATEGORIES and status == "missing" and not ids:
             status = "unknown"  # a gate is missing only from an explicit negative or an answer
+        if status == "unknown" and not gate_like:
+            status = "missing"  # a skill the CV never shows is missing, not a question
         status = _check_years(req, cv, ids, status)
 
         result[req.id] = RequirementAssessment(

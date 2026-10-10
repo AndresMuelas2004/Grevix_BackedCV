@@ -126,6 +126,24 @@ def test_tailor_first_badge_when_coverage_trails_fit():
     assert "tailor_first" in verdict.badges
 
 
+def test_r2_flags_more_years_than_the_technology_has():
+    job = _job(
+        req(
+            "R01",
+            category="experience_years",
+            min_years=5,
+            terms=["LangGraph"],
+            quote="5+ years of experience with LangGraph",
+        ),
+        seniority="Senior",
+    )
+
+    flags = flag_requirements(job, today=date(2026, 10, 11))
+
+    assert [(f.rule_id, f.requirement_ids) for f in flags] == [("R2", ["R01"])]
+    assert "2024" in flags[0].explanation
+
+
 def test_r1_flags_entry_level_years_and_r1_leaves_fit():
     job = _job(
         req("R01", category="experience_years", min_years=5, knockout_type="experience_years"),
