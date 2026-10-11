@@ -18,11 +18,11 @@ DRAFTS = [
     drafts_optimize.PostingReviewDraft,
 ]
 
-# (prompt file name, tier, data blocks the prompt refers to)
+# (prompt file name, version, tier, data blocks the prompt refers to)
 PROMPTS = [
-    ("suggest", "strong", ["<cv_lines>", "<facts>", "<requirements>"]),
-    ("verify", "strong", ["<cv_lines>", "<facts>", "<suggestions>"]),
-    ("review_posting", "fast", ["<job_meta>", "<requirements>"]),
+    ("suggest", "1", "strong", ["<cv_lines>", "<facts>", "<requirements>"]),
+    ("verify", "2", "strong", ["<cv_lines>", "<facts>", "<suggestions>"]),
+    ("review_posting", "1", "fast", ["<job_meta>", "<requirements>"]),
 ]
 
 
@@ -46,11 +46,13 @@ def test_schema_is_strict_compatible(model: type[BaseModel]):
             assert prop.get("description"), name
 
 
-@pytest.mark.parametrize(("name", "tier", "blocks"), PROMPTS)
-def test_prompt_loads_with_id_and_data_blocks(name: str, tier: str, blocks: list[str]):
+@pytest.mark.parametrize(("name", "version", "tier", "blocks"), PROMPTS)
+def test_prompt_loads_with_id_and_data_blocks(
+    name: str, version: str, tier: str, blocks: list[str]
+):
     prompt = load_prompt(name)
     assert prompt.id == name
-    assert prompt.version == "1"
+    assert prompt.version == version
     assert prompt.tier == tier
     for block in blocks:
         assert block in prompt.text, block
