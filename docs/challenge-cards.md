@@ -45,4 +45,12 @@ verify_batch (pass 1: backed) -> gate_recency (pass 2) -> gate_barriers (pass 3)
 
 Press **Try a posting with hidden barriers** on the first screen. The posting is for a platform engineer in Austin and hides "we are unable to sponsor work visas, so you must already have the right to work in the United States" in its closing notes; it asks for Kubernetes "within the last 5 years". The CV belongs to an engineer in Valencia whose only Kubernetes evidence is "Deployed and operated microservices on K8s clusters" in a 2015-2017 job.
 
-BackedCV flags the work permit as a high hidden risk and asks the yes/no question, marks Kubernetes "Looks met, but..." (the keyword is there, the experience is nine years old), and in the review lists the Kubernetes edit under "Refused as not viable" instead of rewording the old line.
+BackedCV flags the work permit and the Austin office days as high hidden risks (the CV is located in Spain) and points to the matching deal-breaker questions, marks Kubernetes "Looks met, but..." (the keyword is there, but the experience ended in 2017), and in the review lists the Kubernetes edit under "Refused as not viable" instead of rewording the old line. Because the posting states the 5-year window, the Kubernetes requirement no longer counts as met, so the verdict is "Likely screened out" until the candidate's situation changes.
+
+Screenshots: [hidden risks](screenshots/08-hidden-risks.png), [Looks met, but...](screenshots/09-looks-met.png), [Refused as not viable](screenshots/10-refused.png).
+
+### Measured
+
+- **Everything that existed still works:** 614 backend tests pass (505 before the card), and the full click-through of the original flow (sample, answers, optimize, review, build, downloads) passes every step.
+- **End-to-end pairs, live with the model:** 4 of 4 pairs and 19 of 19 checks, for $0.0123. The fourth pair checks the card's goal: a high work permit risk, Kubernetes downgraded by recency and flagged "Looks met, but...".
+- **The first live run caught a miss:** the posting's extraction also turned the buried work permit sentence into a knockout requirement, and my first rule capped such risks at medium. Now a risk tied to a knockout keeps its real level and only leaves the question and the verdict to the knockout. Both run reports are kept in `backend/evals/results/`.
