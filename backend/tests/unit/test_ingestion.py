@@ -129,6 +129,15 @@ def test_hyphen_at_a_line_break_joins_a_lowercase_word(tmp_path):
     ]
 
 
+def test_bold_title_wrapped_after_a_comma_stays_one_line(tmp_path):
+    # A bold degree title too wide for a narrow column: the first line ends with a comma.
+    markup = "#set page(width: 78mm, height: 200mm, margin: 10mm)\n" + (
+        "*BSc Computer Science, Universidad Example, Valencia*\n"
+    )
+
+    assert _pdf_texts(tmp_path, markup) == ["BSc Computer Science, Universidad Example, Valencia"]
+
+
 def test_curated_sample_keeps_bullets_and_wrapped_paragraphs_whole():
     texts = [line.text for line in read_cv((CURATED_DIR / "cv.pdf").read_bytes(), "cv.pdf").lines]
     source = (CURATED_DIR / "cv.txt").read_text(encoding="utf-8").splitlines()

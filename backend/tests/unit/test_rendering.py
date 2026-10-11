@@ -7,7 +7,7 @@ from docx.shared import Inches, Pt
 
 from backedcv.domain.builders import build_parsed_cv
 from backedcv.domain.document_diff import document_from_cv
-from backedcv.domain.models import CVDocument, DocContact, DocItem, DocLine, DocSection
+from backedcv.domain.models import CVDocument, CVLine, DocContact, DocItem, DocLine, DocSection
 from backedcv.ingestion import read_cv
 from backedcv.llm.drafts import CVStructureDraft, SectionDraft
 from backedcv.rendering import render_docx, render_pdf, roundtrip_check
@@ -150,38 +150,43 @@ def test_pdf_contact_wraps_between_details_without_a_separator():
     assert not any(text.endswith(("|", "·")) for text in texts)
 
 
-def test_curated_sample_builds_a_document_that_round_trips():
-    # The sample's structure as a model would return it, with the reader's line IDs.
-    draft = CVStructureDraft(
-        name_line_id="L001",
-        location_line_id="L004",
-        sections=[
+CURATED_SECTIONS = {
+    "Contact": "contact",
+    "Education": "education",
+    "Skills": "skills",
+    "Languages": "languages",
+    "Summary": "summary",
+    "Experience": "experience",
+    "Projects": "projects",
+}
+
+
+def _curated_draft(lines: list[CVLine]) -> CVStructureDraft:
+    """The sample's structure as a model would return it. Line IDs come from the read lines, not
+    from fixed numbers: each section runs from its heading to the line before the next heading."""
+    headings = [i for i, line in enumerate(lines) if line.text in CURATED_SECTIONS]
+    sections: list[SectionDraft] = []
+    for n, start in enumerate(headings):
+        end = headings[n + 1] - 1 if n + 1 < len(headings) else len(lines) - 1
+        sections.append(
             SectionDraft(
-                type="contact", heading_line_id=None, first_line_id="L003", last_line_id="L008"
-            ),
-            SectionDraft(
-                type="education", heading_line_id="L009", first_line_id="L009", last_line_id="L013"
-            ),
-            SectionDraft(
-                type="skills", heading_line_id="L014", first_line_id="L014", last_line_id="L015"
-            ),
-            SectionDraft(
-                type="languages", heading_line_id="L016", first_line_id="L016", last_line_id="L017"
-            ),
-            SectionDraft(
-                type="summary", heading_line_id="L018", first_line_id="L018", last_line_id="L019"
-            ),
-            SectionDraft(
-                type="experience", heading_line_id="L020", first_line_id="L020", last_line_id="L036"
-            ),
-            SectionDraft(
-                type="projects", heading_line_id="L037", first_line_id="L037", last_line_id="L040"
-            ),
-        ],
+                type=CURATED_SECTIONS[lines[start].text],
+                heading_line_id=lines[start].id,
+                first_line_id=lines[start].id,
+                last_line_id=lines[end].id,
+            )
+        )
+    return CVStructureDraft(
+        name_line_id=lines[0].id,  # the name is the first line of the CV
+        location_line_id=next(line.id for line in lines if line.text == "Valencia, Spain"),
+        sections=sections,
         entries=[],
     )
+
+
+def test_curated_sample_builds_a_document_that_round_trips():
     lines = read_cv(CURATED_CV.read_bytes(), "cv.pdf").lines
-    doc = document_from_cv(build_parsed_cv(lines, draft, today=date(2026, 10, 11)))
+    doc = document_from_cv(build_parsed_cv(lines, _curated_draft(lines), today=date(2026, 10, 11)))
 
     assert "other" not in [section.type for section in doc.sections]
     ok, issues = roundtrip_check(render_pdf(doc), doc)

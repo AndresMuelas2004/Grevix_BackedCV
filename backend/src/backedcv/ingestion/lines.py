@@ -17,6 +17,7 @@ _SIZE_TOLERANCE = 0.5  # points
 _CAPS_MAX = 40  # characters: a longer all-caps line is running text, not a heading
 _SENTENCE_END = re.compile(r"[.!?…][\"'”’)\]]*$")
 _HYPHEN_END = re.compile(r"\w-$")
+_OPEN_END = re.compile(r"(?:[,&/-]|\b(?:and|or|of|for|with|in|at|to|the))$", re.IGNORECASE)
 _MONTH = r"(?:jan|feb|mar|apr|may|jun|jul|aug|sep|sept|oct|nov|dec)[a-z]*\.?"
 _YEAR = rf"(?:{_MONTH}\s+)?(?:\d{{1,2}}/)?(?:19|20)\d{{2}}"
 _RANGE = rf"{_YEAR}\s*(?:-|\bto\b)\s*(?:present|current|now|today|{_YEAR})\b"
@@ -104,11 +105,14 @@ def _reach(fragments: list[Fragment]) -> float:
 def _continues(group: list[Fragment], nxt: Fragment, reach: float) -> bool:
     """Whether the next physical line goes on with the logical line that `group` is building."""
     first, last = group[0], group[-1]
+    if abs(nxt.size - last.size) > _SIZE_TOLERANCE or nxt.top - last.bottom > _MAX_GAP * nxt.size:
+        return False
+    # A wrapped title may stop short of the block's edge, so the reach rule does not apply to it.
+    if _is_title_wrap(first, last, nxt):
+        return True
     if last.x1 < reach:  # a line that stops well short of the block's edge is complete
         return False
     if _is_break(last) or _is_break(nxt) or _is_bullet(nxt.text):
-        return False
-    if abs(nxt.size - last.size) > _SIZE_TOLERANCE or nxt.top - last.bottom > _MAX_GAP * nxt.size:
         return False
     unfinished = _SENTENCE_END.search(fold(last.text)) is None
     if _is_bullet(first.text):
@@ -121,13 +125,30 @@ def _continues(group: list[Fragment], nxt: Fragment, reach: float) -> bool:
     return unfinished or _starts_lower(nxt.text)
 
 
+def _is_title_wrap(first: Fragment, last: Fragment, nxt: Fragment) -> bool:
+    """A bold title that wraps in a narrow column: the next bold line finishes its open line."""
+    return (
+        last.bold
+        and nxt.bold
+        and abs(nxt.x0 - first.x0) <= _INDENT_TOLERANCE
+        and _OPEN_END.search(fold(last.text)) is not None
+        and not _is_bullet(nxt.text)
+        and not _stands_alone(last.text)
+        and not _stands_alone(nxt.text)
+    )
+
+
 def _is_break(fragment: Fragment) -> bool:
     """Headings, date lines and contact lines always stand alone."""
+    return fragment.heading or _stands_alone(fragment.text)
+
+
+def _stands_alone(text: str) -> bool:
+    """Short all-caps, date and contact lines are never run on, whatever their font."""
     return (
-        fragment.heading
-        or _is_caps_heading(fragment.text)
-        or _DATE_LINE.search(fold(fragment.text)) is not None
-        or _CONTACT.search(fragment.text) is not None
+        _is_caps_heading(text)
+        or _DATE_LINE.search(fold(text)) is not None
+        or _CONTACT.search(text) is not None
     )
 
 
