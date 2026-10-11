@@ -28,9 +28,11 @@ from backedcv.domain.models.assessment import YearsCheck
 from backedcv.domain.models.screening import clean_prose
 from backedcv.domain.rules.knockout import (
     asks_min_years,
+    is_general_years,
     is_knockout,
     language_check,
     likely_question,
+    years_cap_sentence,
     years_sentence,
 )
 from backedcv.domain.text import fold_lower, locate_quote
@@ -313,6 +315,14 @@ def _with_years(
     the requirement may be about one skill."""
     check = _years_check(req, cv)
     if check is None:
+        return assessment
+    if not is_general_years(req):
+        # Years of one skill: the evidence decides. Fewer total years (complete dates) only cap
+        # "met" at "partial": nobody has more years of a skill than years of work.
+        short = check.reliable and check.cv_months < check.min_years * 12
+        if assessment.status == "met" and short:
+            update = {"status": "partial", "rationale": years_cap_sentence(check)}
+            return assessment.model_copy(update=update)
         return assessment
     update: dict = {"years_check": check}
     if check.cv_months < check.min_years * 12:

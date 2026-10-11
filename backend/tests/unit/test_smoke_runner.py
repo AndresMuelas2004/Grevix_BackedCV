@@ -191,13 +191,12 @@ def test_langchain_and_langgraph_pass_when_partial_or_met(tools):
     assert _failed(checks) == []
 
 
-def test_langchain_and_langgraph_fail_when_the_cv_shows_them_missing():
+def test_langchain_fails_when_the_cv_shows_it_missing():
+    # LangGraph is no longer expected as partial: the posting asks for 5+ years of it (flagged R2),
+    # and "agent frameworks" in the CV is too vague to count for that requirement.
     checks = check_expectations(_expect("curated-two-column"), _curated(tools="missing"))
 
-    assert _failed(checks) == [
-        "requirement contains=LangChain, status=partial or met",
-        "requirement contains=LangGraph, status=partial or met",
-    ]
+    assert _failed(checks) == ["requirement contains=LangChain, status=partial or met"]
 
 
 def test_simple_sample_needs_the_r1_flag_on_langgraph():

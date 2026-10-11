@@ -7,8 +7,7 @@
     "expect": {
       "requirements": [
         {"knockout_type": "work_authorization", "screening_question": true},
-        {"contains": "LangChain", "status": ["partial", "met"]},
-        {"contains": "LangGraph", "status": ["partial", "met"]}
+        {"contains": "LangChain", "status": ["partial", "met"]}
       ],
       "flags": [{"rule": "R1"}, {"rule": "R2"}],
       "banners": ["R3"],

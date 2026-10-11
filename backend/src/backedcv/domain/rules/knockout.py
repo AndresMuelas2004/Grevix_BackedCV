@@ -94,6 +94,44 @@ def language_check(
     return "missing", refs, f"The job asks for {language} at {asks}; your CV states {has}."
 
 
+# Words of a GENERAL years requirement ("2+ years of experience", "4+ years in platform, DevOps or
+# cloud engineering"): experience words, connectors and broad fields. Any other word (LangGraph,
+# Python, Kubernetes) names a skill, and the CV's total years then only cap it.
+_GENERAL_TEXT = """
+    a an the of in on at as for to with within and or plus least minimum total overall last past
+    year years yrs experience experienced professional work working relevant related industry
+    proven commercial practical solid strong hands hands-on field similar role roles position
+    equivalent combined including building developing delivering shipping production
+    software development developer engineering engineer engineers programming coding it tech
+    technology technical platform platforms devops cloud data backend back-end frontend front-end
+    fullstack full-stack full stack web mobile infrastructure systems system security network
+    networking qa testing test quality analytics analysis analyst science scientist research
+    product products design management manager leadership lead team consulting sales marketing
+    operations ops support customer finance ai ml machine learning artificial intelligence
+    computer automation architecture site reliability sre administration project program
+    enterprise applications application solutions services digital startup
+    años año de en con como y o el la los las al menos mínimo experiencia profesional sector
+    desarrollo ingeniería ingeniero datos
+"""
+_GENERAL_WORDS = frozenset(_GENERAL_TEXT.split())
+_WORD = re.compile(r"[^\W_]+(?:[-+#.][^\W_]+)*[+#]*")
+
+
+def is_general_years(requirement: Requirement) -> bool:
+    """True when a years requirement asks for experience in general or in a broad field, so the
+    CV's total years measure it. False when its label or terms name a skill or tool."""
+    words = _WORD.findall(fold_lower(" ".join([requirement.label, *requirement.terms])))
+    return all(word.rstrip("+#").isdigit() or word in _GENERAL_WORDS for word in words)
+
+
+def years_cap_sentence(check: YearsCheck) -> str:
+    """Why a skill's years are capped at partial: nobody has more years of a skill than of work."""
+    return (
+        f"Your CV's dates add up to about {duration_text(check.cv_months)}, "
+        f"less than the {check.min_years:g}+ years asked."
+    )
+
+
 def asks_min_years(requirement: Requirement) -> bool:
     """A minimum number of years of experience ("2+ years"), checked against the CV's dates."""
     return bool(requirement.min_years) and "experience_years" in (
