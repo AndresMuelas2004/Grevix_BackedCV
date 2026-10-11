@@ -8,8 +8,10 @@ import type {
   ReviewDecisions,
   Suggestion,
 } from '../../api/types'
+import { friendlyText } from '../../lib/errorMessages'
 import { formatScore } from '../../lib/format'
 import { SECTION_LABELS } from '../../lib/labels'
+import { useSaving } from '../../lib/saving'
 import HowComputed from '../HowComputed'
 import ScoreValue from './ScoreValue'
 import SuggestionCard, { type Decision } from './SuggestionCard'
@@ -21,6 +23,7 @@ interface ReviewScreenProps {
   initialDecisions: ReviewDecisions | null
   onAnalysisChange: (next: AnalysisReport) => void
   onBuild: (decisions: ReviewDecisions) => void
+  onRetrySuggestions: () => void // asks for the suggestions again, after the step failed
 }
 
 type Decisions = Partial<Record<string, Decision>>
@@ -33,9 +36,11 @@ export default function ReviewScreen({
   initialDecisions,
   onAnalysisChange,
   onBuild,
+  onRetrySuggestions,
 }: ReviewScreenProps) {
   const [decisions, setDecisions] = useState<Decisions>(() => fromLists(initialDecisions))
-  const [checking, setChecking] = useState(0) // edits waiting for their check
+  // Every request of this screen is counted here: while one is in flight, nothing else can be sent.
+  const saving = useSaving()
 
   const suggestions = analysis.suggestions
   const verified = suggestions.filter(isVerified)
@@ -49,6 +54,9 @@ export default function ReviewScreen({
     accepted.length > 0 ? accepted.map((s) => s.id) : verified.map((s) => s.id),
   )
   const groups = groupSuggestions(analysis)
+  // No suggestions, and the suggest step itself failed on the server: not the same as "none needed".
+  const suggestFailed =
+    suggestions.length === 0 && analysis.errors.some((error) => error.node === 'suggest')
 
   const requirementLabels = new Map<string, string>(
     (analysis.job?.requirements ?? []).map((req): [string, string] => [req.id, req.label]),
@@ -77,13 +85,8 @@ export default function ReviewScreen({
 
   // Checks an edited text again. The cards show the outcome from the new report.
   async function checkEdit(id: string, text: string) {
-    setChecking((count) => count + 1)
-    try {
-      const next = await verifySuggestion(analysis.analysis_id, id, text)
-      onAnalysisChange(next)
-    } finally {
-      setChecking((count) => count - 1)
-    }
+    const next = await saving.track(() => verifySuggestion(analysis.analysis_id, id, text))
+    onAnalysisChange(next)
   }
 
   function build() {
@@ -127,23 +130,44 @@ export default function ReviewScreen({
             type="button"
             className="btn btn-secondary"
             onClick={acceptVerified}
-            disabled={verified.length === 0}
+            disabled={verified.length === 0 || saving.busy}
           >
             Accept all verified
           </button>
-          <button type="button" className="btn btn-primary" onClick={build} disabled={checking > 0}>
+          <button
+            type="button"
+            className="btn btn-primary"
+            onClick={build}
+            disabled={saving.busy}
+          >
             Build my new CV
           </button>
         </div>
 
-        {checking > 0 && (
+        {saving.busy && (
           <p className="notice notice-info" role="status">
             Checking your edit. You can build the CV when it finishes.
           </p>
         )}
       </section>
 
-      {groups.length === 0 && (
+      {groups.length === 0 && suggestFailed && (
+        <section className="card" aria-labelledby="suggest-failed-title">
+          <h2 id="suggest-failed-title">{friendlyText('optimize_failed').message}</h2>
+          <div className="error-actions">
+            <button
+              type="button"
+              className="btn btn-primary"
+              onClick={onRetrySuggestions}
+              disabled={saving.busy}
+            >
+              Try again
+            </button>
+          </div>
+        </section>
+      )}
+
+      {groups.length === 0 && !suggestFailed && (
         <section className="card">
           <p>No suggestions were found for this CV and posting.</p>
         </section>
@@ -161,6 +185,7 @@ export default function ReviewScreen({
                   requirementLabels={requirementLabels}
                   citations={citations}
                   sectionTitle={group.title}
+                  busy={saving.busy}
                   onDecide={(choice) => decide(suggestion.id, choice)}
                   onSaveEdit={(text) => checkEdit(suggestion.id, text)}
                 />

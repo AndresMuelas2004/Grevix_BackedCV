@@ -1,6 +1,7 @@
 import { useState, type ReactNode } from 'react'
 import type { AnalysisReport, RequirementAssessment } from '../../api/types'
 import { problemLineIds } from '../../lib/parseWarnings'
+import { useSaving } from '../../lib/saving'
 import CvView from '../CVView'
 import KnockoutQuestions from '../facts/KnockoutQuestions'
 import HowComputed from '../HowComputed'
@@ -13,8 +14,9 @@ import './ReportView.css'
 interface ReportViewProps {
   analysis: AnalysisReport
   onAnalysisChange: (next: AnalysisReport) => void
-  // Shown under the verdict, e.g. the "Optimize my CV" button.
-  actions?: ReactNode
+  // Shown under the verdict, e.g. the "Optimize my CV" button. Told whether a request is in flight,
+  // so the controls that send one can be disabled.
+  actions?: (busy: boolean) => ReactNode
 }
 
 // The report page. It owns the selected requirement and the lines highlighted from the parse
@@ -22,6 +24,8 @@ interface ReportViewProps {
 export default function ReportView({ analysis, onAnalysisChange, actions }: ReportViewProps) {
   const [selectedId, setSelectedId] = useState<string | null>(null)
   const [highlightedLineIds, setHighlightedLineIds] = useState<string[]>([])
+  // The answers and the toggles of this screen share one saving state: one request at a time.
+  const saving = useSaving()
 
   const selected: RequirementAssessment | undefined =
     selectedId === null ? undefined : analysis.assessments[selectedId]
@@ -64,13 +68,17 @@ export default function ReportView({ analysis, onAnalysisChange, actions }: Repo
               onSelectRequirement={revealRequirement}
             />
           )}
-          {actions && <div className="report-actions">{actions}</div>}
+          {actions && <div className="report-actions">{actions(saving.busy)}</div>}
         </div>
         {analysis.score && <ScorePanel score={analysis.score} />}
       </div>
 
       <div className="report-facts">
-        <KnockoutQuestions analysis={analysis} onAnalysisChange={onAnalysisChange} />
+        <KnockoutQuestions
+          analysis={analysis}
+          saving={saving}
+          onAnalysisChange={onAnalysisChange}
+        />
         <ParseReport
           warnings={analysis.parse_warnings}
           lines={analysis.cv?.lines ?? []}
@@ -92,6 +100,7 @@ export default function ReportView({ analysis, onAnalysisChange, actions }: Repo
             analysisId: analysis.analysis_id,
             excludedIds: analysis.excluded_ids,
             includedFlaggedIds: analysis.included_flagged_ids,
+            saving,
             onChange: onAnalysisChange,
           }}
         />

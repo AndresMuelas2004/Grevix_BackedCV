@@ -11,8 +11,13 @@ import type {
   ReviewDecisions,
   Samples,
 } from './types'
+import { wait } from '../lib/wait'
 
 const API_BASE = '/api'
+
+// The server refuses a request with 409 run_in_progress while another request holds the same
+// analysis. Such a request is sent once more after this delay; a second refusal is the error.
+const BUSY_RETRY_MS = 1000
 
 // A failed request: an HTTP error body ({code, title, detail}), a FastAPI validation
 // answer (HTTP 422, code "invalid_request"), or a transport problem (status 0).
@@ -93,8 +98,9 @@ export function isSampleCvFile(file: File): boolean {
   return sampleFiles.has(file)
 }
 
-export async function getAnalysis(id: string): Promise<AnalysisReport> {
-  const response = await send(`${API_BASE}/analyses/${encodeURIComponent(id)}`, {})
+// Reads an analysis. Its status is "running" while the server is still working on it.
+export async function getAnalysis(id: string, signal?: AbortSignal): Promise<AnalysisReport> {
+  const response = await send(`${API_BASE}/analyses/${encodeURIComponent(id)}`, { signal })
   if (!response.ok) throw await readError(response)
   return (await response.json()) as AnalysisReport
 }
@@ -130,13 +136,15 @@ export async function runAnalysis(
 // Sends answers, exclusions or inclusions for a report waiting at its report stage.
 // Returns the recomputed report. Fields left out keep their value (see InputsUpdate).
 export async function updateInputs(id: string, body: InputsUpdate): Promise<AnalysisReport> {
-  const response = await send(`${API_BASE}/analyses/${encodeURIComponent(id)}/inputs`, {
-    method: 'PATCH',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(body),
+  return retryWhenBusy(async () => {
+    const response = await send(`${API_BASE}/analyses/${encodeURIComponent(id)}/inputs`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    })
+    if (!response.ok) throw await readError(response)
+    return (await response.json()) as AnalysisReport
   })
-  if (!response.ok) throw await readError(response)
-  return (await response.json()) as AnalysisReport
 }
 
 // Asks for suggestions on a report waiting at its report stage. The "suggestions"
@@ -146,15 +154,19 @@ export async function runOptimize(
   onEvent: (event: OptimizeEvent) => void,
   signal?: AbortSignal,
 ): Promise<void> {
-  await streamEvents({
-    url: `${API_BASE}/analyses/${encodeURIComponent(id)}/optimize`,
-    init: { method: 'POST' },
-    label: 'optimization',
-    parse: toOptimizeEvent,
-    ends: (event) => event.type === 'suggestions' || event.type === 'error',
-    onEvent,
+  await retryWhenBusy(
+    () =>
+      streamEvents({
+        url: `${API_BASE}/analyses/${encodeURIComponent(id)}/optimize`,
+        init: { method: 'POST' },
+        label: 'optimization',
+        parse: toOptimizeEvent,
+        ends: (event) => event.type === 'suggestions' || event.type === 'error',
+        onEvent,
+        signal,
+      }),
     signal,
-  })
+  )
 }
 
 // Checks one suggestion again after the user edited its text. Returns the new report.
@@ -166,13 +178,15 @@ export async function verifySuggestion(
   const url =
     `${API_BASE}/analyses/${encodeURIComponent(id)}` +
     `/suggestions/${encodeURIComponent(suggestionId)}/verify`
-  const response = await send(url, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ after }),
+  return retryWhenBusy(async () => {
+    const response = await send(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ after }),
+    })
+    if (!response.ok) throw await readError(response)
+    return (await response.json()) as AnalysisReport
   })
-  if (!response.ok) throw await readError(response)
-  return (await response.json()) as AnalysisReport
 }
 
 // Keyword coverage now, and if the given suggestions were accepted. Asked for each time the
@@ -203,19 +217,23 @@ export async function runBuild(
   onEvent: (event: BuildEvent) => void,
   signal?: AbortSignal,
 ): Promise<void> {
-  await streamEvents({
-    url: `${API_BASE}/analyses/${encodeURIComponent(id)}/build`,
-    init: {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ accepted: decisions.accepted, rejected: decisions.rejected }),
-    },
-    label: 'CV build',
-    parse: toBuildEvent,
-    ends: (event) => event.type === 'built' || event.type === 'error',
-    onEvent,
+  await retryWhenBusy(
+    () =>
+      streamEvents({
+        url: `${API_BASE}/analyses/${encodeURIComponent(id)}/build`,
+        init: {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ accepted: decisions.accepted, rejected: decisions.rejected }),
+        },
+        label: 'CV build',
+        parse: toBuildEvent,
+        ends: (event) => event.type === 'built' || event.type === 'error',
+        onEvent,
+        signal,
+      }),
     signal,
-  })
+  )
 }
 
 // The address of the built CV in one format. Use it as a download link.
@@ -248,6 +266,22 @@ const BUILD_FAILED: ErrorBody = {
   code: 'build_failed',
   title: 'The CV could not be built.',
   detail: '',
+}
+
+// Runs a request that the server may refuse while another run holds the analysis. A refusal with
+// 409 run_in_progress is tried once more after a second. Nothing is sent again for any other error.
+async function retryWhenBusy<T>(attempt: () => Promise<T>, signal?: AbortSignal): Promise<T> {
+  try {
+    return await attempt()
+  } catch (error) {
+    if (!isRunInProgress(error)) throw error
+  }
+  await wait(BUSY_RETRY_MS, signal)
+  return attempt()
+}
+
+function isRunInProgress(error: unknown): boolean {
+  return error instanceof ApiError && error.status === 409 && error.code === 'run_in_progress'
 }
 
 async function send(url: string, init: RequestInit): Promise<Response> {

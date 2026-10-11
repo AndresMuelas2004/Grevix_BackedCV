@@ -3,16 +3,22 @@ import { updateInputs } from '../../api/client'
 import type { AnalysisReport } from '../../api/types'
 import { describeError } from '../../lib/errors'
 import { knockoutItems, type KnockoutItem } from '../../lib/knockouts'
+import type { Saving } from '../../lib/saving'
 import './KnockoutQuestions.css'
 
 interface KnockoutQuestionsProps {
   analysis: AnalysisReport
+  saving: Saving // the report screen's shared state: every answer is sent through it
   onAnalysisChange: (next: AnalysisReport) => void
 }
 
 // Yes/No answers to the screening questions the employer may ask. Each answer is saved
 // on the server, which recomputes the report; the new report comes back through onAnalysisChange.
-export default function KnockoutQuestions({ analysis, onAnalysisChange }: KnockoutQuestionsProps) {
+export default function KnockoutQuestions({
+  analysis,
+  saving,
+  onAnalysisChange,
+}: KnockoutQuestionsProps) {
   const [savingId, setSavingId] = useState<string | null>(null)
   const [editingId, setEditingId] = useState<string | null>(null)
   const [answeredId, setAnsweredId] = useState<string | null>(null)
@@ -23,7 +29,6 @@ export default function KnockoutQuestions({ analysis, onAnalysisChange }: Knocko
 
   // The server accepts answers only while the report is waiting for "optimize".
   const editable = analysis.stage === 'report_ready'
-  const busy = savingId !== null
 
   async function answer(item: KnockoutItem, value: boolean) {
     setSavingId(item.requirementId)
@@ -31,9 +36,9 @@ export default function KnockoutQuestions({ analysis, onAnalysisChange }: Knocko
     // The answers map is replaced as a whole, so every answer is sent, not only the new one.
     const answers = { ...(analysis.facts.answers ?? {}), [item.requirementId]: value }
     try {
-      const next = await updateInputs(analysis.analysis_id, {
-        facts: { ...analysis.facts, answers },
-      })
+      const next = await saving.track(() =>
+        updateInputs(analysis.analysis_id, { facts: { ...analysis.facts, answers } }),
+      )
       setEditingId(null)
       setAnsweredId(item.requirementId)
       onAnalysisChange(next)
@@ -60,7 +65,7 @@ export default function KnockoutQuestions({ analysis, onAnalysisChange }: Knocko
           {error}
         </p>
       )}
-      {busy && (
+      {savingId !== null && (
         <p className="knockouts-saving" role="status">
           Saving your answer...
         </p>
@@ -72,7 +77,7 @@ export default function KnockoutQuestions({ analysis, onAnalysisChange }: Knocko
           <KnockoutRow
             key={item.requirementId}
             item={item}
-            disabled={busy || !editable}
+            disabled={saving.busy || !editable}
             editing={editingId === item.requirementId}
             focusChange={answeredId === item.requirementId}
             onAnswer={(value) => void answer(item, value)}

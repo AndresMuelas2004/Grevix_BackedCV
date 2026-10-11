@@ -1,6 +1,5 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react'
 import {
-  ApiError,
   getAnalysis,
   runAnalysis,
   runBuild,
@@ -23,8 +22,10 @@ import InputForm from './components/InputForm'
 import Progress, { type ProgressRow } from './components/Progress'
 import ReportView from './components/report/ReportView'
 import ReviewScreen from './components/review/ReviewScreen'
+import RunWatch from './components/RunWatch'
 import { EMPTY_DRAFT, type AnalysisDraft } from './lib/draft'
-import { describeFailure } from './lib/errorMessages'
+import { describeFailure, friendlyText, type KnownCode } from './lib/errorMessages'
+import { isBrokenConnection, toErrorBody } from './lib/errors'
 import {
   PROGRESS_STEPS,
   applyProgress,
@@ -32,17 +33,24 @@ import {
   type ProgressState,
   type StepState,
 } from './lib/progress'
+import type { RunStep } from './lib/runWatch'
 
 // The screens of the flow. Each stream (analysis, optimize, build) has its own progress.
 type Flow =
   | { kind: 'idle' }
   | { kind: 'loading' }
   | { kind: 'analyzing' }
+  // A run still going on the server, found on a reload or after a stream broke.
+  | { kind: 'waiting'; analysisId: string; step: RunStep }
+  // The wait ran out. The run may still finish on the server.
+  | { kind: 'timedOut' }
   | { kind: 'report'; analysis: AnalysisReport }
   | { kind: 'optimizing'; analysis: AnalysisReport }
   | { kind: 'review'; analysis: AnalysisReport; decisions: ReviewDecisions | null }
   | { kind: 'building'; analysis: AnalysisReport }
   | { kind: 'built'; analysis: AnalysisReport }
+  // A run that stopped on the server. The analysis tells which step it stopped at (see stepOf).
+  | { kind: 'stalled'; analysis: AnalysisReport }
   | {
       kind: 'error'
       error: ErrorBody
@@ -62,16 +70,26 @@ const BUILD_STEPS: readonly { id: BuildStep; label: string }[] = [
   { id: 'checks', label: 'Checking' },
 ]
 
+// The plain error of a run that stopped, by the step it stopped at.
+const STALLED_ERRORS: Record<RunStep, KnownCode> = {
+  analysis: 'analysis_failed',
+  optimize: 'optimize_failed',
+  build: 'build_failed',
+}
+
 // What a screen reader hears when a screen opens, in addition to the heading that takes the focus.
 const SCREEN_NOTICE: Record<Flow['kind'], string> = {
   idle: 'Start a new check.',
   loading: 'Opening your analysis.',
   analyzing: 'Checking your CV against the posting.',
+  waiting: 'Your check is still running.',
+  timedOut: 'Stopped waiting for the check.',
   report: 'Report ready.',
   optimizing: 'Suggesting changes to your CV.',
   review: 'Review ready.',
   building: 'Building your new CV.',
   built: 'Build finished.',
+  stalled: 'There is a problem.',
   error: 'There is a problem.',
 }
 
@@ -90,7 +108,8 @@ export default function App() {
   const controllerRef = useRef<AbortController | null>(null)
   const mainRef = useRef<HTMLElement>(null)
 
-  // A reload (or a link with ?analysis=) opens the analysis at the stage it is in.
+  // A reload (or a link with ?analysis=) opens the analysis at the stage it is in, or waits for it
+  // when the server is still working on it.
   useEffect(() => {
     const id = readAnalysisId()
     if (!id) return
@@ -137,11 +156,14 @@ export default function App() {
     const signal = beginRun()
     setAnalysisProgress(initialProgress())
     setFlow({ kind: 'analyzing' })
+    // The id the stream reported first, so a broken stream can be checked on the server.
+    const run: { analysisId: string | null } = { analysisId: null }
 
     const onEvent = (event: AnalysisEvent) => {
       if (signal.aborted) return
       switch (event.type) {
         case 'created':
+          run.analysisId = event.analysisId
           rememberAnalysis(event.analysisId)
           break
         case 'progress': {
@@ -161,9 +183,12 @@ export default function App() {
     try {
       await runAnalysis(input, onEvent, signal)
     } catch (error) {
-      if (!signal.aborted) {
-        setFlow({ kind: 'error', error: toErrorBody(error), analysis: null, decisions: null })
-      }
+      await showFailure(error, run.analysisId, signal, {
+        kind: 'error',
+        error: toErrorBody(error),
+        analysis: null,
+        decisions: null,
+      })
     }
   }
 
@@ -190,9 +215,12 @@ export default function App() {
     try {
       await runOptimize(analysis.analysis_id, onEvent, signal)
     } catch (error) {
-      if (!signal.aborted) {
-        setFlow({ kind: 'error', error: toErrorBody(error), analysis, decisions: null })
-      }
+      await showFailure(error, analysis.analysis_id, signal, {
+        kind: 'error',
+        error: toErrorBody(error),
+        analysis,
+        decisions: null,
+      })
     }
   }
 
@@ -219,10 +247,30 @@ export default function App() {
     try {
       await runBuild(analysis.analysis_id, decisions, onEvent, signal)
     } catch (error) {
-      if (!signal.aborted) {
-        setFlow({ kind: 'error', error: toErrorBody(error), analysis, decisions })
-      }
+      await showFailure(error, analysis.analysis_id, signal, {
+        kind: 'error',
+        error: toErrorBody(error),
+        analysis,
+        decisions,
+      })
     }
+  }
+
+  // Shows what a failed run left behind. A broken connection may have left the run going on the
+  // server, so the analysis is read first: it shows the wait, or the step the run stopped at.
+  // Otherwise, or when the analysis cannot be read, the stream's own error is shown.
+  async function showFailure(
+    error: unknown,
+    analysisId: string | null,
+    signal: AbortSignal,
+    failed: Flow,
+  ) {
+    if (signal.aborted) return
+    const recovered =
+      analysisId !== null && isBrokenConnection(error)
+        ? await flowFromServer(analysisId, signal)
+        : null
+    if (!signal.aborted) setFlow(recovered ?? failed)
   }
 
   function startOver() {
@@ -235,6 +283,13 @@ export default function App() {
   function editAndTryAgain() {
     stopRun()
     setFlow({ kind: 'idle' })
+  }
+
+  // Repeats the step a stopped run was in: the build, the suggestions, or the analysis itself.
+  function retryStalled(analysis: AnalysisReport) {
+    if (analysis.decisions) void startBuild(analysis, analysis.decisions)
+    else if (analysis.verdict) void startOptimize(analysis)
+    else editAndTryAgain()
   }
 
   // The report and the review can change while their screen is open (answers, verified edits).
@@ -272,6 +327,37 @@ export default function App() {
           </>
         )
 
+      case 'waiting':
+        return (
+          <>
+            <Toolbar onStartOver={startOver} />
+            <RunWatch
+              analysisId={flow.analysisId}
+              step={flow.step}
+              onSettled={(analysis) => setFlow(flowFor(analysis, analysis.decisions))}
+              onTimeout={() => setFlow({ kind: 'timedOut' })}
+              onFailed={(error) => setFlow({ kind: 'error', error, analysis: null, decisions: null })}
+            />
+          </>
+        )
+
+      case 'timedOut': {
+        const text = friendlyText('still_running')
+        return (
+          <section className="card error-card" aria-labelledby="error-title">
+            <h2 id="error-title" tabIndex={-1} data-screen-heading>
+              {text.message}
+            </h2>
+            <p className="error-next">{text.next}</p>
+            <div className="error-actions">
+              <button type="button" className="btn btn-secondary" onClick={startOver}>
+                Start over
+              </button>
+            </div>
+          </section>
+        )
+      }
+
       case 'report': {
         const { analysis } = flow
         return (
@@ -280,12 +366,12 @@ export default function App() {
             <ReportView
               analysis={analysis}
               onAnalysisChange={updateReport}
-              actions={
+              actions={(busy) => (
                 <div className="optimize-action">
                   <button
                     type="button"
                     className="btn btn-primary"
-                    disabled={analysis.stage !== 'report_ready'}
+                    disabled={analysis.stage !== 'report_ready' || busy}
                     onClick={() => startOptimize(analysis)}
                   >
                     Optimize my CV
@@ -294,7 +380,7 @@ export default function App() {
                     Suggests rewording, skills and a summary. Each one is checked against your CV.
                   </p>
                 </div>
-              }
+              )}
             />
           </>
         )
@@ -321,6 +407,7 @@ export default function App() {
               initialDecisions={decisions}
               onAnalysisChange={updateReview}
               onBuild={(choices) => startBuild(analysis, choices)}
+              onRetrySuggestions={() => startOptimize(analysis)}
             />
           </>
         )
@@ -336,6 +423,30 @@ export default function App() {
 
       case 'built':
         return <BuildScreen analysis={flow.analysis} onStartOver={startOver} />
+
+      case 'stalled': {
+        const { analysis } = flow
+        const step = stepOf(analysis)
+        return (
+          <section className="card error-card" aria-labelledby="error-title">
+            <h2 id="error-title" tabIndex={-1} data-screen-heading>
+              {friendlyText(STALLED_ERRORS[step]).message}
+            </h2>
+            <div className="error-actions">
+              <button
+                type="button"
+                className="btn btn-primary"
+                onClick={() => retryStalled(analysis)}
+              >
+                {step === 'analysis' ? 'Edit and try again' : 'Try again'}
+              </button>
+              <button type="button" className="btn btn-secondary" onClick={startOver}>
+                Start over
+              </button>
+            </div>
+          </section>
+        )
+      }
 
       case 'error': {
         const { error, analysis, decisions } = flow
@@ -429,8 +540,13 @@ function initialFlow(): Flow {
   return readAnalysisId() ? { kind: 'loading' } : { kind: 'idle' }
 }
 
-// The screen for an analysis, from the stage it is at.
+// The screen for an analysis, from the stage it is at. A run still going shows the wait, and a run
+// that stopped shows the step it stopped at.
 function flowFor(analysis: AnalysisReport, decisions: ReviewDecisions | null): Flow {
+  if (analysis.status === 'running') {
+    return { kind: 'waiting', analysisId: analysis.analysis_id, step: stepOf(analysis) }
+  }
+  if (analysis.status === 'stalled') return { kind: 'stalled', analysis }
   switch (analysis.stage) {
     case 'review_ready':
       return { kind: 'review', analysis, decisions }
@@ -440,6 +556,23 @@ function flowFor(analysis: AnalysisReport, decisions: ReviewDecisions | null): F
       return { kind: 'report', analysis }
     case null:
       return { kind: 'error', error: NOT_READY, analysis: null, decisions: null }
+  }
+}
+
+// The step a run is in, as the analysis shows it: the build once decisions were sent, the
+// suggestions once the report has its verdict, and the analysis before that.
+function stepOf(analysis: AnalysisReport): RunStep {
+  if (analysis.decisions !== null) return 'build'
+  return analysis.verdict === null ? 'analysis' : 'optimize'
+}
+
+// The screen for an analysis as the server has it now, or null when it cannot be read.
+async function flowFromServer(analysisId: string, signal: AbortSignal): Promise<Flow | null> {
+  try {
+    const analysis = await getAnalysis(analysisId, signal)
+    return flowFor(analysis, analysis.decisions)
+  } catch {
+    return null
   }
 }
 
@@ -479,16 +612,4 @@ function stepRows<Step extends string>(
     else if (index === current && latest) state = latest.status === 'done' ? 'done' : 'active'
     return { label: step.label, state }
   })
-}
-
-// Errors from the request or the stream, as the error card shows them.
-function toErrorBody(error: unknown): ErrorBody {
-  if (error instanceof ApiError) {
-    return { code: error.code, title: error.title, detail: error.detail }
-  }
-  return {
-    code: 'unexpected',
-    title: 'Something went wrong.',
-    detail: error instanceof Error ? error.message : '',
-  }
 }

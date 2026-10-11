@@ -15,6 +15,7 @@ interface SuggestionCardProps {
   requirementLabels: ReadonlyMap<string, string>
   citations: ReadonlyMap<string, string> // CV line and fact IDs to their text
   sectionTitle: string // the heading of the section this suggestion is listed under
+  busy: boolean // true while any request of the review is in flight: no edit can be saved then
   onDecide: (decision: Decision) => void
   onSaveEdit: (text: string) => Promise<void>
 }
@@ -37,6 +38,7 @@ export default function SuggestionCard({
   requirementLabels,
   citations,
   sectionTitle,
+  busy,
   onDecide,
   onSaveEdit,
 }: SuggestionCardProps) {
@@ -69,7 +71,7 @@ export default function SuggestionCard({
 
   async function save(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
-    if (saving) return // a second press during the check is ignored
+    if (saving || busy) return // a press during any check is ignored
     const next = text.trim()
     if (next === '') {
       setEditError('Write the new text first.')
@@ -203,7 +205,7 @@ export default function SuggestionCard({
           )}
           <div className="suggestion-actions">
             {/* aria-disabled, not disabled: a disabled button drops the keyboard focus it has. */}
-            <button type="submit" className="btn btn-primary" aria-disabled={saving}>
+            <button type="submit" className="btn btn-primary" aria-disabled={busy}>
               {saving ? 'Checking...' : 'Save and check'}
             </button>
             <button type="button" className="btn btn-secondary" onClick={cancelEdit} disabled={saving}>

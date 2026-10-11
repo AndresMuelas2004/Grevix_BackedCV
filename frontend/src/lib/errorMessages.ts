@@ -49,8 +49,8 @@ const FRIENDLY = {
     next: 'Paste the CV text instead, or export the CV again from its original file.',
   },
   cv_unreadable: {
-    message: 'The CV file could not be opened.',
-    next: 'Save the file again as a PDF or DOCX, or paste the CV text instead.',
+    message: 'We could not read this file.',
+    next: 'Try saving it again as PDF or DOCX, or paste the text.',
   },
 
   // The request, the answers and the choices
@@ -126,6 +126,10 @@ const FRIENDLY = {
     message: 'Your new CV could not be built.',
     next: 'Go back to the review, check your choices, and try again.',
   },
+  still_running: {
+    message: 'This is taking longer than expected.',
+    next: 'The work keeps going on the server. Reload the page in a few minutes to see the result.',
+  },
 
   // The connection and the app itself
   network_error: {
@@ -159,6 +163,11 @@ const FRIENDLY = {
 } satisfies Record<string, FriendlyText>
 
 export type KnownCode = keyof typeof FRIENDLY
+
+// The plain text of a known code, for screens that show it without a server error.
+export function friendlyText(code: KnownCode): FriendlyText {
+  return FRIENDLY[code]
+}
 
 // What an error screen shows for one error.
 export interface FailureText {

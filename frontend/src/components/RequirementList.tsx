@@ -22,14 +22,17 @@ import {
   MATCH_LABELS,
   STATUS_LABELS,
 } from '../lib/labels'
+import type { Saving } from '../lib/saving'
 import CitationTag, { CitedText } from './CitationTag'
 import './RequirementList.css'
 
-// What the row toggles need: the report's current lists, and where the saved report goes.
+// What the row toggles need: the report's current lists, where the saved report goes, and the
+// report screen's shared state that every save goes through.
 interface RequirementInputs {
   analysisId: string
   excludedIds: string[]
   includedFlaggedIds: string[]
+  saving: Saving
   onChange: (next: AnalysisReport) => void
 }
 
@@ -56,24 +59,23 @@ export default function RequirementList({
   inputs,
 }: RequirementListProps) {
   const contributionById = new Map(contributions.map((item) => [item.requirement_id, item]))
-  const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const busy = inputs?.saving.busy === true
 
   // Saves one list. Fields left out keep their value on the server, so only the changed list is sent.
   async function save(body: InputsUpdate) {
     if (!inputs) return
-    setBusy(true)
     setError(null)
     try {
-      inputs.onChange(await updateInputs(inputs.analysisId, body))
+      const next = await inputs.saving.track(() => updateInputs(inputs.analysisId, body))
+      inputs.onChange(next)
     } catch (failure) {
       setError(`Your change was not saved. ${describeError(failure)}`)
-    } finally {
-      setBusy(false)
     }
   }
 
-  // While a save is running, a toggle is ignored (not disabled), so keyboard focus stays on it.
+  // While any request of the report is running, a toggle is ignored (not disabled), so keyboard
+  // focus stays on it.
   function toggleExcluded(requirementId: string) {
     if (!inputs || busy) return
     const current = inputs.excludedIds
