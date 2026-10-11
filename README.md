@@ -77,6 +77,8 @@ The verifier is a language model, so its answers can change between runs. The li
 
 A missed case is an invented rewrite that passed the code checks and the verifier, so it would show as verified. Your review is the last check. A faithful rewrite that is blocked by mistake cannot be accepted as it is, but an edited version is checked again.
 
+End-to-end smoke pairs check the analysis itself on three synthetic CV and posting pairs: the two-column demo sample, a simpler sample, and a non-tech one (a registered nurse posting with a license knockout the CV answers). Each pair has expectations (knockout questions asked or settled, R1/R2 flags, the R3 banner, the two-column warning, a verdict that is not "screened out"). Latest live run: 3 of 3 pairs and 13 of 13 checks passed, for $0.0075.
+
 The offline run needs no API key and runs only the code checks. Commands and the case list are in [backend/evals/README.md](backend/evals/README.md).
 
 ## How it works
