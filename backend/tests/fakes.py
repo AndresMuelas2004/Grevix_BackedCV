@@ -1,7 +1,5 @@
 """Canned LLM answers for tests: no network, no cost."""
 
-from backedcv.llm.drafts_screening import BarrierDraft, HiddenBarriersDraft
-
 from backedcv.llm.drafts import (
     AssessmentDraft,
     CVStructureDraft,
@@ -12,6 +10,7 @@ from backedcv.llm.drafts import (
     SectionDraft,
 )
 from backedcv.llm.drafts_optimize import ContradictionDraft, PostingReviewDraft
+from backedcv.llm.drafts_screening import BarrierDraft, HiddenBarriersDraft
 
 CV_TEXT = """Jane Doe
 Madrid, Spain · jane@example.com · +34 600 123 456

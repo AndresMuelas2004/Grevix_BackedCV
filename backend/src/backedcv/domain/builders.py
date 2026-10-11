@@ -23,6 +23,7 @@ from backedcv.domain.text import fold_lower, locate_quote
 from backedcv.llm.drafts import AssessmentDraft, CVStructureDraft, JobExtractionDraft
 
 GATE_CATEGORIES = {"work_authorization", "location", "clearance", "availability"}
+LIST_MARKERS = "-*•·–— \t"  # a quote copied with its bullet keeps only the sentence
 
 _EMAIL = re.compile(r"[\w.+-]+@[\w-]+(?:\.[\w-]+)+")
 _PHONE = re.compile(r"\+?\d[\d\s().-]{7,}\d")
@@ -155,7 +156,7 @@ def build_job(posting: str, draft: JobExtractionDraft) -> tuple[JobPosting, list
         if located is None and knockout is None:
             notes.append(f"Dropped requirement with a quote not found in the posting: {d.label}")
             continue
-        quote = located or d.quote
+        quote = (located or d.quote).lstrip(LIST_MARKERS)  # "- 3+ years..." reads "3+ years..."
         terms = [t for t in d.terms if t.strip() and _in_quote(t, quote)][:3]
         aliases = [a for a in d.aliases if a.strip()][:3]
         requirements.append(
