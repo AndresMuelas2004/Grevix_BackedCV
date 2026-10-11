@@ -288,7 +288,7 @@ def test_eligibility_barriers_get_a_yes_or_no_question(kind):
     assert risk.question is not None and risk.question.endswith("?")
 
 
-def test_a_barrier_tied_to_a_knockout_has_no_question_and_follows_the_knockout():
+def test_a_barrier_tied_to_a_knockout_asks_no_question_and_met_or_no_settles_it():
     job = JobPosting(requirements=[req("R01", VISA, knockout="work_authorization")])
     tied = US_BARRIER.model_copy(update={"requirement_ids": ["R01"]})
     met = {"R01": RequirementAssessment(requirement_id="R01", status="met")}
@@ -301,9 +301,72 @@ def test_a_barrier_tied_to_a_knockout_has_no_question_and_follows_the_knockout()
     [risk] = assess([tied], job=job, assessments=answered_no)
     assert (risk.risk, risk.question, risk.confirmed) == ("high", None, True)
 
+    # Missing from the CV, not from an answer: the place still decides, and an answer under the
+    # barrier's own id is ignored, because a knockout-tied barrier has no question of its own.
     from_cv = {"R01": RequirementAssessment(requirement_id="R01", status="missing")}
-    [risk] = assess([tied], job=job, assessments=from_cv)
-    assert (risk.risk, risk.question, risk.confirmed) == ("medium", None, False)
+    [risk] = assess(
+        [tied], job=job, assessments=from_cv, facts=CandidateFacts(answers={"H01": True})
+    )
+    assert (risk.risk, risk.question, risk.resolved, risk.confirmed) == ("high", None, False, False)
+    assert risk.cv_refs == ["L002"]
+
+    [risk] = assess([tied], job=job, cv=cv_in(None), assessments=from_cv)
+    assert risk.risk == "medium"  # no location to check: explicit and unknown
+
+
+def test_a_work_authorization_knockout_with_a_place_the_cv_lacks_is_high():
+    # The buried sentence was also extracted as a knockout (R20): the place check still applies.
+    job = JobPosting(requirements=[req("R20", VISA, knockout="work_authorization")])
+    barrier = US_BARRIER.model_copy(update={"id": "H03", "requirement_ids": ["R20"]})
+    missing = {"R20": RequirementAssessment(requirement_id="R20", status="missing")}
+    [risk] = assess([barrier], job=job, cv=cv_in("Valencia, Spain"), assessments=missing)
+    assert (risk.id, risk.risk, risk.cv_refs, risk.question) == ("H03", "high", ["L002"], None)
+
+
+def test_a_location_knockout_for_another_city_is_high_and_the_same_city_is_low():
+    # "Austin office" was also extracted as a location knockout (R01): the city check still applies.
+    job = JobPosting(requirements=[req("R01", "Work from our Austin office.", knockout="location")])
+    barrier = BarrierItem(
+        id="H01",
+        kind="location",
+        quote="Work from our Austin office.",
+        place="Austin",
+        explicit=True,
+        requirement_ids=["R01"],
+        explanation="A screener may drop you.",
+        action="Say where you live.",
+    )
+    missing = {"R01": RequirementAssessment(requirement_id="R01", status="missing")}
+    [risk] = assess([barrier], job=job, cv=cv_in("Valencia, Spain"), assessments=missing)
+    assert (risk.risk, risk.cv_refs, risk.question) == ("high", ["L002"], None)
+    [risk] = assess([barrier], job=job, cv=cv_in("Austin, Texas"), assessments=missing)
+    assert (risk.risk, risk.resolved) == ("low", True)
+
+
+def test_a_recency_knockout_follows_its_downgraded_check():
+    # "3+ years of Kubernetes within the last 5 years" was also extracted as an experience
+    # knockout (R01). apply_recency has already downgraded it, so the recency check decides.
+    job = JobPosting(requirements=[req("R01", K8S, knockout="experience_years")])
+    barrier = BarrierItem(
+        id="H02",
+        kind="recency",
+        quote=K8S,
+        window_years=5,
+        requirement_ids=["R01"],
+        explicit=True,
+        explanation="A screener may drop you.",
+        action="Show dates.",
+    )
+    downgraded = {"R01": RequirementAssessment(requirement_id="R01", status="missing")}
+    [risk] = assess(
+        [barrier], job=job, assessments=downgraded, recency={"R01": check("downgraded", rid="R01")}
+    )
+    assert (risk.risk, risk.cv_refs, risk.question, risk.confirmed) == (
+        "high",
+        ["L004"],
+        None,
+        False,
+    )
 
 
 def test_recency_barrier_takes_its_level_from_the_checks_of_its_requirements():

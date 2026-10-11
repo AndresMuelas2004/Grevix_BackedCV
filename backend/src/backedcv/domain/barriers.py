@@ -264,8 +264,9 @@ def assess_risks(
     recency: dict[str, RecencyCheck],
 ) -> list[HiddenRisk]:
     """One risk per barrier, plus a composite HC1 when two or more open medium risks remain.
-    A barrier tied to a knockout follows that knockout and never asks a question of its own.
-    Order: the composite first, then high, medium and low, barrier order within each level."""
+    A barrier tied to a knockout asks no question of its own; see _knockout_risk. Tied barriers
+    never join the composite. Order: the composite first, then high, medium and low, barrier
+    order within each level."""
     knockouts = {req.id: req for req in job.requirements if req.knockout_type}
     risks: list[HiddenRisk] = []
     tied: set[str] = set()
@@ -273,7 +274,7 @@ def assess_risks(
         tied_to = [knockouts[rid] for rid in barrier.requirement_ids if rid in knockouts]
         if tied_to:
             tied.add(barrier.id)
-            risks.append(_knockout_risk(barrier, tied_to, assessments))
+            risks.append(_knockout_risk(barrier, tied_to, assessments, cv, facts, recency))
         else:
             risks.append(_own_risk(barrier, job, cv, facts, recency))
     composite = _composite(risks, tied)
@@ -286,14 +287,19 @@ def _knockout_risk(
     barrier: BarrierItem,
     knockouts: list[Requirement],
     assessments: dict[str, RequirementAssessment],
+    cv: ParsedCV,
+    facts: CandidateFacts,
+    recency: dict[str, RecencyCheck],
 ) -> HiddenRisk:
-    """Follows the knockout it is tied to. No question of its own: the knockout already asks."""
+    """A barrier tied to a knockout. Only three rules are special: it asks no question of its own
+    (the knockout asks); a met knockout resolves it (low); a no from the candidate confirms it
+    (high). Otherwise the barrier's own kind decides, exactly as for any other barrier."""
     states = [_knockout_state(assessments.get(req.id)) for req in knockouts]
     if "answered_no" in states:
         return _risk(barrier, "high", confirmed=True)
     if all(state == "met" for state in states):
         return _risk(barrier, "low", resolved=True)
-    return _risk(barrier, "medium" if barrier.explicit else "low")
+    return _by_kind(barrier, cv, facts, recency, question=None)
 
 
 def _knockout_state(assessment: RequirementAssessment | None) -> str:
@@ -313,9 +319,10 @@ def _own_risk(
     facts: CandidateFacts,
     recency: dict[str, RecencyCheck],
 ) -> HiddenRisk:
+    """A barrier with a question of its own: the candidate's yes or no settles it first."""
     question = _question(barrier, job.location)
     answer = facts.answers.get(barrier.id)
-    if answer is not None:  # the candidate's own yes or no settles it
+    if answer is not None:
         return _risk(
             barrier,
             "low" if answer else "high",
@@ -323,6 +330,18 @@ def _own_risk(
             resolved=answer,
             confirmed=not answer,
         )
+    return _by_kind(barrier, cv, facts, recency, question)
+
+
+def _by_kind(
+    barrier: BarrierItem,
+    cv: ParsedCV,
+    facts: CandidateFacts,
+    recency: dict[str, RecencyCheck],
+    question: str | None,
+) -> HiddenRisk:
+    """The level from the barrier's own kind: needs_sponsorship, the place against the CV, the
+    recency checks, or medium or low when the posting alone decides."""
     if barrier.kind == "work_authorization" and facts.needs_sponsorship is True:
         return _risk(barrier, "high", question=question, confirmed=True)
     if barrier.kind == "recency":
