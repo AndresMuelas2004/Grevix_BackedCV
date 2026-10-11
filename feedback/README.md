@@ -21,6 +21,29 @@ Before asking for feedback, I gave it: I tried five other participants' projects
 
 ## What people said
 
+Three people answered within the first hour, all GREVIX AfterCode participants who tried the live demo.
+
+**A. A participant, by WhatsApp direct message (17:36)** ([06-feedback-whatsapp-dm.png](screenshots/06-feedback-whatsapp-dm.png); name, number and the CV they tried are blurred):
+
+> Hey, andres. i saw your project the "BackedCV" and the output is kinda confusing. i tried a random resume and a job posting and it was way too overwhelming
+>
+> also, you should improve the landing page ui
+
+**B. Another participant, in a comment on my LinkedIn post (about 17:40)** ([07-feedback-linkedin-comment.png](screenshots/07-feedback-linkedin-comment.png); name and photo blurred):
+
+> Really sharp take on ATS screening! Focusing on hidden disqualifiers (visa sponsorship, tech recency) and strictly refusing to invent experience is a huge differentiator over generic keyword matchers.
+>
+> Three quick thoughts on your questions:
+> 1. Verdict Trust: Binary reasons backed by direct side-by-side quotes (job snippet vs. CV line) make the verdict indisputable.
+> 2. Signal vs Noise: Clearly separate "Hard Dealbreakers" (legal/visa bans) from "Soft Preferences" so applicants don't self-reject from flexible roles.
+> 3. Adoption Barrier: Multi-column PDFs can distort dates; a quick preview showing how employment timelines were parsed would eliminate doubt on recency checks.
+
+**C. A third participant, by WhatsApp direct message (17:52)** ([08-feedback-whatsapp-dm2.png](screenshots/08-feedback-whatsapp-dm2.png); name and number blurred):
+
+> Just gonna through your website its giving reviews a bit too lengthy i would highly recommend that change the ai and make it as it returns in short manner
+
+A and C say the same thing in different words: the report is too much to take in. B says what would make it trustworthy. I took A and C as the main problem and B as the shape of the fix.
+
 ## What I changed
 
 ## What I did not change, and why
