@@ -1,8 +1,16 @@
-import { PROGRESS_STEPS, type ProgressState, type StepState } from '../lib/progress'
+import type { StepState } from '../lib/progress'
 import './Progress.css'
 
+// One step of a progress list. `detail` is optional text shown under the step.
+export interface ProgressRow {
+  label: string
+  state: StepState
+  detail?: string
+}
+
 interface ProgressProps {
-  state: ProgressState
+  title: string
+  rows: ProgressRow[]
 }
 
 const STATE_TEXT: Record<StepState, string> = {
@@ -11,30 +19,22 @@ const STATE_TEXT: Record<StepState, string> = {
   done: 'Done',
 }
 
-export default function Progress({ state }: ProgressProps) {
-  const { requirements } = state
+export default function Progress({ title, rows }: ProgressProps) {
   return (
     <section className="progress card" aria-labelledby="progress-title">
-      <h2 id="progress-title">Checking your CV against the posting</h2>
+      <h2 id="progress-title">{title}</h2>
       <div aria-live="polite">
         <ol className="progress-steps">
-          {PROGRESS_STEPS.map((step, index) => {
-            const status = state.steps[step.id]
-            return (
-              <li key={step.id} className={`progress-step is-${status}`}>
-                <span className="step-marker" aria-hidden="true">
-                  {status === 'done' ? '' : index + 1}
-                </span>
-                <span className="step-label">{step.label}</span>
-                <span className="step-state">{STATE_TEXT[status]}</span>
-                {step.id === 'prepare_job' && status === 'done' && requirements !== null && (
-                  <span className="step-detail">
-                    {requirements} {requirements === 1 ? 'requirement' : 'requirements'} found
-                  </span>
-                )}
-              </li>
-            )
-          })}
+          {rows.map((row, index) => (
+            <li key={row.label} className={`progress-step is-${row.state}`}>
+              <span className="step-marker" aria-hidden="true">
+                {row.state === 'done' ? '' : index + 1}
+              </span>
+              <span className="step-label">{row.label}</span>
+              <span className="step-state">{STATE_TEXT[row.state]}</span>
+              {row.detail && <span className="step-detail">{row.detail}</span>}
+            </li>
+          ))}
         </ol>
       </div>
     </section>

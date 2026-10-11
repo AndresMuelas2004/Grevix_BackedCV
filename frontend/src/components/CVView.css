@@ -85,6 +85,44 @@
   white-space: nowrap;
 }
 
+.cv-line.is-noted {
+  background: var(--warn-soft);
+  box-shadow: inset 3px 0 0 #b45309;
+}
+
+.cv-tags {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.3rem;
+}
+
+.cv-tags:empty {
+  display: none;
+}
+
+.cv-tag-note {
+  background: #ffffff;
+  border-color: #f0d59a;
+  color: var(--warn);
+}
+
+/* A small "!" marker on lines that a parse warning points at. */
+.cv-warn-mark {
+  display: inline-grid;
+  place-items: center;
+  width: 1.25rem;
+  height: 1.25rem;
+  border: 1px solid #f0d59a;
+  border-radius: 999px;
+  background: var(--warn-soft);
+  color: var(--warn);
+  font-size: 0.8125rem;
+  font-weight: 800;
+  line-height: 1;
+}
+
 @media (min-width: 900px) {
   .cv-view {
     display: flex;

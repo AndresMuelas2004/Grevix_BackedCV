@@ -1,0 +1,99 @@
+.parse-report {
+  display: grid;
+  align-content: start;
+  gap: 1rem;
+}
+
+.parse-report > h2 {
+  font-size: 1.25rem;
+}
+
+.parse-group {
+  display: grid;
+  gap: 0.6rem;
+}
+
+.parse-group h3 {
+  font-size: 0.8125rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.parse-list {
+  display: grid;
+  gap: 0.6rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.parse-item {
+  display: grid;
+  justify-items: start;
+  gap: 0.4rem;
+  padding: 0.7rem 0.9rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+}
+
+.parse-message {
+  font-size: 0.9375rem;
+  overflow-wrap: anywhere;
+}
+
+.parse-lines {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem 0.75rem;
+}
+
+/* Pressed while its lines are highlighted in the CV. The check mark shows it, not color alone. */
+.parse-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  min-height: 2.25rem;
+  padding: 0.3rem 0.8rem;
+  border: 1px solid var(--border-strong);
+  border-radius: 999px;
+  background: var(--surface);
+  color: var(--text);
+  font: inherit;
+  font-size: 0.875rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.parse-toggle:hover {
+  background: var(--bg);
+}
+
+.parse-toggle[aria-pressed='true'] {
+  border-color: #b45309;
+  background: var(--warn-soft);
+  color: var(--warn);
+}
+
+.parse-toggle[aria-pressed='true']::before {
+  content: '\2713';
+  font-weight: 800;
+}
+
+.parse-ids {
+  font-size: 0.875rem;
+  color: var(--muted);
+}
+
+.parse-id {
+  padding: 0.05rem 0.35rem;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  background: var(--bg);
+  color: var(--text);
+  font-family: ui-monospace, Consolas, monospace;
+  font-size: 0.8125rem;
+}

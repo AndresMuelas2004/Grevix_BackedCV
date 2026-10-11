@@ -1,0 +1,58 @@
+.review {
+  display: grid;
+  gap: 1.25rem;
+}
+
+.review-summary {
+  display: grid;
+  gap: 0.9rem;
+}
+
+.review-summary h2 {
+  font-size: 1.375rem;
+}
+
+.counts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.review-coverage {
+  display: grid;
+  gap: 0.5rem;
+}
+
+.review-coverage h3,
+.review-group > h3 {
+  font-size: 1.0625rem;
+}
+
+.review-group {
+  display: grid;
+  gap: 0.75rem;
+}
+
+.suggestion-list {
+  display: grid;
+  gap: 0.75rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.summary-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 0.5rem;
+}
+
+@media (max-width: 560px) {
+  .summary-actions .btn {
+    flex: 1 1 auto;
+  }
+}

@@ -9,6 +9,10 @@ interface CvViewProps {
   selectedId: string | null
   // Line or fact IDs (L… or F…) cited as evidence by the selected requirement.
   highlightIds: string[]
+  // Line IDs picked in the "How your CV reads" report. Shown with a "Noted" tag.
+  noteIds?: string[]
+  // Line IDs that a parse warning points at. Each gets a small warning marker.
+  warnedIds?: string[]
 }
 
 interface LineGroup {
@@ -17,27 +21,40 @@ interface LineGroup {
   lines: CvLine[]
 }
 
-export default function CvView({ cv, meta, selectedId, highlightIds }: CvViewProps) {
+export default function CvView({
+  cv,
+  meta,
+  selectedId,
+  highlightIds,
+  noteIds = [],
+  warnedIds = [],
+}: CvViewProps) {
   const highlighted = new Set(highlightIds)
+  const noted = new Set(noteIds)
+  const warned = new Set(warnedIds)
   const groups = cv ? groupLines(cv) : []
   const readingOrder = cv ? [...cv.lines.map((line) => line.id), ...cv.facts.map((fact) => fact.id)] : []
-  const firstHighlighted = readingOrder.find((id) => highlighted.has(id)) ?? null
-  const highlightKey = highlightIds.join('|')
+  const firstEvidence = readingOrder.find((id) => highlighted.has(id)) ?? null
+  const firstNote = readingOrder.find((id) => noted.has(id)) ?? null
+  const scrollTarget = firstEvidence ?? firstNote
+  const highlightKey = `${highlightIds.join('|')}#${noteIds.join('|')}`
 
-  // Bring the first evidence line into view whenever the selection changes.
+  // Bring the first highlighted line into view whenever the highlight changes.
   useEffect(() => {
-    if (!firstHighlighted) return
+    if (!scrollTarget) return
     const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches
     document
-      .getElementById(`cv-${firstHighlighted}`)
+      .getElementById(`cv-${scrollTarget}`)
       ?.scrollIntoView({ block: 'nearest', behavior: reduceMotion ? 'auto' : 'smooth' })
-  }, [firstHighlighted, highlightKey])
+  }, [scrollTarget, highlightKey])
 
   let hint: string | null = null
-  if (selectedId === null) {
-    hint = 'Select a requirement to see its evidence highlighted here.'
-  } else if (firstHighlighted === null) {
-    hint = 'This requirement has no evidence in your CV.'
+  if (noteIds.length === 0) {
+    if (selectedId === null) {
+      hint = 'Select a requirement to see its evidence highlighted here.'
+    } else if (firstEvidence === null) {
+      hint = 'This requirement has no evidence in your CV.'
+    }
   }
 
   return (
@@ -59,7 +76,9 @@ export default function CvView({ cv, meta, selectedId, highlightIds }: CvViewPro
                     key={line.id}
                     id={line.id}
                     text={line.text}
-                    highlighted={highlighted.has(line.id)}
+                    evidence={highlighted.has(line.id)}
+                    noted={noted.has(line.id)}
+                    warned={warned.has(line.id)}
                   />
                 ))}
               </ul>
@@ -75,7 +94,9 @@ export default function CvView({ cv, meta, selectedId, highlightIds }: CvViewPro
                     key={fact.id}
                     id={fact.id}
                     text={fact.text}
-                    highlighted={highlighted.has(fact.id)}
+                    evidence={highlighted.has(fact.id)}
+                    noted={noted.has(fact.id)}
+                    warned={warned.has(fact.id)}
                   />
                 ))}
               </ul>
@@ -90,15 +111,30 @@ export default function CvView({ cv, meta, selectedId, highlightIds }: CvViewPro
 interface LineItemProps {
   id: string
   text: string
-  highlighted: boolean
+  evidence: boolean
+  noted: boolean
+  warned: boolean
 }
 
-function LineItem({ id, text, highlighted }: LineItemProps) {
+function LineItem({ id, text, evidence, noted, warned }: LineItemProps) {
+  let className = 'cv-line'
+  if (evidence) className += ' is-evidence'
+  if (noted) className += ' is-noted'
+
   return (
-    <li id={`cv-${id}`} className={highlighted ? 'cv-line is-evidence' : 'cv-line'}>
+    <li id={`cv-${id}`} className={className}>
       <span className="cv-id">{id}</span>
       <span className="cv-text">{text}</span>
-      {highlighted && <span className="cv-tag">Evidence</span>}
+      <span className="cv-tags">
+        {warned && (
+          <span className="cv-warn-mark">
+            <span aria-hidden="true">!</span>
+            <span className="visually-hidden">Parse warning</span>
+          </span>
+        )}
+        {evidence && <span className="cv-tag">Evidence</span>}
+        {noted && <span className="cv-tag cv-tag-note">Noted</span>}
+      </span>
     </li>
   )
 }

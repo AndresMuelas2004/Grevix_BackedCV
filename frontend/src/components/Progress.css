@@ -47,6 +47,12 @@
 .progress-step.is-done .step-marker {
   background: var(--accent);
   border-color: var(--accent);
+  color: #ffffff;
+}
+
+/* A check mark, so a finished step does not rely on its colour alone. */
+.progress-step.is-done .step-marker::before {
+  content: '\2713';
 }
 
 .step-label {

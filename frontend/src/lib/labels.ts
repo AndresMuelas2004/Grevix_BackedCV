@@ -5,6 +5,7 @@ import type {
   Importance,
   KnockoutType,
   MatchType,
+  ParseWarning,
   SectionType,
   Status,
 } from '../api/types'
@@ -76,4 +77,31 @@ export const MATCH_LABELS: Record<MatchType, string> = {
 export const FLAG_LABELS: Record<'R1' | 'R2', string> = {
   R1: 'Seniority mismatch',
   R2: 'Technology too new for the years asked',
+}
+
+export const SEVERITY_LABELS: Record<ParseWarning['severity'], string> = {
+  error: 'Error',
+  warning: 'Warning',
+  info: 'Info',
+}
+
+// Plain words for why a requirement is left out of Fit (its contribution's excluded_reason).
+// Reasons can be joined by the backend, e.g. "flagged_R1+R2".
+export function describeExclusion(reason: string): string {
+  if (reason === 'not_relevant') return 'You marked it as not relevant.'
+  if (reason === 'gate') {
+    return 'It is a screening question: it gives no points, but it can change the verdict.'
+  }
+  if (reason.startsWith('flagged_')) {
+    const rules = reason.slice('flagged_'.length).split('+').filter(isFlagRule)
+    if (rules.length > 0) {
+      const names = rules.map((rule) => FLAG_LABELS[rule]).join(' and ')
+      return `Left out because it was flagged (${names}). Choose "Count it anyway" to include it.`
+    }
+  }
+  return 'It is left out of Fit.'
+}
+
+function isFlagRule(value: string): value is keyof typeof FLAG_LABELS {
+  return value === 'R1' || value === 'R2'
 }

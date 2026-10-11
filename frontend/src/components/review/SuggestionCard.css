@@ -1,0 +1,118 @@
+.suggestion {
+  display: grid;
+  align-content: start;
+  gap: 0.75rem;
+  padding: 1rem 1.1rem;
+}
+
+/* Not verified: greyed out, with a dashed border so it does not look like a finished change. */
+.suggestion[data-status='unsupported'],
+.suggestion[data-status='pending'] {
+  background: #f1f2f4;
+  border-style: dashed;
+  box-shadow: none;
+}
+
+.suggestion-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.4rem 0.5rem;
+}
+
+.suggestion-head h4 {
+  margin-right: auto;
+  font-size: 1rem;
+}
+
+.suggestion-label {
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: var(--muted);
+}
+
+.suggestion-meta {
+  font-size: 0.9375rem;
+}
+
+.cited {
+  display: grid;
+  gap: 0.25rem;
+}
+
+.cited-list {
+  display: grid;
+  gap: 0.3rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font-size: 0.9375rem;
+}
+
+.cited-list li {
+  display: grid;
+  grid-template-columns: 3.25rem minmax(0, 1fr);
+  gap: 0.5rem;
+  align-items: baseline;
+  overflow-wrap: anywhere;
+}
+
+.cite-id {
+  font-family: ui-monospace, Consolas, monospace;
+  font-size: 0.8125rem;
+  color: var(--muted);
+}
+
+.reason-box {
+  display: grid;
+  gap: 0.4rem;
+  padding: 0.6rem 0.8rem;
+  border-left: 4px solid var(--danger);
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+  font-size: 0.9375rem;
+  overflow-wrap: anywhere;
+}
+
+.reason-box ul {
+  display: grid;
+  gap: 0.25rem;
+  margin: 0;
+  padding-left: 1.1rem;
+}
+
+.suggestion-note {
+  font-size: 0.875rem;
+  color: var(--muted);
+}
+
+.suggestion-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+/* The Accept and Reject buttons are toggles. The pressed state is shown by fill and by the
+   Accepted or Rejected chip above, not by colour alone. */
+.decision-accept[aria-pressed='true'] {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #ffffff;
+}
+
+.decision-reject[aria-pressed='true'] {
+  background: #e4e7ec;
+  border-color: #8a94a3;
+  color: var(--text);
+}
+
+.edit-form {
+  display: grid;
+  gap: 0.5rem;
+  padding-top: 0.25rem;
+}
+
+.edit-form textarea {
+  min-height: 6rem;
+}

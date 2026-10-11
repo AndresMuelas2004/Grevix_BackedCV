@@ -1,0 +1,56 @@
+.build {
+  display: grid;
+  gap: 1.25rem;
+}
+
+.build-summary {
+  display: grid;
+  gap: 1.1rem;
+}
+
+.build-summary h2 {
+  font-size: 1.5rem;
+}
+
+.built-by {
+  font-size: 0.9375rem;
+  color: var(--muted);
+}
+
+.build-fact {
+  display: grid;
+  gap: 0.4rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--border);
+}
+
+.build-fact h3 {
+  font-size: 1rem;
+}
+
+.fit-status {
+  color: var(--muted);
+  font-size: 0.9375rem;
+}
+
+.issue-list {
+  display: grid;
+  gap: 0.25rem;
+  margin: 0.25rem 0 0;
+  padding-left: 1.1rem;
+  overflow-wrap: anywhere;
+}
+
+.downloads {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--border);
+}
+
+@media (max-width: 560px) {
+  .downloads .btn {
+    flex: 1 1 auto;
+  }
+}

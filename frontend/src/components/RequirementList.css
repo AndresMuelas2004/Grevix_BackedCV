@@ -142,3 +142,56 @@
   color: var(--muted);
   font-size: 0.8125rem;
 }
+
+.req-points {
+  font-size: 0.9375rem;
+  font-weight: 600;
+}
+
+.req-saving {
+  font-size: 0.875rem;
+  color: var(--muted);
+}
+
+.req-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+/* On/off toggles. The state is also shown as a check mark, not by color alone. */
+.req-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  min-height: 2.25rem;
+  padding: 0.3rem 0.8rem;
+  border: 1px solid var(--border-strong);
+  border-radius: 999px;
+  background: var(--surface);
+  color: var(--text);
+  font: inherit;
+  font-size: 0.875rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.req-toggle:hover:not([aria-disabled='true']) {
+  background: var(--bg);
+}
+
+.req-toggle[aria-pressed='true'] {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+  color: #0b5f58;
+}
+
+.req-toggle[aria-pressed='true']::before {
+  content: '\2713';
+  font-weight: 800;
+}
+
+.req-toggle[aria-disabled='true'] {
+  cursor: not-allowed;
+  opacity: 0.55;
+}

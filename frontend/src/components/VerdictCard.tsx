@@ -6,6 +6,8 @@ interface VerdictCardProps {
   verdict: Verdict
   job: JobPosting | null
   assessments: Record<string, RequirementAssessment>
+  // Set to false when the questions are answered in another block (KnockoutQuestions).
+  showQuestions?: boolean
 }
 
 const TONE: Record<VerdictLabel, 'good' | 'warn' | 'bad' | 'neutral'> = {
@@ -22,7 +24,12 @@ const BADGE_CHIP: Record<keyof typeof BADGE_LABELS, string> = {
   posting_red_flags: 'chip-partial',
 }
 
-export default function VerdictCard({ verdict, job, assessments }: VerdictCardProps) {
+export default function VerdictCard({
+  verdict,
+  job,
+  assessments,
+  showQuestions = true,
+}: VerdictCardProps) {
   const labelFor = (requirementId: string): string =>
     job?.requirements.find((req) => req.id === requirementId)?.label ?? requirementId
 
@@ -70,7 +77,7 @@ export default function VerdictCard({ verdict, job, assessments }: VerdictCardPr
         </ul>
       )}
 
-      {questions.length > 0 && (
+      {showQuestions && questions.length > 0 && (
         <div className="questions">
           <h3>Questions an employer may ask</h3>
           <ul>

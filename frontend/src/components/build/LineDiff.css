@@ -1,0 +1,70 @@
+.line-diff {
+  display: grid;
+  gap: 1.25rem;
+}
+
+.line-diff-section {
+  display: grid;
+  gap: 0.5rem;
+}
+
+.line-diff-section > h4 {
+  font-size: 1rem;
+}
+
+.line-diff-items {
+  display: grid;
+  gap: 0.5rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.line-diff-item {
+  display: grid;
+  justify-items: start;
+  gap: 0.4rem;
+  padding: 0.6rem 0.8rem;
+  border: 1px solid var(--border);
+  border-left-width: 4px;
+  border-radius: var(--radius-sm);
+  overflow-wrap: anywhere;
+}
+
+.line-diff-item.is-changed {
+  border-left-color: #b45309;
+}
+
+.line-diff-item.is-added {
+  border-left-color: var(--accent);
+}
+
+.line-diff-item.is-removed {
+  border-left-color: var(--danger);
+}
+
+.line-diff-item.is-removed .line-text {
+  color: var(--muted);
+  text-decoration: line-through;
+}
+
+.line-diff-item .change-diff {
+  width: 100%;
+}
+
+.line-diff-folded summary {
+  cursor: pointer;
+  padding: 0.3rem 0;
+  font-size: 0.9375rem;
+  color: var(--muted);
+}
+
+.line-plain {
+  display: grid;
+  gap: 0.25rem;
+  margin: 0.25rem 0 0;
+  padding: 0 0 0 0.9rem;
+  color: var(--muted);
+  font-size: 0.9375rem;
+  overflow-wrap: anywhere;
+}

@@ -1,0 +1,55 @@
+.change-diff {
+  display: grid;
+  gap: 0.4rem;
+  margin: 0;
+}
+
+.change-row {
+  display: grid;
+  grid-template-columns: 5.5rem minmax(0, 1fr);
+  align-items: baseline;
+  gap: 0.5rem;
+}
+
+.change-row dt {
+  font-size: 0.8125rem;
+  font-weight: 700;
+  color: var(--muted);
+}
+
+.change-row dd {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+.change-none {
+  font-style: italic;
+  color: var(--muted);
+}
+
+/* Removed words: struck through, with a tinted background. */
+.change-diff del {
+  color: var(--danger);
+  text-decoration: line-through;
+  text-decoration-thickness: 2px;
+  background: var(--danger-soft);
+  border-radius: 3px;
+}
+
+/* Added words: underlined and bold, with a tinted background. */
+.change-diff ins {
+  color: #0b5f58;
+  font-weight: 600;
+  text-decoration: underline;
+  text-decoration-thickness: 2px;
+  text-underline-offset: 0.2em;
+  background: var(--accent-soft);
+  border-radius: 3px;
+}
+
+@media (max-width: 480px) {
+  .change-row {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 0.1rem;
+  }
+}
