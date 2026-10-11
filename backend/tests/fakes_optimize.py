@@ -7,6 +7,7 @@ from backedcv.llm.drafts_optimize import (
     VerificationBatchDraft,
     VerificationDraft,
 )
+from backedcv.llm.drafts_screening import BarrierDraft
 from tests.fakes import FakeLLM
 
 # Line IDs of tests/fakes.CV_TEXT: L007 is "Built a support bot with LangGraph". R03 ("agent
@@ -55,8 +56,12 @@ def _supports(row: str) -> VerificationDraft:
 class FakeOptimizeLLM(FakeLLM):
     """FakeLLM that also answers suggest and verify. `inputs` keeps the data each of them got."""
 
-    def __init__(self, suggestions: list[SuggestionDraft] | None = None):
-        super().__init__()
+    def __init__(
+        self,
+        suggestions: list[SuggestionDraft] | None = None,
+        barriers: list[BarrierDraft] | None = None,
+    ):
+        super().__init__(barriers=barriers)
         if suggestions is None:
             suggestions = [FAITHFUL_REWORD, INVENTED_NUMBER, ADD_SKILL]
         self.suggestions = suggestions

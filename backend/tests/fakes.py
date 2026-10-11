@@ -1,5 +1,7 @@
 """Canned LLM answers for tests: no network, no cost."""
 
+from backedcv.llm.drafts_screening import BarrierDraft, HiddenBarriersDraft
+
 from backedcv.llm.drafts import (
     AssessmentDraft,
     CVStructureDraft,
@@ -198,9 +200,10 @@ def review_draft() -> PostingReviewDraft:
 
 
 class FakeLLM:
-    def __init__(self):
+    def __init__(self, barriers: list[BarrierDraft] | None = None):
         self.calls: list[str] = []
         self.received: list[tuple[str, str]] = []  # (node, data) of every call: what the model got
+        self.barriers = barriers or []  # the barrier screen's answer: none unless a test sets it
 
     async def run(self, prompt, data, schema, *, node):
         self.calls.append(node)
@@ -226,4 +229,6 @@ class FakeLLM:
             return match_draft(ids), usage
         if schema is PostingReviewDraft:
             return review_draft(), usage
+        if schema is HiddenBarriersDraft:
+            return HiddenBarriersDraft(items=self.barriers), usage
         raise AssertionError(f"unexpected schema {schema}")

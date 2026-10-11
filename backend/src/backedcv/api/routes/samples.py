@@ -1,4 +1,4 @@
-"""Serve the curated sample CV (text, PDF, DOCX) and job posting for the one-click demo."""
+"""Serve the demo samples: the curated CV and posting (text, PDF, DOCX) and the hidden-risk pair."""
 
 from pathlib import Path
 
@@ -36,8 +36,18 @@ def get_sample_docx() -> FileResponse:
     return _file(_curated_dir() / "cv.docx", DOCX_TYPE)
 
 
+@router.get("/samples/hidden-risk")
+def get_hidden_risk_sample() -> dict[str, str]:
+    folder = _hidden_risk_dir()
+    return {"cv_text": _read(folder / "cv.txt"), "job_text": _read(folder / "job.txt")}
+
+
 def _curated_dir() -> Path:
     return get_settings().samples_dir / "curated"
+
+
+def _hidden_risk_dir() -> Path:
+    return get_settings().samples_dir / "hidden_risk"
 
 
 def _read(path: Path) -> str:

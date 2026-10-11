@@ -37,11 +37,16 @@ class AnalysisState(TypedDict, total=False):
     parse_warnings: list[dict]
     assessment_drafts: Annotated[dict, merge_by_id]
     assessments: dict
+    barrier_items: list[dict]  # the model's barriers, then the merged list once recomputed
+    recency: dict  # requirement ID -> RecencyCheck
+    hidden_risks: list[dict]
+    screening_flags: list[dict]
     score: dict
     verdict: dict
 
     # Optimize and build
     suggestions: Annotated[list[dict], merge_items_by_id]
+    refusals: list[dict]  # not viable: requirements and refused suggestions
     decisions: dict | None
     document: dict | None
     built_by: str | None

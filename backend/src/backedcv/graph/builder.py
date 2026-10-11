@@ -21,21 +21,25 @@ def build_graph(llm: StructuredLLM, checkpointer=None, order_model=None):
     graph.add_node("prepare_cv", nodes["prepare_cv"])
     graph.add_node("prepare_job", nodes["prepare_job"], retry_policy=LLM_RETRY)
     graph.add_node("review_posting", nodes["review_posting"])
+    graph.add_node("screen_barriers", nodes["screen_barriers"])
     graph.add_node("plan_matching", nodes["plan_matching"])
     graph.add_node("match_chunk", nodes["match_chunk"])
     graph.add_node("score_and_verdict", nodes["score_and_verdict"])
     graph.add_node("await_optimize", nodes["await_optimize"])
     graph.add_node("suggest", optimize["suggest"])
     graph.add_node("verify_batch", optimize["verify_batch"])
+    graph.add_node("gate_recency", optimize["gate_recency"])
+    graph.add_node("gate_barriers", optimize["gate_barriers"])
     graph.add_node("await_review", optimize["await_review"])
     graph.add_node("build_cv", build["build_cv"])
     graph.add_node("final_checks", build["final_checks"])
 
-    # Both branches take one step each, then join. The posting review starts once the job
-    # is extracted and runs alongside plan_matching.
+    # Both branches take one step each, then join. The posting review and the barrier screen
+    # start once the job is extracted and run alongside plan_matching.
     graph.add_edge(START, "prepare_cv")
     graph.add_edge(START, "prepare_job")
     graph.add_edge("prepare_job", "review_posting")
+    graph.add_edge("prepare_job", "screen_barriers")
     graph.add_edge(["prepare_cv", "prepare_job"], "plan_matching")
     graph.add_conditional_edges(
         "plan_matching", nodes["route_matching"], ["match_chunk", "score_and_verdict"]
@@ -43,12 +47,15 @@ def build_graph(llm: StructuredLLM, checkpointer=None, order_model=None):
     graph.add_edge("match_chunk", "score_and_verdict")
     graph.add_edge("score_and_verdict", "await_optimize")
 
-    # After the first pause: suggest, verify per CV section in parallel, then the review pause.
+    # After the first pause: suggest, verify per CV section in parallel, then the two gates
+    # (recency, barriers) on every suggestion, then the review pause.
     graph.add_edge("await_optimize", "suggest")
     graph.add_conditional_edges(
-        "suggest", optimize["route_verification"], ["verify_batch", "await_review"]
+        "suggest", optimize["route_verification"], ["verify_batch", "gate_recency"]
     )
-    graph.add_edge("verify_batch", "await_review")
+    graph.add_edge("verify_batch", "gate_recency")
+    graph.add_edge("gate_recency", "gate_barriers")
+    graph.add_edge("gate_barriers", "await_review")
     graph.add_edge("await_review", "build_cv")
     graph.add_edge("build_cv", "final_checks")
     graph.add_edge("final_checks", END)

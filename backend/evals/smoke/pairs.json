@@ -37,5 +37,16 @@
       ],
       "verdict_not": ["likely_screened_out"]
     }
+  },
+  {
+    "id": "hidden-risk",
+    "description": "Fictional Austin platform posting with a buried work-permit rule, a hybrid rule and a Kubernetes rule of 3+ years in the last 5. The CV is from Valencia, Spain, and its only Kubernetes evidence is from 2015-2017.",
+    "cv": "samples/hidden_risk/cv.txt",
+    "job": "samples/hidden_risk/job.txt",
+    "expect": {
+      "hidden_risks": [{"kind": "work_authorization", "risk": "high"}],
+      "recency": [{"contains": "Kubernetes", "effect": "downgraded"}],
+      "screening_flags": [{"contains": "Kubernetes"}]
+    }
   }
 ]

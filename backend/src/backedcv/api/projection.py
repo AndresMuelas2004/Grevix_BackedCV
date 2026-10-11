@@ -8,7 +8,8 @@ REVIEW_NODE = "await_review"  # the node that pauses for the user's decisions on
 REVIEW_STAGE = "review_ready"
 BUILT_STAGE = "built"  # the run reached its end
 _PAUSE_STAGES = {REPORT_NODE: REPORT_STAGE, REVIEW_NODE: REVIEW_STAGE}
-OPTIMIZE_STEP = frozenset({"suggest", "verify_batch"})  # the nodes an optimize can stop in
+# The nodes an optimize can stop in: the suggestions, their verification, then the two gates.
+OPTIMIZE_STEP = frozenset({"suggest", "verify_batch", "gate_recency", "gate_barriers"})
 BUILD_STEP = frozenset({"build_cv", "final_checks"})  # the nodes a build can stop in
 
 
@@ -79,6 +80,10 @@ def project(
         "assessments": values.get("assessments", {}),
         "score": values.get("score"),
         "verdict": values.get("verdict"),
+        "hidden_risks": values.get("hidden_risks") or [],
+        "screening_flags": values.get("screening_flags") or [],
+        "recency": values.get("recency") or {},
+        "refusals": values.get("refusals") or [],
         "suggestions": values.get("suggestions") or [],
         "decisions": values.get("decisions"),
         "document": values.get("document"),

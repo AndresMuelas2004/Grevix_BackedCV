@@ -15,7 +15,7 @@ router = APIRouter(tags=["analyses"])
 class InputsUpdate(BaseModel):
     """Omitted fields keep their current value; a list that is sent replaces the old list."""
 
-    facts: CandidateFacts | None = None  # answers: a fact left out keeps its old answer
+    facts: CandidateFacts | None = None  # answers: requirement or barrier IDs (H01...), yes or no
     excluded_ids: list[str] | None = None  # requirements the user marks as not relevant
     included_flagged_ids: list[str] | None = None  # flagged requirements to count again
 

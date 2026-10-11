@@ -7,6 +7,7 @@ from datetime import date
 from langgraph.config import get_stream_writer
 from langgraph.types import Send, interrupt
 
+from backedcv.domain.barriers import barriers_from_draft
 from backedcv.domain.builders import build_job, build_parsed_cv
 from backedcv.domain.keywords import keyword_hits
 from backedcv.domain.models import CVLine, JobPosting, ParsedCV, PostingBanner
@@ -20,6 +21,7 @@ from backedcv.graph.recompute import recompute
 from backedcv.graph.state import AnalysisState, MatchTask
 from backedcv.llm.drafts import CVStructureDraft, JobExtractionDraft, MatchChunkDraft
 from backedcv.llm.drafts_optimize import PostingReviewDraft
+from backedcv.llm.drafts_screening import HiddenBarriersDraft
 from backedcv.llm.prompt_loader import load_prompt
 from backedcv.llm.structured import StructuredLLM
 
@@ -83,6 +85,12 @@ def _review_banners(draft: PostingReviewDraft, job: JobPosting) -> list[PostingB
             )
         )
     return banners
+
+
+def _barrier_data(posting: str, job: JobPosting) -> str:
+    """The posting as written, then its requirement rows: barriers name the IDs they affect."""
+    rows = "\n".join(f"{req.id} | {req.quote}" for req in job.requirements)
+    return f"<job_posting>\n{posting}\n</job_posting>\n\n<requirements>\n{rows}\n</requirements>"
 
 
 def _requirements_quoting(job: JobPosting, texts: list[str]) -> list[str]:
@@ -159,6 +167,23 @@ def make_nodes(llm: StructuredLLM):
         banners = _review_banners(draft, job)
         return {"review_banners": [b.model_dump() for b in banners], "usage": [usage]}
 
+    async def screen_barriers(state: AnalysisState) -> dict:
+        # Same superstep as plan_matching, so score_and_verdict always reads the barriers.
+        # No progress event: the frontend shows a fixed list of steps.
+        posting = state["job_text"]
+        job = JobPosting.model_validate(state["job"])
+        try:
+            draft, usage = await llm.run(
+                load_prompt("hidden_barriers"),
+                _barrier_data(posting, job),
+                HiddenBarriersDraft,
+                node="screen_barriers",
+            )
+            items = barriers_from_draft(draft, posting, job)
+        except Exception as exc:  # the screen is optional: the rule barriers still stand
+            return {"barrier_items": [], "errors": [_error("screen_barriers", exc)]}
+        return {"barrier_items": [b.model_dump() for b in items], "usage": [usage]}
+
     async def plan_matching(state: AnalysisState) -> dict:
         _progress("match", "started")
         return {}
@@ -227,6 +252,7 @@ def make_nodes(llm: StructuredLLM):
         "prepare_cv": prepare_cv,
         "prepare_job": prepare_job,
         "review_posting": review_posting,
+        "screen_barriers": screen_barriers,
         "plan_matching": plan_matching,
         "route_matching": route_matching,
         "match_chunk": match_chunk,
