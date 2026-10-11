@@ -1,7 +1,9 @@
 import asyncio
+import json
 import sqlite3
 from contextlib import closing
 from dataclasses import replace
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
 
 import pytest
@@ -9,7 +11,7 @@ from langchain_core.messages import AIMessage
 from pydantic import BaseModel
 
 from backedcv.llm import structured
-from backedcv.llm.cache import answer_key
+from backedcv.llm.cache import LLMCache, answer_key
 from backedcv.llm.prompt_loader import Prompt
 from backedcv.llm.structured import LLMError, OpenAIStructuredLLM
 from backedcv.settings import Settings
@@ -220,3 +222,49 @@ def test_the_key_changes_with_each_part_of_the_call():
     assert _key() == base
     assert base not in variants
     assert len(variants) == 7
+
+
+def test_rows_created_before_the_cutoff_are_purged_and_fresh_rows_stay(tmp_path):
+    cache = LLMCache(_db(tmp_path))
+    cache.put("old", {"label": "supported", "score": 3}, 120, 30)
+    cache.put("fresh", {"label": "supported", "score": 3}, 120, 30)
+    now = datetime.now(UTC)
+    _execute(
+        tmp_path,
+        "UPDATE answers SET created_at = ? WHERE key = ?",
+        ((now - timedelta(hours=25)).timestamp(), "old"),
+    )
+
+    assert cache.purge_created_before(now - timedelta(hours=24)) == 1
+
+    assert cache.get("old") is None
+    assert cache.get("fresh") is not None
+    assert _stored_rows(tmp_path) == 1
+
+
+def test_a_cache_from_before_the_timestamp_is_migrated_and_its_rows_count_as_expired(tmp_path):
+    with closing(sqlite3.connect(_db(tmp_path))) as db, db:
+        db.execute(
+            "CREATE TABLE answers (key TEXT PRIMARY KEY, answer TEXT NOT NULL, "
+            "input_tokens INTEGER NOT NULL, output_tokens INTEGER NOT NULL)"
+        )
+        db.execute(
+            "INSERT INTO answers VALUES ('legacy', ?, 120, 30)",
+            (json.dumps({"label": "supported", "score": 3}),),
+        )
+    cache = LLMCache(_db(tmp_path))
+
+    assert cache.get("legacy") is None  # no creation time: never served
+    columns = {row[1] for row in _execute(tmp_path, "PRAGMA table_info(answers)")}
+    assert "created_at" in columns
+    assert _stored_rows(tmp_path) == 1  # the migration keeps the rows
+
+    cache.put("new", {"label": "supported", "score": 3}, 120, 30)
+    assert cache.purge_created_before(datetime(2000, 1, 1, tzinfo=UTC)) == 1  # the legacy row
+    assert cache.get("new") is not None
+    assert _stored_rows(tmp_path) == 1
+
+
+def test_purging_before_any_answer_is_stored_creates_no_file(tmp_path):
+    assert LLMCache(_db(tmp_path)).purge_created_before(datetime.now(UTC)) == 0
+    assert not _db(tmp_path).exists()

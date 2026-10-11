@@ -1,4 +1,5 @@
-"""Analyses expire after 24 hours: an hourly task deletes the older ones and their checkpoints."""
+"""Analyses and cached model answers expire after 24 hours: an hourly task deletes the old ones
+(and the checkpoints of the analyses)."""
 
 import asyncio
 import logging
@@ -12,6 +13,7 @@ from langgraph.checkpoint.base import BaseCheckpointSaver
 
 from backedcv.api.errors import ApiError
 from backedcv.api.locks import RunLocks
+from backedcv.llm.cache import LLMCache
 
 MAX_AGE = timedelta(hours=24)
 PURGE_EVERY = 3600  # seconds between two passes
@@ -64,14 +66,18 @@ async def purge_expired(
     locks: RunLocks,
     now: datetime,
     max_age: timedelta = MAX_AGE,
+    cache: LLMCache | None = None,
 ) -> list[str]:
-    """Deletes the analyses created more than `max_age` before `now`, with their checkpoints.
+    """Deletes the analyses created more than `max_age` before `now`, with their checkpoints, and
+    the cache rows created that long before it (rows with no creation time count as old).
 
     An analysis that is running is skipped and the next pass looks at it again. Returns the IDs
-    that were deleted. A failure on one analysis is logged and the others still go on.
+    that were deleted. A failure on one analysis is logged and the others still go on. A failure
+    on the cache raises, so the hourly pass logs it.
     """
+    cutoff = now - max_age
     purged: list[str] = []
-    for analysis_id in ledger.created_before(now - max_age):
+    for analysis_id in ledger.created_before(cutoff):
         try:
             locks.acquire(analysis_id)
         except ApiError:
@@ -84,6 +90,8 @@ async def purge_expired(
             log.exception("could not purge analysis %s", analysis_id)
             continue
         purged.append(analysis_id)
+    if cache is not None:
+        cache.purge_created_before(cutoff)
     return purged
 
 
@@ -93,11 +101,12 @@ async def purge_hourly(
     locks: RunLocks,
     clock: Callable[[], datetime] = utc_now,
     every: float = PURGE_EVERY,
+    cache: LLMCache | None = None,
 ) -> None:
     """One pass at once, then one every `every` seconds, until the task is cancelled."""
     while True:
         try:
-            await purge_expired(ledger, checkpointer, locks, now=clock())
+            await purge_expired(ledger, checkpointer, locks, now=clock(), cache=cache)
         except Exception:
-            log.exception("analysis purge failed; the next pass will try again")
+            log.exception("retention purge failed; the next pass will try again")
         await asyncio.sleep(every)

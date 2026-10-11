@@ -26,6 +26,7 @@ from backedcv.api.routes import (
     samples,
 )
 from backedcv.graph.builder import build_graph
+from backedcv.llm.cache import LLMCache
 from backedcv.llm.structured import OpenAIStructuredLLM, StructuredLLM
 from backedcv.settings import get_settings
 
@@ -55,14 +56,17 @@ def create_app(llm: StructuredLLM | None = None, checkpointer=None) -> FastAPI:
                     AsyncSqliteSaver.from_conn_string(str(settings.data_dir / "checkpoints.sqlite"))
                 )
                 ledger_path = settings.data_dir / "analyses.sqlite"
+                llm_cache = LLMCache(settings.data_dir / "llm_cache.sqlite")
             else:
-                saver, ledger_path = checkpointer, ":memory:"
+                saver, ledger_path, llm_cache = checkpointer, ":memory:", None
             app.state.checkpointer = saver
             app.state.graph = build_graph(model, checkpointer=saver, order_model=order_model)
             app.state.ledger = AnalysisLedger(ledger_path)
             stack.callback(app.state.ledger.close)
             app.state.purge_task = asyncio.create_task(
-                purge_hourly(app.state.ledger, saver, app.state.locks, clock=utc_now)
+                purge_hourly(
+                    app.state.ledger, saver, app.state.locks, clock=utc_now, cache=llm_cache
+                )
             )
             stack.push_async_callback(_stop, app.state.purge_task)
             yield

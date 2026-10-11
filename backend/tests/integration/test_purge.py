@@ -1,5 +1,8 @@
 import asyncio
 import json
+import sqlite3
+import time
+from contextlib import closing
 from datetime import UTC, datetime, timedelta
 
 import pytest
@@ -7,7 +10,9 @@ from fastapi.testclient import TestClient
 from langgraph.checkpoint.memory import InMemorySaver
 
 from backedcv.api.retention import purge_expired, purge_hourly
+from backedcv.llm.cache import LLMCache
 from backedcv.main import create_app
+from backedcv.settings import get_settings
 from tests.fakes import CV_TEXT, JOB_TEXT, FakeLLM
 
 
@@ -27,10 +32,12 @@ def _in_hours(hours: float) -> datetime:
     return datetime.now(UTC) + timedelta(hours=hours)
 
 
-def _purge(client, now: datetime) -> list[str]:
+def _purge(client, now: datetime, cache: LLMCache | None = None) -> list[str]:
     app = client.app
     return asyncio.run(
-        purge_expired(app.state.ledger, app.state.checkpointer, app.state.locks, now=now)
+        purge_expired(
+            app.state.ledger, app.state.checkpointer, app.state.locks, now=now, cache=cache
+        )
     )
 
 
@@ -93,3 +100,39 @@ def test_the_purge_task_stops_with_the_app():
         assert not task.done()
 
     assert task.done()
+
+
+def test_llm_cache_rows_follow_the_same_day_limit(client, tmp_path):
+    cache = LLMCache(tmp_path / "llm_cache.sqlite")
+    cache.put("answer", {"label": "supported", "score": 3}, 120, 30)
+
+    _purge(client, _in_hours(23), cache)
+    assert cache.get("answer") is not None
+
+    _purge(client, _in_hours(25), cache)
+    assert cache.get("answer") is None
+
+
+def test_the_app_purges_the_llm_cache_file_in_its_data_dir(monkeypatch, tmp_path):
+    monkeypatch.setenv("BACKEDCV_DATA_DIR", str(tmp_path))
+    get_settings.cache_clear()
+    cache = LLMCache(tmp_path / "llm_cache.sqlite")
+    cache.put("old", {"label": "supported", "score": 3}, 120, 30)
+    cache.put("fresh", {"label": "supported", "score": 3}, 120, 30)
+    with closing(sqlite3.connect(tmp_path / "llm_cache.sqlite")) as db, db:
+        db.execute(
+            "UPDATE answers SET created_at = ? WHERE key = 'old'",
+            ((datetime.now(UTC) - timedelta(hours=25)).timestamp(),),
+        )
+
+    try:
+        with TestClient(create_app(llm=FakeLLM())):
+            for _ in range(500):  # the first pass runs at startup; this only waits for it
+                if cache.get("old") is None:
+                    break
+                time.sleep(0.01)
+    finally:
+        get_settings.cache_clear()
+
+    assert cache.get("old") is None
+    assert cache.get("fresh") is not None

@@ -1,5 +1,6 @@
 """A SQLite cache of model answers: the same call with the same input gets the stored answer back,
-at no cost. The key covers everything that decides the answer (see `answer_key`)."""
+at no cost. The key covers everything that decides the answer (see `answer_key`). Each row keeps
+its creation time, so the hourly purge in `api/retention.py` can delete the old ones."""
 
 import hashlib
 import json
@@ -7,6 +8,7 @@ import logging
 import sqlite3
 from collections.abc import Iterator
 from contextlib import contextmanager
+from datetime import UTC, datetime
 from pathlib import Path
 
 from pydantic import BaseModel
@@ -40,11 +42,13 @@ class LLMCache:
         self.path = path
 
     def get(self, key: str) -> tuple[dict, int, int] | None:
-        """The stored answer with its token counts, or None on a miss or an unreadable row."""
+        """The stored answer with its token counts, or None on a miss or an unreadable row. A row
+        with no creation time counts as expired and is never returned."""
         try:
             with self._connect() as db:
                 row = db.execute(
-                    "SELECT answer, input_tokens, output_tokens FROM answers WHERE key = ?",
+                    "SELECT answer, input_tokens, output_tokens FROM answers "
+                    "WHERE key = ? AND created_at IS NOT NULL",
                     (key,),
                 ).fetchone()
         except (OSError, sqlite3.Error) as exc:
@@ -63,20 +67,42 @@ class LLMCache:
         return None
 
     def put(self, key: str, answer: dict, input_tokens: int, output_tokens: int) -> None:
-        """Stores a successful answer. If the write fails, the next identical call asks again."""
+        """Stores a successful answer, timestamped now. If the write fails, the next identical call
+        asks again."""
+        stored_at = datetime.now(UTC).timestamp()
         try:
             with self._connect() as db:
                 db.execute(
-                    "INSERT OR REPLACE INTO answers (key, answer, input_tokens, output_tokens) "
-                    "VALUES (?, ?, ?, ?)",
-                    (key, json.dumps(answer, ensure_ascii=False), input_tokens, output_tokens),
+                    "INSERT OR REPLACE INTO answers "
+                    "(key, answer, input_tokens, output_tokens, created_at) VALUES (?, ?, ?, ?, ?)",
+                    (
+                        key,
+                        json.dumps(answer, ensure_ascii=False),
+                        input_tokens,
+                        output_tokens,
+                        stored_at,
+                    ),
                 )
         except (OSError, sqlite3.Error) as exc:
             log.warning("LLM cache write failed: %s", exc)
 
+    def purge_created_before(self, cutoff: datetime) -> int:
+        """Deletes the rows created before `cutoff`, and the rows with no creation time (their age
+        is unknown, so they count as expired). Returns how many rows were deleted. Unlike get and
+        put, this raises when the file cannot be read, so the caller logs it. It creates no file."""
+        if not self.path.exists():
+            return 0
+        with self._connect() as db:
+            deleted = db.execute(
+                "DELETE FROM answers WHERE created_at IS NULL OR created_at < ?",
+                (cutoff.timestamp(),),
+            ).rowcount
+        return deleted
+
     @contextmanager
     def _connect(self) -> Iterator[sqlite3.Connection]:
-        """Opens the file, creating it with its table on first use, and closes it again."""
+        """Opens the file, creating it with its table on first use, and closes it again. A table
+        from before the `created_at` column gets the column; its old rows keep no creation time."""
         self.path.parent.mkdir(parents=True, exist_ok=True)
         db = sqlite3.connect(self.path)
         try:
@@ -84,8 +110,12 @@ class LLMCache:
                 db.execute(
                     "CREATE TABLE IF NOT EXISTS answers ("
                     "key TEXT PRIMARY KEY, answer TEXT NOT NULL, "
-                    "input_tokens INTEGER NOT NULL, output_tokens INTEGER NOT NULL)"
+                    "input_tokens INTEGER NOT NULL, output_tokens INTEGER NOT NULL, "
+                    "created_at REAL)"
                 )
+                columns = {row[1] for row in db.execute("PRAGMA table_info(answers)")}
+                if "created_at" not in columns:
+                    db.execute("ALTER TABLE answers ADD COLUMN created_at REAL")
                 yield db
         finally:
             db.close()
