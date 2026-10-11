@@ -166,10 +166,12 @@ uv run pytest
 - python-docx
 - lxml
 - Typst
+- SQLite
 - React 19
 - TypeScript
 - Vite
 - Docker
+- Render (live demo)
 - uv
 - ruff
 - pytest
