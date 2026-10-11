@@ -6,9 +6,11 @@ import type {
   InputsUpdate,
   JobPosting,
   PostingBanner,
+  RecencyCheck,
   Requirement,
   RequirementAssessment,
   RequirementFlag,
+  ScreeningFlag,
   Status,
 } from '../api/types'
 import { describeError } from '../lib/errors'
@@ -41,6 +43,9 @@ interface RequirementListProps {
   assessments: Record<string, RequirementAssessment>
   banners: PostingBanner[]
   flags: RequirementFlag[]
+  // Card 1: requirements that look met but may still be rejected, and when the CV last used them.
+  screeningFlags: ScreeningFlag[]
+  recency: Record<string, RecencyCheck>
   contributions: Contribution[]
   selectedId: string | null
   onSelect: (requirementId: string | null) => void
@@ -53,6 +58,8 @@ export default function RequirementList({
   assessments,
   banners,
   flags,
+  screeningFlags,
+  recency,
   contributions,
   selectedId,
   onSelect,
@@ -125,6 +132,8 @@ export default function RequirementList({
         <ol className="req-list">
           {job.requirements.map((req) => {
             const rowFlags = flags.filter((flag) => flag.requirement_ids.includes(req.id))
+            const screening = screeningFlags.find((flag) => flag.requirement_id === req.id)
+            const recencyCheck = recency[req.id] as RecencyCheck | undefined
             const toggles: RowToggles | undefined = inputs
               ? {
                   notRelevant: inputs.excludedIds.includes(req.id),
@@ -141,6 +150,8 @@ export default function RequirementList({
                 requirement={req}
                 assessment={assessments[req.id] as RequirementAssessment | undefined}
                 flags={rowFlags}
+                screening={screening}
+                recency={recencyCheck}
                 contribution={contributionById.get(req.id)}
                 selected={selectedId === req.id}
                 onSelect={() => onSelect(selectedId === req.id ? null : req.id)}
@@ -166,6 +177,8 @@ interface RequirementRowProps {
   requirement: Requirement
   assessment: RequirementAssessment | undefined
   flags: RequirementFlag[]
+  screening: ScreeningFlag | undefined
+  recency: RecencyCheck | undefined
   contribution: Contribution | undefined
   selected: boolean
   onSelect: () => void
@@ -176,6 +189,8 @@ function RequirementRow({
   requirement,
   assessment,
   flags,
+  screening,
+  recency,
   contribution,
   selected,
   onSelect,
@@ -196,6 +211,7 @@ function RequirementRow({
       >
         <span className="req-label">{requirement.label}</span>
         <span className={`chip chip-${status}`}>{STATUS_LABELS[status]}</span>
+        {screening && <span className="chip chip-screening">Looks met, but...</span>}
       </button>
 
       <div className="req-details">
@@ -247,7 +263,20 @@ function RequirementRow({
           </div>
         ))}
 
-        {assessment?.rationale && (
+        {screening && screening.reasons.length > 0 && (
+          <div className="req-flag">
+            <p className="req-flag-title">Why it may still be screened out</p>
+            <ul className="req-flag-list">
+              {screening.reasons.map((reason, index) => (
+                <li key={`${index}-${reason}`}>{reason}</li>
+              ))}
+            </ul>
+          </div>
+        )}
+
+        {recency && <RecencyNote check={recency} />}
+
+        {assessment?.rationale && !repeatsNote(assessment.rationale, screening, recency) && (
           <p className="req-rationale">
             <CitedText text={assessment.rationale} />
           </p>
@@ -279,6 +308,39 @@ function RequirementRow({
       </div>
     </li>
   )
+}
+
+// "Last used 2017 (stale)". A requirement the posting's window downgraded also names that window.
+function RecencyNote({ check }: { check: RecencyCheck }) {
+  const year = check.last_used?.slice(0, 4)
+  const warn = check.effect !== 'none'
+  const windowYears = check.effect === 'downgraded' ? check.rule?.window_years : undefined
+  return (
+    <div className="req-recency">
+      <p className={warn ? 'req-recency-line is-warn' : 'req-recency-line'}>
+        {year ? `Last used ${year} (${check.band})` : `No dated entry shows it (${check.band})`}
+      </p>
+      {windowYears !== undefined && (
+        <p className="req-recency-line is-warn">{`Outside the posting's ${windowYears}-year window.`}</p>
+      )}
+    </div>
+  )
+}
+
+// True when the rationale repeats a reason in the screening box, or the recency explanation.
+function repeatsNote(
+  rationale: string,
+  screening: ScreeningFlag | undefined,
+  recency: RecencyCheck | undefined,
+): boolean {
+  const text = plainText(rationale)
+  if (screening?.reasons.some((reason) => plainText(reason) === text)) return true
+  return recency !== undefined && plainText(recency.explanation) === text
+}
+
+// The text with its spaces tidied, so the same sentence compares equal wherever it came from.
+function plainText(text: string): string {
+  return text.trim().replace(/\s+/g, ' ')
 }
 
 // The points this requirement won out of its maximum, or that it is not counted.

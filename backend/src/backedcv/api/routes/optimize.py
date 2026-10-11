@@ -24,10 +24,20 @@ from backedcv.api.projection import (
 )
 from backedcv.api.rate_limit import count_model_run
 from backedcv.api.runs import Run, emit_progress, stream_graph
+from backedcv.domain.corroboration import (
+    apply_pass,
+    backed_pass,
+    barrier_pass,
+    recency_pass,
+    refusals_from,
+)
 from backedcv.domain.guards import apply_guards
 from backedcv.domain.models import JobPosting, ParsedCV, ReviewDecisions, Suggestion, Verification
+from backedcv.domain.recency import line_last_used
 from backedcv.graph.builder import run_config
 from backedcv.graph.optimize_nodes import make_optimize_nodes
+from backedcv.graph.recompute import recency_of, risks_of, today_of
+from backedcv.graph.state import merge_items_by_id
 from backedcv.llm.structured import StructuredLLM
 
 router = APIRouter(tags=["analyses"])
@@ -137,7 +147,8 @@ async def build(run: Annotated[Run, Depends(start_build)]) -> AsyncIterable[Serv
 async def verify_suggestion(
     request: Request, analysis_id: str, suggestion_id: str, edit: SuggestionEdit
 ) -> dict:
-    """Checks an edited suggestion again: the guards first, then the verifier if they pass."""
+    """Checks an edited suggestion again: the guards, then the verifier if they pass, then the
+    corroboration gate."""
     graph, locks = request.app.state.graph, request.app.state.locks
     config = run_config(analysis_id)
     locks.acquire(analysis_id)
@@ -149,8 +160,8 @@ async def verify_suggestion(
         row = _find_suggestion(snapshot.values, suggestion_id)
         count_model_run(request)
         update = await _check_edit(request.app.state.llm, snapshot.values, row, edit.after)
-        # Written as if the verifier had just run, so the run still waits at the review.
-        await graph.aupdate_state(config, update, as_node="verify_batch")
+        # Written as if the gate had just run, so the run still waits at the review.
+        await graph.aupdate_state(config, update, as_node="gate_barriers")
     return project(analysis_id, await graph.aget_state(config))
 
 
@@ -211,9 +222,9 @@ async def _suggest_again(
     run: Run, llm: StructuredLLM, graph: Any, config: dict, values: dict
 ) -> None:
     """Runs the suggest step here, because the graph cannot run a step again from the review. Then
-    each verification group runs as the graph would run it. The result is written as if verify_batch
-    had just run, so the run still waits at the review. The `resolves` entry supersedes the error of
-    the failed step."""
+    each verification group runs as the graph would run it, and the gate runs on the result. The
+    result is written as if gate_barriers had just run, so the run still waits at the review. The
+    `resolves` entry supersedes the error of the failed step."""
     nodes = make_optimize_nodes(llm)
     emit_progress(run, "suggest", "started")
     found = await nodes["suggest"](values)
@@ -234,22 +245,52 @@ async def _suggest_again(
             errors += result.get("errors", [])
         suggestions = list(checked.values())
 
-    await graph.aupdate_state(
-        config,
-        {"suggestions": suggestions, "usage": usage, "errors": [{"resolves": "suggest"}, *errors]},
-        as_node="verify_batch",
-    )
+    update = {
+        "suggestions": suggestions,
+        "usage": usage,
+        "errors": [{"resolves": "suggest"}, *errors],
+    }
+    gated = _corroborate(values, update)
+    await graph.aupdate_state(config, gated, as_node="gate_barriers")
 
 
 async def _check_edit(llm: StructuredLLM, values: dict, row: dict, after: str) -> dict:
-    """The state update for one edited suggestion: guards first, then a new verification."""
+    """The state update for one edited suggestion: guards first, then a new verification, then the
+    corroboration gate."""
     cv = ParsedCV.model_validate(values["cv"])
     job = JobPosting.model_validate(values["job"])
     edited = Suggestion.model_validate(row).model_copy(
         update={"after": after, "edited_by_user": True, "verification": Verification()}
     )
     checked = apply_guards(edited, cv, job)
-    if checked.verification.status != "pending":  # a hard guard failed: the model is not asked
-        return {"suggestions": [checked.model_dump()]}
-    verify_batch = make_optimize_nodes(llm)["verify_batch"]
-    return await verify_batch({"cv": values["cv"], "group": [checked.model_dump()]})
+    if checked.verification.status == "pending":
+        verify_batch = make_optimize_nodes(llm)["verify_batch"]
+        update = await verify_batch({"cv": values["cv"], "group": [checked.model_dump()]})
+    else:  # a hard guard failed: the model is not asked
+        update = {"suggestions": [checked.model_dump()]}
+    return _corroborate(values, update)
+
+
+def _corroborate(values: dict, update: dict) -> dict:
+    """Runs the corroboration gate on the suggestions of an update, as the graph does after the
+    verifier: the backed, recency and barrier passes. A verified suggestion that fails a pass is
+    refused. Only the suggestions of the update get passes, so none is checked twice. The refusals
+    of the suggestions are rebuilt; the refusals of requirements do not depend on a suggestion."""
+    cv = ParsedCV.model_validate(values["cv"])
+    today = today_of(values)
+    last_used = line_last_used(cv, today)
+    recency, risks = recency_of(values), risks_of(values)
+    gated = []
+    for row in update["suggestions"]:
+        s = Suggestion.model_validate(row)
+        s = apply_pass(s, backed_pass(s))
+        s = apply_pass(s, recency_pass(s, recency, last_used, today))
+        gated.append(apply_pass(s, barrier_pass(s, risks)))
+    rows = [s.model_dump() for s in gated]
+    everything = [
+        Suggestion.model_validate(r) for r in merge_items_by_id(values.get("suggestions"), rows)
+    ]
+    refused = refusals_from(everything)
+    kept = [r for r in values.get("refusals") or [] if r.get("suggestion_id") is None]
+    refusals = [*kept, *(r.model_dump() for r in refused)]
+    return {**update, "suggestions": rows, "refusals": refusals}

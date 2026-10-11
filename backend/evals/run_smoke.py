@@ -16,7 +16,14 @@ from typing import Any, get_args
 
 from backedcv.api.projection import REPORT_STAGE, project
 from backedcv.api.routes.analyses import JOB_MAX_CHARS, JOB_MIN_CHARS
-from backedcv.domain.models import CandidateFacts, Importance, KnockoutType, Status
+from backedcv.domain.models import (
+    BarrierKind,
+    CandidateFacts,
+    Importance,
+    KnockoutType,
+    RiskLevel,
+    Status,
+)
 from backedcv.domain.models.score import VerdictLabel
 from backedcv.domain.text import fold_lower
 from backedcv.graph.builder import build_graph, run_config
@@ -29,7 +36,16 @@ PAIRS_PATH = EVALS_DIR / "smoke" / "pairs.json"
 RESULTS_DIR = EVALS_DIR / "results"
 LANGSMITH_DATASET = "backedcv-smoke"
 BINARY_SUFFIXES = (".pdf", ".docx")  # read like uploads; any other file is read as pasted text
-EXPECT_KEYS = {"requirements", "flags", "banners", "parse_warnings", "verdict_not"}
+EXPECT_KEYS = {
+    "requirements",
+    "flags",
+    "banners",
+    "parse_warnings",
+    "verdict_not",
+    "hidden_risks",
+    "recency",
+    "screening_flags",
+}
 SELECTOR_KEYS = {"contains", "importance", "knockout_type", "status", "screening_question"}
 SELECTOR_VALUES = {
     "importance": get_args(Importance),
@@ -40,6 +56,8 @@ FLAG_KEYS = {"rule", "contains"}
 FLAG_RULES = ("R1", "R2")
 BANNER_RULES = ("R3", "R4")
 VERDICT_LABELS = get_args(VerdictLabel)
+HIDDEN_RISK_VALUES = {"kind": get_args(BarrierKind), "risk": get_args(RiskLevel)}
+RECENCY_EFFECTS = ("none", "warning", "downgraded")
 ANALYSIS_HEADER = (
     "Pair",
     "Verdict",
@@ -142,6 +160,20 @@ def validate_expect(expect: dict[str, Any]) -> None:
     for label in expect.get("verdict_not", []):
         if label not in VERDICT_LABELS:
             raise ValueError(f"verdict must be one of {VERDICT_LABELS}, got {label!r}")
+    for risk in expect.get("hidden_risks", []):
+        if not risk or set(risk) - set(HIDDEN_RISK_VALUES):
+            raise ValueError(f"bad hidden risk {risk}: use the keys kind and risk")
+        for key, allowed in HIDDEN_RISK_VALUES.items():
+            if key in risk and risk[key] not in allowed:
+                raise ValueError(f"{key} must be one of {allowed}, got {risk[key]!r}")
+    for recency in expect.get("recency", []):
+        if set(recency) != {"contains", "effect"}:
+            raise ValueError(f"bad recency {recency}: use the keys contains and effect")
+        if recency["effect"] not in RECENCY_EFFECTS:
+            raise ValueError(f"effect must be one of {RECENCY_EFFECTS}, got {recency['effect']!r}")
+    for flag in expect.get("screening_flags", []):
+        if set(flag) != {"contains"}:
+            raise ValueError(f"bad screening flag {flag}: use the key contains")
 
 
 def is_inline(value: str) -> bool:
@@ -199,6 +231,11 @@ def check_expectations(expect: dict[str, Any], projection: dict) -> list[Check]:
     checks += [_banner_check(rule, projection) for rule in expect.get("banners", [])]
     checks += [_warning_check(code, projection) for code in expect.get("parse_warnings", [])]
     checks += [_verdict_check(label, projection) for label in expect.get("verdict_not", [])]
+    checks += [_hidden_risk_check(risk, projection) for risk in expect.get("hidden_risks", [])]
+    checks += [_recency_check(recency, projection) for recency in expect.get("recency", [])]
+    checks += [
+        _screening_flag_check(flag, projection) for flag in expect.get("screening_flags", [])
+    ]
     return checks
 
 
@@ -303,6 +340,48 @@ def _verdict_check(label: str, projection: dict) -> Check:
     if actual is None:
         return Check(name, False, "the report has no verdict")
     return Check(name, actual != label, f"verdict is {actual}")
+
+
+def _named(phrase: str, projection: dict) -> list[dict]:
+    """The requirements whose label, quote or terms contain the phrase."""
+    return [r for r in _requirements(projection) if fold_lower(phrase) in _text(r)]
+
+
+def _hidden_risk_check(expect: dict, projection: dict) -> Check:
+    name = f"hidden risk {_describe(expect)}"
+    risks = projection.get("hidden_risks") or []
+    hit = next((r for r in risks if all(r.get(k) == v for k, v in expect.items())), None)
+    if hit:
+        return Check(name, True, f"{hit['id']} shown")
+    found = ", ".join(sorted({f"{r['kind']} at {r['risk']}" for r in risks})) or "none"
+    return Check(name, False, f"no such risk (risks: {found})")
+
+
+def _recency_check(expect: dict, projection: dict) -> Check:
+    name = f"recency {_describe(expect)}"
+    recency = projection.get("recency") or {}
+    named = _named(expect["contains"], projection)
+    if not named:
+        return Check(name, False, f"no requirement contains {expect['contains']!r}")
+    effects = {r["id"]: (recency.get(r["id"]) or {}).get("effect") for r in named}
+    if expect["effect"] in effects.values():
+        hit = next(rid for rid, effect in effects.items() if effect == expect["effect"])
+        return Check(name, True, f"{hit} effect is {expect['effect']}")
+    found = ", ".join(f"{rid} {effect or 'unchecked'}" for rid, effect in effects.items())
+    return Check(name, False, f"no matching requirement has effect {expect['effect']} ({found})")
+
+
+def _screening_flag_check(expect: dict, projection: dict) -> Check:
+    name = f"screening flag {_describe(expect)}"
+    flags = projection.get("screening_flags") or []
+    named = _named(expect["contains"], projection)
+    if not named:
+        return Check(name, False, f"no requirement contains {expect['contains']!r}")
+    flagged = {f["requirement_id"] for f in flags}
+    hits = [r["id"] for r in named if r["id"] in flagged]
+    if hits:
+        return Check(name, True, f"flagged: {', '.join(hits)}")
+    return Check(name, False, f"not flagged (flags: {_ids(flags, 'requirement_id')})")
 
 
 def _ids(items: list[dict] | None, key: str) -> str:

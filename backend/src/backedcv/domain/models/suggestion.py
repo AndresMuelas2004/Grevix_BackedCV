@@ -4,8 +4,11 @@ from typing import Literal
 
 from pydantic import BaseModel, Field
 
+from backedcv.domain.models.screening import GatePass
+
 SuggestionKind = Literal["align_wording", "add_skill", "tailor_summary"]
-VerificationStatus = Literal["pending", "verified", "unsupported"]
+# "refused": backed by the CV, but not viable (old evidence or a hidden barrier); never accepted.
+VerificationStatus = Literal["pending", "verified", "unsupported", "refused"]
 
 
 class ClaimCheck(BaseModel):
@@ -30,6 +33,7 @@ class Verification(BaseModel):
     status: VerificationStatus = "pending"
     claims: list[ClaimCheck] = Field(default_factory=list)
     guards: list[GuardResult] = Field(default_factory=list)
+    passes: list[GatePass] = Field(default_factory=list)  # the corroboration gate, in order
     reason: str | None = None  # first failing reason, shown to the user
 
 

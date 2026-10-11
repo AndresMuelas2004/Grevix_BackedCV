@@ -1,0 +1,28 @@
+/* Refused edits look like the unsupported ones: greyed, with a dashed border. They have no decision
+   controls, so the cards are read-only. */
+.refused-list {
+  display: grid;
+  gap: 0.75rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.refused-list .refused-card {
+  display: grid;
+  align-content: start;
+  gap: 0.75rem;
+  padding: 1rem 1.1rem;
+  background: #f1f2f4;
+  border-style: dashed;
+  box-shadow: none;
+  overflow-wrap: anywhere;
+}
+
+.refused-list .refused-card h4 {
+  font-size: 1rem;
+}
+
+.refused-list .refused-card > p {
+  font-size: 0.9375rem;
+}

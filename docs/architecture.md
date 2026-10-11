@@ -4,12 +4,12 @@ BackedCV checks a CV against a job posting. The backend is a FastAPI app in `bac
 
 ## 1. Overview and data flow
 
-upload -> read -> analyze -> report pause -> suggest -> verify -> review pause -> build -> download
+upload -> read -> analyze -> report pause -> suggest -> verify -> gate -> review pause -> build -> download
 
 1. **Upload.** `POST /api/analyses` takes the posting text and the CV (PDF, DOCX or pasted text).
 2. **Read.** The CV becomes numbered lines (`L001`, `L002`, ...). PDFs are read with pdfplumber, in reading order: a two-column page is read as its header, then its left column, then its right column (`ingestion/columns.py`). In each column, a line that runs nearly to the right edge is joined with the next line when that line sits just below it, at the same font size and indent (for a bullet, the indent of its text), unless the line ends a sentence and the next one starts with a capital (`ingestion/lines.py`). So a wrapped bullet or paragraph becomes one line. Headings, dates and contact lines always stand alone, and bullet glyphs are removed. Pasted text is split on its line breaks only. DOCX is walked as XML with lxml, one line per paragraph or line break. Limits: CV up to 4 MB, 6 PDF pages and 30,000 characters; posting 150 to 20,000 characters.
-3. **Analyze.** The graph extracts requirements, matches them to CV lines, then scores and gives a verdict. It stops at pause 1 (`report_ready`). While paused, `PATCH /api/analyses/{id}/inputs` changes answers and exclusions and recomputes the score, with no model call.
-4. **Suggest and verify.** `POST .../optimize` resumes the run. The graph proposes CV rewrites and verifies each one. It stops at pause 2 (`review_ready`) for accept or reject decisions.
+3. **Analyze.** The graph extracts requirements and hidden barriers, matches the requirements to CV lines, then scores and gives a verdict. It stops at pause 1 (`report_ready`). While paused, `PATCH /api/analyses/{id}/inputs` changes answers and exclusions and recomputes the score, with no model call.
+4. **Suggest and verify.** `POST .../optimize` resumes the run. The graph proposes CV rewrites, verifies each one and runs the corroboration gate (section 4). It stops at pause 2 (`review_ready`) for accept or reject decisions.
 5. **Build.** `POST .../build` sends the decisions. Accepted, verified rewrites are applied in code. An order agent may reorder sections and items. Final checks render a PDF and read it back.
 6. **Download.** `GET .../cv.docx` and `GET .../cv.pdf` render the built CV on request. They return 409 until the CV is built.
 
@@ -22,17 +22,21 @@ flowchart TD
     start_node((START)) --> prepare_cv
     start_node --> prepare_job
     prepare_job --> review_posting
+    prepare_job --> screen_barriers
     prepare_cv --> plan_matching
     prepare_job --> plan_matching
     plan_matching -->|one per 8 requirements| match_chunk
     plan_matching -->|no requirements| score_and_verdict
     match_chunk --> score_and_verdict
     review_posting -.->|R4 banners via state| score_and_verdict
+    screen_barriers -.->|barrier items via state| score_and_verdict
     score_and_verdict --> await_optimize
     await_optimize --> suggest
     suggest -->|one per CV section| verify_batch
-    suggest -->|nothing pending| await_review
-    verify_batch --> await_review
+    suggest -->|nothing pending| gate_recency
+    verify_batch --> gate_recency
+    gate_recency --> gate_barriers
+    gate_barriers --> await_review
     await_review --> build_cv
     build_cv --> final_checks
     final_checks --> end_node((END))
@@ -43,12 +47,15 @@ flowchart TD
 - `prepare_cv`: `structure_cv` call (optional). Builds the parsed CV and the total-experience fact (`F01`). Runs parse checks and recruiter tips.
 - `prepare_job`: `extract_job` call. Locates quotes, sets the R1 and R2 flags and the R3 banner. Retry policy: 2 attempts.
 - `review_posting`: `review_posting` call (optional, never scored). Its R4 banners reach `score_and_verdict` through state, not an edge.
+- `screen_barriers`: `hidden_barriers` call (optional, never scored). Runs after `prepare_job`, beside `review_posting`. Its items reach `score_and_verdict` through state, not an edge. LangGraph waits for every node of a step, so the call ends before scoring.
 - `plan_matching`: waits for `prepare_cv` and `prepare_job`, then routes.
 - `match_chunk`: one `match_requirements` call per chunk of 8 requirements, in parallel. A failed chunk falls back to literal matching.
-- `score_and_verdict`: `recompute`. Assessments, score, verdict and badges.
+- `score_and_verdict`: `recompute`. Assessments with answers and recency applied, hidden risks, screening flags, score, verdict and badges.
 - `await_optimize`: **pause 1**. `interrupt({"stage": "report_ready"})`.
-- `suggest`: `suggest` call for requirements that are met but lack the posting's exact terms. Runs the deterministic guards on each rewrite.
+- `suggest`: `suggest` call for requirements that are met but lack the posting's exact terms. Runs the deterministic guards on each rewrite. Skips requirements that are not viable (section 4).
 - `verify_batch`: `verify` call for one CV section's pending rewrites. One per section, in parallel.
+- `gate_recency`: pass 2 of the corroboration gate (section 4), in code, no model call. Records passes 1 and 2 on each suggestion. Runs after the `verify_batch` calls, or straight after `suggest` when nothing is pending.
+- `gate_barriers`: pass 3 of the corroboration gate (not blocked), in code. Writes `refusals`: the requirements that are not viable, and the refused suggestions.
 - `await_review`: **pause 2**. `interrupt({"stage": "review_ready"})`. The resume value is the user's accepted and rejected IDs.
 - `build_cv`: applies accepted, verified rewrites in code. Then the order agent, or the standard section order.
 - `final_checks`: renders the PDF, reads it back, validates the document, compares keyword coverage before and after the build, and records fit. Writes `build_report`.
@@ -62,6 +69,7 @@ Max concurrency is 4 (`run_config`).
 | `structure_cv` (fast) | `prepare_cv` | `CVStructureDraft`: section and entry line ranges, name and location line IDs | Numbered CV lines | Builds sections, entries and contact. Dates are parsed by code. If the call fails, matching still works on the lines. |
 | `extract_job` (fast, v2) | `prepare_job` | `JobExtractionDraft`: posting meta and requirements (quote, label, terms, category, importance, knockout type, minimum years, aliases) | The posting text | Locates each quote in the posting. Drops requirements whose quote is not found, unless they are knockouts or gates. Keeps only terms found in the quote, at most 3 terms and 3 aliases. |
 | `review_posting` (fast) | `review_posting` | `PostingReviewDraft`: contradictions (quotes, explanation) and doubtful credentials (name, explanation) | Posting meta fields and `R03 \| sentence` rows | Each finding with a quote or a name becomes an R4 banner. If the call fails, there are no R4 banners. |
+| `hidden_barriers` (fast) | `screen_barriers` | `HiddenBarriersDraft`: up to 8 items, each with kind, quote, explicit, place, window in years, requirement IDs, explanation, action and question | The posting as written, and one row per requirement (ID and quote) | Locates each quote in the posting and drops items whose quote is not found. Keeps known requirement IDs, and window years only for recency (1 to 20). Merged with the code-pattern barriers (`domain/barriers.py`) in `recompute`. If the call fails, there are no model barriers. |
 | `match_requirements` (fast) | `match_chunk` | `MatchChunkDraft`: per requirement, a status (met, partial, missing, unknown), cited IDs, match type, rationale | 8 requirements (label, importance, category, quote, exact hits) and the numbered CV with facts | Keeps only cited IDs that exist and fills quotes from the CV. Applies the evidence rules. |
 | `suggest` (strong) | `suggest` | `SuggestionsDraft`: at most 8 rewrites (kind, target, new text, cited IDs, requirement IDs, rationale) | CV lines, facts, and the requirements that are met but lack exact terms | Maps targets to section IDs and runs the guards (section 4). If the call fails, no rewrites. |
 | `verify` (strong, v2) | `verify_batch` | `VerificationBatchDraft`: per rewrite, its claims with supporting IDs, a verdict per new term, an `uncertain` flag | The full CV with facts, and one section's pending rewrites (cited IDs, new terms, new text) | Sets verified or unsupported (section 4). If the call fails, all unsupported. |
@@ -70,6 +78,7 @@ Max concurrency is 4 (`run_config`).
 - Tiers map to `BACKEDCV_MODEL_FAST` (default `gpt-6-luna`) and `BACKEDCV_MODEL_STRONG` (default `gpt-6.1-sol`). The order agent uses the fast model.
 - Structured calls use a strict JSON schema through the OpenAI Responses API, with `store=False`. One repair attempt follows an invalid answer.
 - `prepare_job` has no fallback. If its call fails, the analysis fails with an SSE `error`.
+- `hidden_barriers` (`llm/prompts/hidden_barriers.md`) has no fallback either, but its failure never fails the run: the code-pattern barriers and the recency rules still apply, and the error is recorded.
 - Reasoning effort per call comes from `config/models.toml` (default `low`).
 - `extract_job` v2 splits a list of skills joined by "and" or commas into one requirement per item, each with its own terms and the same quote. "X or Y" stays one requirement.
 - Answers are cached in `llm_cache.sqlite` (`llm/cache.py`). An identical call (same model, effort, prompt version, schema and input) gets the stored answer back at no cost, and its usage record is marked `cached`. Only successful answers are stored, and a cache error counts as a miss. The setting is `BACKEDCV_LLM_CACHE` (default `true`); the evals turn it off.
@@ -87,11 +96,12 @@ Max concurrency is 4 (`run_config`).
    - `length` (hard): word limit, 2 times the original plus 30 (60 for a new summary).
    - `introduced_terms` (soft): lists new names missing from the CV. Never fails.
 4. **Independent verifier.** A separate `verify` call (prompt version 2, `llm/prompts/verify.md`) checks each rewrite that passed the hard guards. It does not see the generator's rationale. It splits the rewrite into claims and lists the IDs that prove each one. It judges each new name as a faithful name or a claim the CV does not show. Version 2 also treats `F` IDs as whole-CV totals and requires quantities and plurals to match.
-5. **Binary status.** A rewrite ends as `verified` or `unsupported`. `pending` exists only between steps 3 and 4. It is verified only if every claim is supported, no new name adds a claim, the verifier is not uncertain, and it returned claims. Otherwise the first reason is shown.
-6. **User review.** Pause 2 takes the accepted and rejected IDs. Only rewrites that are both accepted and verified are applied.
-7. **Code-applied changes.** `apply_suggestions` is deterministic. `align_wording` replaces one line's text. `add_skill` appends a line to the Skills section (or to a new "added-skills" section at the end if there is none). `tailor_summary` replaces the Summary lines (or adds an "added-summary" section at the top if there is none). `validate_document` then checks that every original line is unchanged or replaced by an applied rewrite.
-8. **Ordering agent** (`agents/cv_builder`). A tool-calling model (`create_agent`, recursion limit 25) with three tools: `move_section(section_id, position)`, `reorder_items(section_id, ordered_ids)` and `finalize()`. The first two only move sections and items, and return bad input as text. `finalize` runs `validate_document`. The agent's order is used only if the last `finalize` returned ok. Otherwise the standard section order is used (`built_by` = `fallback`): summary, experience, projects, education, certifications, skills, languages, other. That also happens when there is no order model (no OpenAI key, or the app was created with an injected LLM for tests) or the agent raises.
-9. **Read-back check** (`final_checks`). The document is rendered to PDF with Typst, the PDF is read back with the app's own reader, and every document line's words must appear in the extracted text, in order. Failures go to `build_report.roundtrip_issues`. `validate_document` errors go to `validation_errors`. The check reports only. It does not stop the build.
+5. **Status.** A rewrite ends as `verified` or `unsupported`. `pending` exists only between steps 3 and 4. It is verified only if every claim is supported, no new name adds a claim, the verifier is not uncertain, and it returned claims. Otherwise the first reason is shown.
+6. **Corroboration gate** (`gate_recency`, `gate_barriers`; `domain/corroboration.py`; no model call). Two more passes run on each verified rewrite. A hard failure in either sets its status to `refused`, with the reason. Pass 2, recent enough: if a requirement the rewrite covers has a stated window, one of its cited lines (or the target line) must have been used within it. Undated lines do not count. Without a window, a rewrite whose dated citations are all more than 6 years old only gets a note. Pass 3, not blocked: the requirements the rewrite covers must not carry a high risk from an eligibility barrier or a composite. The same two checks run per requirement before generation. A requirement whose evidence is outside its window, or that is met or partial and carries such a high risk, is not viable: `suggest` skips it, and `refusals` lists it with no suggestion ID.
+7. **User review.** Pause 2 takes the accepted and rejected IDs. Only rewrites that are both accepted and verified are applied. Accepting an unsupported or refused rewrite gets 422 `decisions_invalid`.
+8. **Code-applied changes.** `apply_suggestions` is deterministic. `align_wording` replaces one line's text. `add_skill` appends a line to the Skills section (or to a new "added-skills" section at the end if there is none). `tailor_summary` replaces the Summary lines (or adds an "added-summary" section at the top if there is none). `validate_document` then checks that every original line is unchanged or replaced by an applied rewrite.
+9. **Ordering agent** (`agents/cv_builder`). A tool-calling model (`create_agent`, recursion limit 25) with three tools: `move_section(section_id, position)`, `reorder_items(section_id, ordered_ids)` and `finalize()`. The first two only move sections and items, and return bad input as text. `finalize` runs `validate_document`. The agent's order is used only if the last `finalize` returned ok. Otherwise the standard section order is used (`built_by` = `fallback`): summary, experience, projects, education, certifications, skills, languages, other. That also happens when there is no order model (no OpenAI key, or the app was created with an injected LLM for tests) or the agent raises.
+10. **Read-back check** (`final_checks`). The document is rendered to PDF with Typst, the PDF is read back with the app's own reader, and every document line's words must appear in the extracted text, in order. Failures go to `build_report.roundtrip_issues`. `validate_document` errors go to `validation_errors`. The check reports only. It does not stop the build.
 
 ## 5. API
 
@@ -102,27 +112,28 @@ Max concurrency is 4 (`run_config`).
 | GET | `/api/samples` | Sample CV text and posting text, plus the URLs of the sample CV as PDF and DOCX | none |
 | GET | `/api/samples/cv.pdf` | The sample CV as PDF | none |
 | GET | `/api/samples/cv.docx` | The sample CV as DOCX | none |
+| GET | `/api/samples/hidden-risk` | The hidden-barriers demo: CV text and posting text (no PDF or DOCX) | none |
 | POST | `/api/analyses` | Start an analysis (multipart: `job_text`, `cv_file` or `cv_text`, optional `facts` JSON). Runs up to pause 1 | `created`, `progress`, `error`, `report` |
 | GET | `/api/analyses/{analysis_id}` | Current projection of an analysis | none |
-| PATCH | `/api/analyses/{analysis_id}/inputs` | Set `facts` (answers), `excluded_ids`, `included_flagged_ids`; recompute score and verdict. Only at pause 1 | none |
-| POST | `/api/analyses/{analysis_id}/optimize` | Resume pause 1: write the suggestions and verify each one. Pauses at review | `progress`, `suggestions`, `error` |
+| PATCH | `/api/analyses/{analysis_id}/inputs` | Set `facts` (answers, keyed by requirement ID or by barrier ID such as `H01`), `excluded_ids`, `included_flagged_ids`; recompute score, verdict and hidden risks. Only at pause 1 | none |
+| POST | `/api/analyses/{analysis_id}/optimize` | Resume pause 1: write the suggestions, verify each one and run the gate. Pauses at review | `progress`, `suggestions`, `error` |
 | POST | `/api/analyses/{analysis_id}/build` | Resume pause 2 with the user's `accepted` and `rejected` IDs: apply, order, final checks | `progress`, `built`, `error` |
-| POST | `/api/analyses/{analysis_id}/suggestions/{suggestion_id}/verify` | Check an edited suggestion again: guards, then the verifier. Only while waiting at review | none (JSON projection) |
+| POST | `/api/analyses/{analysis_id}/suggestions/{suggestion_id}/verify` | Check an edited suggestion again: guards, then the verifier, then the gate. Only while waiting at review | none (JSON projection) |
 | POST | `/api/analyses/{analysis_id}/coverage-preview` | Keyword coverage now and with the accepted suggestions (body: `accepted`, suggestion IDs; only verified ones count). Only while waiting at review. No model call, nothing saved | none (JSON) |
 | GET | `/api/analyses/{analysis_id}/cv.docx` | Download the built CV as DOCX | none |
 | GET | `/api/analyses/{analysis_id}/cv.pdf` | Download the built CV as PDF, rendered on request | none |
 | DELETE | `/api/analyses/{analysis_id}` | Delete the analysis and its checkpoints (204). 409 while it is running | none |
 
 - `created` carries the analysis ID. `progress` carries `step` and `status` per graph step. `error` carries `code` (`analysis_failed`, `optimize_failed`, `build_failed`), `title` and `detail`. `report` carries the projection at pause 1. `suggestions` and `built` carry the projection at the end of their step.
-- Projection `status` is `running`, `paused`, `done` or `stalled`. `stage` is `report_ready`, `review_ready`, `built` or null.
+- Projection `status` is `running`, `paused`, `done` or `stalled`. `stage` is `report_ready`, `review_ready`, `built` or null. The projection also carries `recency`, `hidden_risks`, `screening_flags` and `refusals`.
 - Errors are JSON `{code, title, detail}` with a 4xx status, for example `job_too_short`, `cv_unsupported_type`, `not_found` (404), `not_paused` and `wrong_stage` (409), `not_built` (409), `inputs_invalid` and `decisions_invalid` (422), `invalid_request` (422, malformed body).
 - One run per analysis at a time (`run_in_progress`, 409). The lock lives in memory, so run one server process.
 - **Rate limits** (`api/rate_limit.py`): `POST /analyses`, `POST .../optimize`, `POST .../build` and `POST .../suggestions/{suggestion_id}/verify` each count one model run, checked before the stream starts. Per client address, at most `BACKEDCV_RATE_LIMIT_PER_HOUR` (default 30) in a rolling hour; over that, 429 `rate_limited`. All clients together, at most `BACKEDCV_DAILY_MODEL_RUNS` (default 300) per UTC day; over that, 429 `daily_limit_reached`, which resets at midnight UTC. The 429 detail says how long to wait. The counts live in memory and start again with the process. Coverage preview and PATCH make no model call and are not limited.
-- In PATCH, sent `facts.answers` are merged into the stored answers: a sent answer replaces the stored one for the same requirement ID, and the others stay. Other sent fact fields replace their old values, and sent `excluded_ids` or `included_flagged_ids` replace their lists. Unknown requirement IDs in those two lists get 422 `inputs_invalid` before anything is written.
+- In PATCH, sent `facts.answers` are merged into the stored answers: a sent answer replaces the stored one for the same ID (requirement or barrier), and the others stay. Other sent fact fields replace their old values, and sent `excluded_ids` or `included_flagged_ids` replace their lists. Unknown requirement IDs in those two lists get 422 `inputs_invalid` before anything is written.
 
 ## 6. Storage and privacy
 
-- **Kept:** LangGraph checkpoints in SQLite, `checkpoints.sqlite` in `BACKEDCV_DATA_DIR` (default `<repo>/data`, `/app/data` in Docker). One thread per analysis ID, one checkpoint per step. Next to it, `analyses.sqlite` holds each analysis ID and creation time, which the purge reads. The state holds the file name, size and line count, the CV's text lines, the posting text, the parsed CV and job, answers and exclusions, model drafts, assessments, rewrites, decisions, the built document, the build report, token usage and errors.
+- **Kept:** LangGraph checkpoints in SQLite, `checkpoints.sqlite` in `BACKEDCV_DATA_DIR` (default `<repo>/data`, `/app/data` in Docker). One thread per analysis ID, one checkpoint per step. Next to it, `analyses.sqlite` holds each analysis ID and creation time, which the purge reads. The state holds the file name, size and line count, the CV's text lines, the posting text, the parsed CV and job, answers and exclusions, model drafts, barrier items, assessments, recency checks, hidden risks, screening flags, rewrites, refusals, decisions, the built document, the build report, token usage and errors.
 - **Not kept:** file bytes. The upload is read inside the request and turned into lines before the graph starts. The state holds plain JSON-friendly values (`graph/state.py`). The PDF rendered for the read-back check is not stored.
 - **Purge:** analyses older than 24 hours are deleted with their checkpoints. A pass runs at startup and then every hour (`api/retention.py`, started by `main.py`). An analysis that is running is skipped until the next pass. `DELETE /api/analyses/{id}` deletes one on request.
 - **Model-answer cache:** `llm_cache.sqlite` in `BACKEDCV_DATA_DIR` keeps the model's answers, which can include parts of the CV and the posting, keyed by a hash of the input (section 3). Each row records when it was stored, and the hourly purge deletes rows older than 24 hours, like analyses.

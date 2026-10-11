@@ -134,7 +134,13 @@ def test_the_analysis_prompts_hold_no_contact_details():
 
     asyncio.run(graph.ainvoke(initial, config))
 
-    assert sorted(set(llm.calls)) == ["match_chunk", "prepare_cv", "prepare_job", "review_posting"]
+    assert sorted(set(llm.calls)) == [
+        "match_chunk",
+        "prepare_cv",
+        "prepare_job",
+        "review_posting",
+        "screen_barriers",
+    ]
     for _, data in llm.received:
         _assert_no_contact(data)
     assert "L002 | Madrid, Spain · [email] · [phone] · [link]" in dict(llm.received)["prepare_cv"]

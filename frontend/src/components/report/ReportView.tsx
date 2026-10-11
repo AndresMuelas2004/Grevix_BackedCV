@@ -9,6 +9,7 @@ import ParseReport from '../parse/ParseReport'
 import RequirementList from '../RequirementList'
 import ScorePanel from '../ScorePanel'
 import VerdictCard from '../VerdictCard'
+import HiddenRisks from './HiddenRisks'
 import './ReportView.css'
 
 interface ReportViewProps {
@@ -73,6 +74,8 @@ export default function ReportView({ analysis, onAnalysisChange, actions }: Repo
         {analysis.score && <ScorePanel score={analysis.score} />}
       </div>
 
+      <HiddenRisks analysis={analysis} saving={saving} onAnalysisChange={onAnalysisChange} />
+
       <div className="report-facts">
         <KnockoutQuestions
           analysis={analysis}
@@ -93,6 +96,8 @@ export default function ReportView({ analysis, onAnalysisChange, actions }: Repo
           assessments={analysis.assessments}
           banners={analysis.banners}
           flags={analysis.flags}
+          screeningFlags={analysis.screening_flags ?? []}
+          recency={analysis.recency ?? {}}
           contributions={analysis.score?.contributions ?? []}
           selectedId={selectedId}
           onSelect={selectRequirement}

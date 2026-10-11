@@ -246,7 +246,12 @@ def test_misspelled_expectations_are_rejected(expect):
 def test_pairs_load_and_every_file_they_reference_exists():
     pairs = load_pairs()
 
-    assert [pair.id for pair in pairs] == ["curated-two-column", "simple-sample", "nurse-rn"]
+    assert [pair.id for pair in pairs] == [
+        "curated-two-column",
+        "simple-sample",
+        "nurse-rn",
+        "hidden-risk",
+    ]
     for pair in pairs:
         for value in (pair.cv, pair.job):
             if not run_smoke.is_inline(value):

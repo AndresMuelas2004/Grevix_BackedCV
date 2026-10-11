@@ -34,6 +34,19 @@ from backedcv.domain.models.job import (
     RequirementFlag,
 )
 from backedcv.domain.models.score import Contribution, ScoreBreakdown, Verdict, VerdictReason
+from backedcv.domain.models.screening import (
+    ELIGIBILITY_KINDS,
+    BarrierItem,
+    BarrierKind,
+    GatePass,
+    HiddenRisk,
+    RecencyBand,
+    RecencyCheck,
+    RecencyRule,
+    Refusal,
+    RiskLevel,
+    ScreeningFlag,
+)
 from backedcv.domain.models.suggestion import (
     ClaimCheck,
     GuardResult,
@@ -44,6 +57,17 @@ from backedcv.domain.models.suggestion import (
 )
 
 __all__ = [
+    "ELIGIBILITY_KINDS",
+    "BarrierItem",
+    "BarrierKind",
+    "GatePass",
+    "HiddenRisk",
+    "RecencyBand",
+    "RecencyCheck",
+    "RecencyRule",
+    "Refusal",
+    "RiskLevel",
+    "ScreeningFlag",
     "BuildReport",
     "CVDocument",
     "ClaimCheck",

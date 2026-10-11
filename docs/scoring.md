@@ -67,10 +67,71 @@ The code applies these rules in order:
 6. Any other unknown becomes missing. A skill the CV never shows is missing, not a question.
 7. Your answers can settle an unknown knockout. Every required knockout can be answered yes or no, keyed by requirement ID. Answers apply only while the knockout is still unknown, so CV evidence always wins. Typed facts (work authorization, relocation, languages, licenses) can settle some unknowns too, but a direct answer comes first.
 8. If the model's answer skips a requirement, or its call fails, the code falls back to literal matches. A posting term or alias found in the CV (same matching as Keyword coverage) counts as met, with up to three lines as evidence. This is the one exception to "Fit asks what the CV proves": for a requirement without a model answer, a literal match alone can raise Fit. Gates and knockouts never get this shortcut: they stay unknown. Anything else is missing.
+9. A recency downgrade turns met or partial into missing. See Recency and hidden screening risks.
+
+## Recency and hidden screening risks
+
+Recency asks when the CV last showed each requirement. Hidden risks ask whether the posting holds a buried disqualifier that the CV does not settle. Both measure time from the analysis's creation date.
+
+**Bands.** Each CV line takes the dates of the entry it belongs to: the end date, or the start date when there is no end. A current job counts as ending on the analysis date. A line in several entries keeps the latest date. A line outside any dated entry is undated.
+
+For each met or partial requirement with CV-line evidence, the most recent dated line gives its last use. Years since then (whole months divided by 12, rounded to one decimal) set the band:
+
+| Band | Years since last use |
+|---|---|
+| `recent` | up to 3.0 |
+| `aging` | over 3.0, up to 6.0 |
+| `stale` | over 6.0 |
+| `undated` | no dated line |
+
+The thresholds are the constants `RECENT_MAX_YEARS` and `AGING_MAX_YEARS` in `domain/recency.py`. Facts such as total years are not checked this way.
+
+**Windows.** Only a window stated in the posting removes credit. Code patterns find windows such as "within the last 5 years" or "5+ years in the last 7 years" (the window is the 7). Numbers can be digits or the words one to ten. "Recent experience" with no number is not a window. Each window keeps the posting's exact sentence.
+
+A window applies to the requirements its sentence mentions. A window that names none applies to every required hard skill and experience-years requirement. If several apply, the smallest counts.
+
+**Effect.** With a window:
+- Dated evidence inside it: no effect.
+- Dated evidence only outside it: downgraded. The status becomes missing, so the requirement earns no credit. Keyword coverage does not change, because the keyword is still in the CV.
+- No dated evidence: warning.
+
+Without a window, a stale last use is a warning. A warning never changes the score.
+
+**Risk levels.** A hidden barrier is a disqualifier that the posting states in a buried or unclear way. Its kind is work authorization, location, recency, graduation window, language, clearance, availability or other. Work authorization, location, graduation window, language, clearance and availability are eligibility barriers: a CV edit cannot fix them, so you answer them.
+
+Code sets the risk levels, from the CV, your answers and the dates. The model never sets a level. "Explicit" means the posting states the barrier plainly; "implied" means it only suggests it. "Resolved" means the barrier no longer counts. "Confirmed" means it applies to you.
+
+| Case | Risk |
+|---|---|
+| Tied to a knockout requirement, and every such requirement is met | low, resolved |
+| Tied to a knockout requirement, and you answered one of them no | high, confirmed |
+| Tied to a knockout requirement, otherwise | medium if explicit, low if implied |
+| You answered yes | low, resolved |
+| You answered no | high, confirmed |
+| Work authorization, and you said you need sponsorship | high, confirmed |
+| Work authorization or location, and the place it names is your location or a country you are authorized in | low, resolved |
+| Location, and you are willing to relocate | low, resolved |
+| Work authorization or location, and your known location does not match the place it names | high, with your location line as evidence |
+| Recency | high if downgraded, medium if warning, low otherwise; resolved when the evidence is inside a stated window |
+| Any other barrier | medium if explicit, low if implied |
+
+- A barrier tied to a knockout requirement never asks a question of its own. The knockout's question covers it.
+- Other eligibility barriers ask a yes or no question: the model's wording, or a default for the kind. Recency and other barriers ask none.
+- Two or more open medium risks that are not tied to a knockout make one composite risk, `HC1`, at high level. It lists those risks as components and the requirements they touch.
+
+**Looks met, but...** A requirement gets this badge when it looks met and carries a recency warning or downgrade, or an unresolved medium or high barrier risk that names it. It looks met when its status before the recency check was met or partial, or its exact keyword is in the CV. The badge gives plain reasons and the barrier IDs behind it (for example `H01`). It is separate from the R1 and R2 flags (see Flags).
+
+**Effect on the verdict.** Hidden risks feed the rules in Verdict as if they were knockouts:
+- A confirmed eligibility risk (a no answer, or a sponsorship need you gave) acts like a missing knockout: Likely screened out, with the barrier's quote.
+- An unanswered high risk with a question acts like an unanswered knockout: it counts in "Answer N question(s) first" and is listed as an open question.
+- A barrier tied to a knockout requirement never changes the verdict. The knockout's own question covers it.
+- Other high risks and composite risks add a reason to the verdict, without changing its label.
+
+Only a recency downgrade changes Fit. Hidden risks never do.
 
 ## Verdict
 
-The rules run top to bottom, and the first match wins. Knockouts come first.
+The rules run top to bottom, and the first match wins. Knockouts come first. Hidden risks join the first two rules (see Recency and hidden screening risks).
 
 An **active** knockout is required, not marked not relevant, and not flagged (unless you included it).
 

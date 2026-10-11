@@ -1,0 +1,31 @@
+Mateo Serrano Vidal
+Platform engineer focused on AWS, Terraform and CI/CD
+CONTACT
+Valencia, Spain
+mateo.serrano@example.com
++34 600 000 187
+github.com/mateo-serrano-example
+linkedin.com/in/mateo-serrano-example
+SUMMARY
+Platform engineer with a background in cloud and DevOps work. I build AWS infrastructure with Terraform, run CI/CD pipelines and write Python tools that product teams use every day.
+EXPERIENCE
+Platform Engineer, Faro Mesa Software, Valencia
+Mar 2019 - Present
+- Build and maintain AWS infrastructure with Terraform for three product teams.
+- Run GitHub Actions pipelines that test, build and deploy services on every merge.
+- Containerized 12 services with Docker and cut their image sizes by half.
+- Wrote Python tools for deployment checks and monthly cloud cost reports.
+- Added pre-merge checks in CI that cut failed deployments by 40%.
+DevOps Engineer, Alameda Ticketing Labs, Valencia
+Sep 2015 - Dec 2017
+- Deployed and operated microservices on K8s clusters.
+- Maintained Jenkins pipelines for nightly builds and releases.
+- Wrote Bash and Python scripts to automate server provisioning.
+EDUCATION
+BSc Computer Engineering, Universidad Example, Valencia
+Sep 2011 - Jun 2015
+- Teaching assistant for the operating systems course: weekly Linux labs for 35 students.
+SKILLS
+Python, Terraform, AWS, Docker, GitHub Actions, Ansible, Linux, Bash, Git, Prometheus
+LANGUAGES
+Spanish (native), English (C1)

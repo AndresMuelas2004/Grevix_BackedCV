@@ -5,6 +5,14 @@ from typing import TypedDict
 
 from langgraph.types import Send, interrupt
 
+from backedcv.domain.corroboration import (
+    apply_pass,
+    backed_pass,
+    barrier_pass,
+    not_viable_targets,
+    recency_pass,
+    refusals_from,
+)
 from backedcv.domain.guards import NEW_SKILLS, NEW_SUMMARY, apply_guards
 from backedcv.domain.models import (
     ClaimCheck,
@@ -16,8 +24,10 @@ from backedcv.domain.models import (
     Suggestion,
 )
 from backedcv.domain.models.suggestion import VerificationStatus
+from backedcv.domain.recency import line_last_used
 from backedcv.domain.redaction import numbered_rows
 from backedcv.graph.nodes import _error, _progress
+from backedcv.graph.recompute import assessments_of, recency_of, risks_of, today_of
 from backedcv.graph.state import AnalysisState
 from backedcv.llm.drafts_optimize import (
     ClaimDraft,
@@ -103,6 +113,10 @@ def _section_of(target: str, cv: ParsedCV) -> str:
     return target
 
 
+def _stored_suggestions(state: AnalysisState) -> list[Suggestion]:
+    return [Suggestion.model_validate(row) for row in state.get("suggestions") or []]
+
+
 def _claim_check(claim: ClaimDraft, refs: dict[str, str]) -> ClaimCheck:
     known = [ref for ref in claim.supported_by if ref in refs]
     unknown = [ref for ref in claim.supported_by if ref not in refs]
@@ -147,14 +161,14 @@ def make_optimize_nodes(llm: StructuredLLM) -> dict[str, Callable]:
         cv = ParsedCV.model_validate(state["cv"])
         job = JobPosting.model_validate(state["job"])
         excluded = set(state.get("excluded_ids") or [])
-        assessments = {
-            rid: RequirementAssessment.model_validate(a)
-            for rid, a in (state.get("assessments") or {}).items()
-        }
+        assessments = assessments_of(state)
+        # Requirements that are not viable (too old, or blocked by a hidden barrier) get no wording.
+        held = not_viable_targets(job, assessments, recency_of(state), risks_of(state), excluded)
+        skipped = excluded | {refusal.requirement_id for refusal in held}
         rows = [
             _requirement_row(req, assessments[req.id])
             for req in job.requirements
-            if _needs_wording(req, assessments.get(req.id), excluded)
+            if _needs_wording(req, assessments.get(req.id), skipped)
         ]
         if not rows:
             _progress("suggest", "done", suggestions=0)
@@ -190,7 +204,7 @@ def make_optimize_nodes(llm: StructuredLLM) -> dict[str, Callable]:
         suggestions = [Suggestion.model_validate(s) for s in state.get("suggestions") or []]
         pending = [s for s in suggestions if s.verification.status == "pending"]
         if not pending:
-            return "await_review"  # an empty Send list would end the graph early
+            return "gate_recency"  # an empty Send list would end the graph early
         cv = ParsedCV.model_validate(state["cv"])
         groups: dict[str, list[dict]] = {}
         for s in pending:
@@ -223,6 +237,37 @@ def make_optimize_nodes(llm: StructuredLLM) -> dict[str, Callable]:
         _progress("verify", "done", suggestions=len(checked))
         return {"suggestions": [s.model_dump() for s in checked], "usage": [usage]}
 
+    async def gate_recency(state: AnalysisState) -> dict:
+        """Every suggestion must pass the backed check, then the recency check. No model call."""
+        today = today_of(state)
+        cv = ParsedCV.model_validate(state["cv"])
+        last_used = line_last_used(cv, today)
+        recency = recency_of(state)
+        rows = []
+        for s in _stored_suggestions(state):
+            s = apply_pass(s, backed_pass(s))
+            s = apply_pass(s, recency_pass(s, recency, last_used, today))
+            rows.append(s.model_dump())
+        return {"suggestions": rows}
+
+    async def gate_barriers(state: AnalysisState) -> dict:
+        """The barrier check on every suggestion, then the refusals: requirements not viable from
+        the start, and every suggestion refused by a gate."""
+        job = JobPosting.model_validate(state["job"])
+        assessments = assessments_of(state)
+        recency = recency_of(state)
+        risks = risks_of(state)
+        excluded = set(state.get("excluded_ids") or [])
+        rows = [apply_pass(s, barrier_pass(s, risks)) for s in _stored_suggestions(state)]
+        refusals = [
+            *not_viable_targets(job, assessments, recency, risks, excluded),
+            *refusals_from(rows),
+        ]
+        return {
+            "suggestions": [s.model_dump() for s in rows],
+            "refusals": [r.model_dump() for r in refusals],
+        }
+
     async def await_review(state: AnalysisState) -> dict:
         # Nothing runs before the interrupt: a node restarts from its top on resume.
         decisions = ReviewDecisions.model_validate(interrupt({"stage": "review_ready"}))
@@ -232,5 +277,7 @@ def make_optimize_nodes(llm: StructuredLLM) -> dict[str, Callable]:
         "suggest": suggest,
         "route_verification": route_verification,
         "verify_batch": verify_batch,
+        "gate_recency": gate_recency,
+        "gate_barriers": gate_barriers,
         "await_review": await_review,
     }

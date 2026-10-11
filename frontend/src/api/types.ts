@@ -236,7 +236,8 @@ export interface Verdict {
 
 export type SuggestionKind = 'align_wording' | 'add_skill' | 'tailor_summary'
 
-export type VerificationStatus = 'pending' | 'verified' | 'unsupported'
+// "refused": backed by the CV but not viable for the posting (Card 1). It can never be accepted.
+export type VerificationStatus = 'pending' | 'verified' | 'unsupported' | 'refused'
 
 // One atomic claim of a suggestion, and the CV references (L and F IDs) backing it.
 export interface ClaimCheck {
@@ -259,6 +260,8 @@ export interface Verification {
   claims: ClaimCheck[]
   guards: GuardResult[]
   reason: string | null // the first failing reason, shown to the user
+  // The gate's passes (Card 1). Optional: an analysis saved before Card 1 has none.
+  passes?: GatePass[]
 }
 
 // A proposed CV change. `target` is a line ID (align_wording) or a section ID (add_skill,
@@ -353,6 +356,91 @@ export interface BuildReport {
   validation_errors: string[]
 }
 
+// ---- Screening risks, recency and the gate (Card 1) ------------------------
+
+// How recent the CV's evidence of a requirement is: recent (3 years or less), aging (up to 6),
+// stale (more), or undated (no dated entry shows it).
+export type RecencyBand = 'recent' | 'aging' | 'stale' | 'undated'
+
+// A recency rule the posting states, e.g. "within the last 5 years". The quote is its sentence.
+export interface RecencyRule {
+  quote: string
+  window_years: number
+  requirement_ids: string[] // empty: a general rule
+  source: 'rule' | 'model'
+}
+
+// When the CV last shows a requirement, and what the posting's rule does to it.
+export interface RecencyCheck {
+  requirement_id: string
+  original_status: string // the status before the check
+  last_used: string | null // YYYY-MM of the most recent dated entry that shows it
+  years_since: number | null
+  band: RecencyBand
+  evidence_refs: string[]
+  rule: RecencyRule | null
+  within_rule: boolean | null // null when no rule applies
+  effect: 'none' | 'warning' | 'downgraded' // downgraded: the requirement counts as missing
+  explanation: string
+}
+
+export type RiskLevel = 'high' | 'medium' | 'low'
+
+export type BarrierKind =
+  | 'work_authorization'
+  | 'location'
+  | 'recency'
+  | 'graduation_window'
+  | 'language'
+  | 'clearance'
+  | 'availability'
+  | 'other'
+
+// A line of the posting that may get the candidate screened out without a word. The quote is the
+// posting's exact sentence. A composite combines several risks and has no quote.
+export interface HiddenRisk {
+  id: string // H01, H02, ...; composites are HC1, HC2, ...
+  kind: BarrierKind | 'composite'
+  quote: string // empty for a composite
+  explanation: string // why a screener may reject without a word
+  action: string // what the candidate can do; may be empty
+  risk: RiskLevel
+  requirement_ids: string[]
+  question: string | null // a yes/no question; its answer is saved as facts.answers[id]
+  resolved: boolean // answered yes, or (no question) the requirement it follows is met
+  confirmed: boolean // answered no, or (no question) the requirement it follows is missing
+  component_ids: string[] // composites: the risks they combine
+  cv_refs: string[] // CV lines that show the conflict
+}
+
+// A requirement that looks met but may still be rejected without a word.
+export interface ScreeningFlag {
+  requirement_id: string
+  risk: RiskLevel
+  reasons: string[] // plain sentences
+  risk_ids: string[] // the risk IDs behind it
+}
+
+// The three passes of the corroboration gate.
+export type GateName = 'backed' | 'recent_enough' | 'not_blocked'
+
+// One pass of the gate. A failed hard pass refuses the edit as not viable.
+export interface GatePass {
+  name: GateName
+  ok: boolean
+  hard: boolean
+  detail: string | null
+}
+
+// An edit refused as not viable: a requirement (suggestion_id null), or a generated suggestion.
+export interface Refusal {
+  requirement_id: string
+  gate: 'recent_enough' | 'not_blocked'
+  reason: string
+  refs: string[] // the old or conflicting evidence lines
+  suggestion_id: string | null
+}
+
 // ---- Report projection (GET /api/analyses/{id} and the "report" event) ----
 
 export type CvKind = 'pdf' | 'docx' | 'text'
@@ -398,6 +486,11 @@ export interface AnalysisReport {
   assessments: Record<string, RequirementAssessment>
   score: ScoreBreakdown | null
   verdict: Verdict | null
+  // Card 1. Optional: an analysis saved before Card 1 has none of these, so read them with a default.
+  hidden_risks?: HiddenRisk[]
+  screening_flags?: ScreeningFlag[]
+  recency?: Record<string, RecencyCheck>
+  refusals?: Refusal[]
   suggestions: Suggestion[]
   decisions: ReviewDecisions | null
   document: CVDocument | null
@@ -446,6 +539,12 @@ export interface Samples {
   cv_pdf_url: string
   cv_docx_url: string
   cv_filename: string
+}
+
+// Body of GET /api/samples/hidden-risk: a posting with hidden barriers, and its CV as plain text.
+export interface HiddenRiskSample {
+  cv_text: string
+  job_text: string
 }
 
 // Body of PATCH /api/analyses/{id}/inputs. A field left out keeps its value, and a list that

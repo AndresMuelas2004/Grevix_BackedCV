@@ -33,6 +33,12 @@
   font-size: 1.125rem;
 }
 
+.sample-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
 .field-label {
   font-weight: 600;
   font-size: 0.9375rem;

@@ -1,13 +1,17 @@
 // Display text for the backend's literal values. Keys are the backend's values.
 import type {
   Badge,
+  BarrierKind,
   Category,
+  GateName,
   Importance,
   KnockoutType,
   MatchType,
   ParseWarning,
+  RiskLevel,
   SectionType,
   Status,
+  SuggestionKind,
 } from '../api/types'
 
 export const STATUS_LABELS: Record<Status, string> = {
@@ -52,6 +56,38 @@ export const BADGE_LABELS: Record<Badge, string> = {
   tailor_first: 'Tailor your CV first',
   screening_risk: 'Screening risk',
   posting_red_flags: 'Posting red flags',
+}
+
+export const SUGGESTION_KIND_LABELS: Record<SuggestionKind, string> = {
+  align_wording: 'Align wording',
+  add_skill: 'Add skill',
+  tailor_summary: 'Tailor summary',
+}
+
+export const RISK_LEVEL_LABELS: Record<RiskLevel, string> = {
+  high: 'High',
+  medium: 'Medium',
+  low: 'Low',
+}
+
+// The kind of a hidden risk in plain words. "composite" is a risk that combines several others.
+export const BARRIER_KIND_LABELS: Record<BarrierKind | 'composite', string> = {
+  work_authorization: 'Work permit',
+  location: 'Location',
+  recency: 'Recency rule',
+  graduation_window: 'Graduation window',
+  language: 'Language',
+  clearance: 'Clearance',
+  availability: 'Availability',
+  other: 'Other',
+  composite: 'Combined risk',
+}
+
+// The gate's passes, as the user reads the one that failed.
+export const GATE_LABELS: Record<GateName, string> = {
+  backed: 'Backed by your CV',
+  recent_enough: 'Recent enough for the posting',
+  not_blocked: 'Not blocked by a barrier in the posting',
 }
 
 export const SECTION_LABELS: Record<SectionType, string> = {

@@ -292,13 +292,13 @@ def test_route_sends_one_verification_per_section_with_pending_suggestions():
     assert groups == {("S01", "S02"), ("S03",), ("S04",), ("S05",)}
 
 
-def test_route_goes_to_review_when_nothing_is_pending():
+def test_route_goes_to_the_gates_when_nothing_is_pending():
     route = make_optimize_nodes(FakeOptimizeLLM())["route_verification"]
     cv = SECTIONED.model_dump()
     unsupported = _suggestion("S01", "L002", status="unsupported")
 
-    assert route({"cv": cv, "suggestions": [unsupported]}) == "await_review"
-    assert route({"cv": cv}) == "await_review"
+    assert route({"cv": cv, "suggestions": [unsupported]}) == "gate_recency"
+    assert route({"cv": cv}) == "gate_recency"
 
 
 @pytest.mark.anyio
@@ -321,17 +321,21 @@ async def test_only_suggestions_that_passed_the_guards_reach_the_verifier():
 
 
 def _optimize_graph(llm: FakeOptimizeLLM):
-    """The four optimize nodes wired as the builder will wire them, on the real analysis state."""
+    """The optimize nodes wired as the builder wires them, on the real analysis state."""
     nodes = make_optimize_nodes(llm)
     graph = StateGraph(AnalysisState)
     graph.add_node("suggest", nodes["suggest"])
     graph.add_node("verify_batch", nodes["verify_batch"])
+    graph.add_node("gate_recency", nodes["gate_recency"])
+    graph.add_node("gate_barriers", nodes["gate_barriers"])
     graph.add_node("await_review", nodes["await_review"])
     graph.add_edge(START, "suggest")
     graph.add_conditional_edges(
-        "suggest", nodes["route_verification"], ["verify_batch", "await_review"]
+        "suggest", nodes["route_verification"], ["verify_batch", "gate_recency"]
     )
-    graph.add_edge("verify_batch", "await_review")
+    graph.add_edge("verify_batch", "gate_recency")
+    graph.add_edge("gate_recency", "gate_barriers")
+    graph.add_edge("gate_barriers", "await_review")
     graph.add_edge("await_review", END)
     return graph.compile(checkpointer=InMemorySaver())
 

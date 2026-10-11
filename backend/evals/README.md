@@ -47,14 +47,15 @@ The newest live run is `evals/results/fabrication-live-20261011-0257.md`. On the
 
 ## Smoke pairs
 
-Three synthetic CV and posting pairs run through the real analysis, up to the report. Each pair lists what its report must show: a screening question, a flag, a banner, a parse warning or a verdict. The checks test those properties, not exact scores. `smoke/pairs.json` holds the pairs:
+Four synthetic CV and posting pairs run through the real analysis, up to the report. Each pair lists what its report must show: a screening question, a flag, a banner, a parse warning, a verdict, a hidden risk, a recency result or a screening flag. The checks test those properties, not exact scores. `smoke/pairs.json` holds the pairs:
 
 - `cv` and `job` are paths from `backend/`, or the text itself when it has line breaks. A PDF or DOCX is read like an upload; any other file as pasted text.
-- `expect` keys: `requirements` (a requirement with these properties exists: `contains`, `importance`, `knockout_type`, `status`, `screening_question`), `flags` (`rule`, and optionally `contains`, a phrase the flagged requirement must have), `banners` and `parse_warnings` (rule IDs and codes), `verdict_not` (verdict labels it must not have).
+- `expect` keys: `requirements` (a requirement with these properties exists: `contains`, `importance`, `knockout_type`, `status`, `screening_question`), `flags` (`rule`, and optionally `contains`, a phrase the flagged requirement must have), `banners` and `parse_warnings` (rule IDs and codes), `verdict_not` (verdict labels it must not have), `hidden_risks` (`kind` and `risk`, e.g. `work_authorization` at `high`), `recency` (`contains` and `effect`: `none`, `warning` or `downgraded`), `screening_flags` (`contains`: the requirement with that phrase must be flagged).
+- `hidden-risk` (pair 4) tests buried rules: a work-permit sentence in the posting's last paragraph, and a 5-year Kubernetes window that the CV's only Kubernetes evidence (2015-2017) falls outside of.
 
 | Command | What runs | Cost |
 |---|---|---|
-| `uv run python -m evals.run_smoke --live` | The three pairs, with the model. Needs `OPENAI_API_KEY` in `.env`. | Model calls |
+| `uv run python -m evals.run_smoke --live` | The four pairs, with the model. Needs `OPENAI_API_KEY` in `.env`. | Model calls |
 | `uv run python -m evals.run_smoke --live --langsmith` | The same, plus one experiment on the LangSmith dataset `backedcv-smoke`. Needs `LANGSMITH_API_KEY` in `.env`. | Model calls |
 
 Notes:

@@ -1,0 +1,28 @@
+Platform Engineer at Sable Creek Freight Systems
+Location: Austin, TX
+
+About the role
+Sable Creek Freight Systems builds routing and dispatch software for regional trucking fleets. Our platform team runs the infrastructure that every product team ships on. You will design, automate and operate that platform alongside backend developers and our reliability engineers. We ship small, frequent changes, and we value calm, clear communication over heroics. This is a hybrid role: three days a week in our Austin office.
+
+What you will do
+- Build and maintain AWS infrastructure with Terraform, reviewed like application code.
+- Run and improve the CI/CD pipelines that test and deploy services several times a day.
+- Package services with Docker and keep image sizes and build times under control.
+- Write Python tools for deployment checks, cost reports and on-call automation.
+- Lead incident reviews and turn their findings into automated guardrails.
+
+Requirements
+- 4+ years of experience in platform, DevOps or cloud engineering.
+- Strong Python skills.
+- Hands-on experience with Terraform and AWS.
+- Experience building CI/CD pipelines with GitHub Actions or similar tools.
+- Working knowledge of Docker.
+- 3+ years of hands-on Kubernetes experience within the last 5 years.
+- Clear written communication and a habit of documenting decisions.
+
+Nice to have
+- Experience with Prometheus or Grafana.
+- A background in logistics or fleet software.
+
+Good to know
+Please note we are unable to sponsor work visas, so you must already have the right to work in the United States. Fluent English (C1 or above) is required for client calls. Our benefits include health insurance for you and your family, 25 days of paid leave, a learning budget and a home-office stipend.

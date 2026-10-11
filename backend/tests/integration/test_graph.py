@@ -41,7 +41,13 @@ async def test_full_analysis_pauses_before_optimizing():
     values = state.values
 
     assert state.next == ("await_optimize",)
-    assert sorted(llm.calls) == ["match_chunk", "prepare_cv", "prepare_job", "review_posting"]
+    assert sorted(llm.calls) == [
+        "match_chunk",
+        "prepare_cv",
+        "prepare_job",
+        "review_posting",
+        "screen_barriers",
+    ]
     assert any(m == "custom" and c["step"] == "score" for m, c in events)
 
     # The requirement whose quote is not in the posting is dropped.

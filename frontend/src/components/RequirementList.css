@@ -191,3 +191,31 @@
   cursor: not-allowed;
   opacity: 0.55;
 }
+
+/* Card 1: the "Looks met, but..." badge, its reasons, and the recency note. */
+.chip.chip-screening {
+  background: var(--warn-soft);
+  color: var(--warn);
+  border-color: #d9a441;
+  border-style: dashed;
+}
+
+.req-flag-list {
+  margin: 0.3rem 0 0;
+  padding-left: 1.1rem;
+}
+
+.req-recency {
+  display: grid;
+  gap: 0.2rem;
+}
+
+.req-recency-line {
+  font-size: 0.9375rem;
+  color: var(--muted);
+}
+
+.req-recency-line.is-warn {
+  color: var(--warn);
+  font-weight: 600;
+}
