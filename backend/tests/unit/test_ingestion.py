@@ -34,6 +34,22 @@ def test_pasted_text_gets_numbered_lines_without_bullets():
     ]
 
 
+def test_pasted_text_drops_control_characters():
+    result = read_cv_text("Jane\x00\tDoe\n\x1b\x07\n\x1bBuilt APIs with FastAPI\x7f\n")
+
+    assert [(line.id, line.text) for line in result.lines] == [
+        ("L001", "Jane Doe"),
+        ("L002", "Built APIs with FastAPI"),
+    ]
+
+
+def test_pasted_text_drops_unpaired_surrogates():
+    result = read_cv_text("Jane\ud800 Doe 😀\n\udc00\n")
+
+    assert [line.text for line in result.lines] == ["Jane Doe \U0001f600"]
+    assert result.size == len("Jane Doe \U0001f600\n\n".encode())
+
+
 def test_pdf_lines_in_reading_order_with_bold_headings(tmp_path):
     data = _pdf(
         tmp_path,
@@ -183,6 +199,16 @@ def test_docx_reads_tables_headers_and_content_controls():
     assert by_text["Experience"].bold
     assert by_text["Python"].source == "table"
     assert "Skills inside a content control" in by_text
+
+
+def test_docx_without_a_body_is_unreadable():
+    document = docx.Document()
+    document.element.remove(document.element.body)
+
+    with pytest.raises(IngestionError) as error:
+        read_cv(_docx_bytes(document), "cv.docx")
+    assert error.value.code == "cv_unreadable"
+    assert error.value.status == 422
 
 
 def test_rejects_unsupported_files():

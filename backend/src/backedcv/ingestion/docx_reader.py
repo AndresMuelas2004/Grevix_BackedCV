@@ -29,6 +29,9 @@ def read_docx(data: bytes) -> list[RawLine]:
         document = docx.Document(io.BytesIO(data))
     except Exception as exc:
         raise IngestionError("cv_unreadable", "This Word file could not be opened.") from exc
+    body = document.element.find(_q("w:body"))
+    if body is None:  # a document.xml without a body has no text to read
+        raise IngestionError("cv_unreadable", "This Word file is damaged or incomplete.")
 
     rows: list[RawLine] = []
     seen_margins: set[str] = set()
@@ -36,7 +39,7 @@ def read_docx(data: bytes) -> list[RawLine]:
         for part, source in ((section.header, "header"), (section.first_page_header, "header")):
             _walk_margin(part, source, rows, seen_margins)
 
-    _walk(document.element.body, "body", rows)
+    _walk(body, "body", rows)
 
     for section in document.sections:
         for part in (section.footer, section.first_page_footer):

@@ -10,6 +10,7 @@ from backedcv.domain.text import fold
 BULLET_GLYPHS = "•▪●◦‣⁃■□∙·*>-–"
 _BULLET = re.compile(r"^[\s•▪●◦‣⁃■□∙·*>-]+\s*")
 _BULLET_START = re.compile(r"^(?:[•▪●◦‣⁃■□∙]|[-–*·>](?:\s|$))")
+_CONTROL = re.compile(r"[\x00-\x08\x0b\x0c\x0e-\x1f\x7f]")  # tab, newline and CR are kept
 _MAX_GAP = 0.5  # widest vertical gap inside one paragraph, in multiples of the font size
 _EDGE_SHARE = 0.25  # share of the block width a line may stop short of the block's widest end
 _INDENT_TOLERANCE = 3.0  # points
@@ -57,8 +58,8 @@ class Fragment:
 
 
 def clean(text: str) -> str:
-    """Fold spacing and drop leading bullet glyphs; keeps the words exactly as written."""
-    text = fold(text)
+    """Drop control characters, fold spacing and leading bullets; keeps the words as written."""
+    text = fold(_CONTROL.sub("", text))
     stripped = _BULLET.sub("", text)
     return stripped if stripped else text
 

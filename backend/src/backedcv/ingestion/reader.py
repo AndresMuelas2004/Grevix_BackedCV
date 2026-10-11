@@ -34,6 +34,8 @@ def read_cv(data: bytes, filename: str | None) -> ReadResult:
 
 
 def read_cv_text(text: str) -> ReadResult:
+    # A lone surrogate cannot be encoded as UTF-8: drop it; a valid pair becomes one character.
+    text = text.encode("utf-16", "surrogatepass").decode("utf-16", "ignore")
     rows = [RawLine(text=row) for row in text.splitlines()]
     return ReadResult(_finish(rows), "text", None, len(text.encode()))
 
