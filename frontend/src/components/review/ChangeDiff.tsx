@@ -5,23 +5,21 @@ import './ChangeDiff.css'
 interface ChangeDiffProps {
   before: string | null // null when the line is new
   after: string
+  sectionTitle?: string // the section a new line goes into; used only when before is null
 }
 
-// Shows a change as a Before row and an After row. Changed words are struck through in Before
-// and underlined in After, so the change is visible without relying on colour.
-export default function ChangeDiff({ before, after }: ChangeDiffProps) {
+// A changed line shows a Before row and an After row. Changed words are struck through in Before
+// and underlined in After, so the change is visible without relying on colour. A new line shows
+// a sentence naming its section, then the new text.
+export default function ChangeDiff({ before, after, sectionTitle }: ChangeDiffProps) {
   if (before === null) {
     return (
-      <dl className="change-diff">
-        <div className="change-row">
-          <dt>Before</dt>
-          <dd className="change-none">New line</dd>
-        </div>
-        <div className="change-row">
-          <dt>After</dt>
-          <dd>{after}</dd>
-        </div>
-      </dl>
+      <div className="change-diff">
+        <p className="change-note">
+          {sectionTitle ? `Adds a new line to ${sectionTitle}` : 'Adds a new line'}
+        </p>
+        <p>{after}</p>
+      </div>
     )
   }
 

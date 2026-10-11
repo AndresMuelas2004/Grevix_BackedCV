@@ -140,8 +140,8 @@ export default function BuildScreen({ analysis, onStartOver }: BuildScreenProps)
 // How the section order was chosen, in plain words.
 function orderNote(builtBy: BuildReport['built_by']): string {
   return builtBy === 'agent'
-    ? 'An AI agent chose the section order; it can only move sections, so your text is unchanged'
-    : 'Original section order kept'
+    ? 'An AI agent chose the section order. It can only move sections: the only text changes are the suggestions you accepted.'
+    : 'Original section order kept. The only text changes are the suggestions you accepted.'
 }
 
 // For example: "2 changed, 1 added, 0 removed, 14 unchanged".

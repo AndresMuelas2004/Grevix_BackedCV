@@ -14,6 +14,7 @@ interface SuggestionCardProps {
   decision: Decision | undefined
   requirementLabels: ReadonlyMap<string, string>
   citations: ReadonlyMap<string, string> // CV line and fact IDs to their text
+  sectionTitle: string // the heading of the section this suggestion is listed under
   onDecide: (decision: Decision) => void
   onSaveEdit: (text: string) => Promise<void>
 }
@@ -35,6 +36,7 @@ export default function SuggestionCard({
   decision,
   requirementLabels,
   citations,
+  sectionTitle,
   onDecide,
   onSaveEdit,
 }: SuggestionCardProps) {
@@ -101,7 +103,11 @@ export default function SuggestionCard({
         {suggestion.edited_by_user && <span className="chip chip-neutral">Edited by you</span>}
       </div>
 
-      <ChangeDiff before={suggestion.before} after={suggestion.after} />
+      <ChangeDiff
+        before={suggestion.before}
+        after={suggestion.after}
+        sectionTitle={sectionTitle}
+      />
 
       <p className="suggestion-meta">
         <span className="suggestion-label">Covers:</span>{' '}

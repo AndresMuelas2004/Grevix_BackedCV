@@ -18,7 +18,7 @@ interface CvViewProps {
 
 interface LineGroup {
   key: string
-  label: string
+  label: string | null // the section type as a title, or null when the section's heading line is listed instead
   lines: CvLine[]
 }
 
@@ -33,7 +33,8 @@ export default function CvView({
   const highlighted = new Set(highlightIds)
   const noted = new Set(noteIds)
   const warned = new Set(warnedIds)
-  const groups = cv ? groupLines(cv) : []
+  const headings = cv ? headingLineIds(cv) : new Set<string>()
+  const groups = cv ? groupLines(cv, headings) : []
   const readingOrder = cv ? [...cv.lines.map((line) => line.id), ...cv.facts.map((fact) => fact.id)] : []
   const firstEvidence = readingOrder.find((id) => highlighted.has(id)) ?? null
   const firstNote = readingOrder.find((id) => noted.has(id)) ?? null
@@ -70,7 +71,7 @@ export default function CvView({
         <div className="cv-scroll" role="region" aria-label="Lines read from your CV" tabIndex={0}>
           {groups.map((group) => (
             <div key={`${group.key}-${group.lines[0].id}`} className="cv-group">
-              <h3 className="cv-group-title">{group.label}</h3>
+              {group.label !== null && <h3 className="cv-group-title">{group.label}</h3>}
               <ul className="cv-lines">
                 {group.lines.map((line) => (
                   <LineItem
@@ -78,6 +79,7 @@ export default function CvView({
                     id={line.id}
                     label={citationLabel(line.id)}
                     text={line.text}
+                    heading={headings.has(line.id)}
                     evidence={highlighted.has(line.id)}
                     noted={noted.has(line.id)}
                     warned={warned.has(line.id)}
@@ -115,12 +117,13 @@ interface LineItemProps {
   id: string
   label: string // shown before the text: "line 39", or nothing for a computed fact
   text: string
+  heading?: boolean // a section's heading line: shown as the heading, not as a line of text
   evidence: boolean
   noted: boolean
   warned: boolean
 }
 
-function LineItem({ id, label, text, evidence, noted, warned }: LineItemProps) {
+function LineItem({ id, label, text, heading = false, evidence, noted, warned }: LineItemProps) {
   let className = 'cv-line'
   if (evidence) className += ' is-evidence'
   if (noted) className += ' is-noted'
@@ -128,7 +131,11 @@ function LineItem({ id, label, text, evidence, noted, warned }: LineItemProps) {
   return (
     <li id={`cv-${id}`} className={className}>
       <span className="cv-id">{label}</span>
-      <span className="cv-text">{text}</span>
+      {heading ? (
+        <h3 className="cv-text cv-heading">{text}</h3>
+      ) : (
+        <span className="cv-text">{text}</span>
+      )}
       <span className="cv-tags">
         {warned && (
           <span className="cv-warn-mark">
@@ -143,13 +150,14 @@ function LineItem({ id, label, text, evidence, noted, warned }: LineItemProps) {
   )
 }
 
-// Lines keep their reading order. Each run of lines in the same section forms
-// one group, labelled with the section type. Lines outside any section are "Other lines".
-function groupLines(cv: ParsedCv): LineGroup[] {
+// Lines keep their reading order. Each run of lines in the same section forms one group. A section
+// with a heading line gets no title, because its heading line is listed in place (so the heading
+// shows once). Lines outside any section are "Other lines".
+function groupLines(cv: ParsedCv, headings: ReadonlySet<string>): LineGroup[] {
   const sectionByLine = new Map<string, CvSection>()
   for (const section of cv.sections) {
-    for (const lineId of section.line_ids) {
-      if (!sectionByLine.has(lineId)) sectionByLine.set(lineId, section)
+    for (const lineId of [section.heading_line_id, ...section.line_ids]) {
+      if (lineId !== null && !sectionByLine.has(lineId)) sectionByLine.set(lineId, section)
     }
   }
 
@@ -163,12 +171,30 @@ function groupLines(cv: ParsedCv): LineGroup[] {
     } else {
       groups.push({
         key,
-        label: section ? SECTION_LABELS[section.type] : 'Other lines',
+        label: section ? sectionTitle(section, headings) : 'Other lines',
         lines: [line],
       })
     }
   }
   return groups
+}
+
+// The heading lines of the sections. A heading line counts only when it is one of the CV's lines.
+function headingLineIds(cv: ParsedCv): Set<string> {
+  const lineIds = new Set(cv.lines.map((line) => line.id))
+  const headings = new Set<string>()
+  for (const section of cv.sections) {
+    if (section.heading_line_id !== null && lineIds.has(section.heading_line_id)) {
+      headings.add(section.heading_line_id)
+    }
+  }
+  return headings
+}
+
+// The title of a section's group: its type, or null when its heading line is listed in place.
+function sectionTitle(section: CvSection, headings: ReadonlySet<string>): string | null {
+  if (section.heading_line_id !== null && headings.has(section.heading_line_id)) return null
+  return SECTION_LABELS[section.type]
 }
 
 function sourceText(meta: CvMeta | null): string {

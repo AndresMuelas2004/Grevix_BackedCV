@@ -131,10 +131,12 @@ function KnockoutRow({
 
         {showChoices ? (
           <div className="knockout-actions">
+            {/* Only the saved answer is selected: an unanswered question shows two neutral choices. */}
             <button
               ref={yesButton}
               type="button"
-              className="btn btn-primary"
+              className={choiceClass(item.answer === true)}
+              aria-pressed={item.answer === true}
               aria-disabled={disabled}
               onClick={whenEnabled(() => onAnswer(true))}
             >
@@ -142,7 +144,8 @@ function KnockoutRow({
             </button>
             <button
               type="button"
-              className="btn btn-secondary"
+              className={choiceClass(item.answer === false)}
+              aria-pressed={item.answer === false}
               aria-disabled={disabled}
               onClick={whenEnabled(() => onAnswer(false))}
             >
@@ -179,4 +182,9 @@ function KnockoutRow({
       </fieldset>
     </li>
   )
+}
+
+// The saved answer is the primary button; the other choice stays neutral.
+function choiceClass(selected: boolean): string {
+  return selected ? 'btn btn-primary' : 'btn btn-secondary'
 }

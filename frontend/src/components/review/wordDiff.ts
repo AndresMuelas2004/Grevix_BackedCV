@@ -13,9 +13,22 @@ export interface WordDiff {
 // Above this many word pairs the table gets too big, so the whole text counts as changed.
 const MAX_CELLS = 250_000
 
-// Splits text into words and runs of spaces, so joining the tokens gives the text back.
+// Punctuation at the end of a word ("Python," or "PostgreSQL.") does not make it another word.
+const TRAILING_PUNCTUATION = /[.,;:!?)\]"'”’»…]+$/
+
+// Splits text into tokens: each word with the spaces before it, and any spaces at the end.
+// Joining the tokens gives the text back. Spaces are not tokens of their own, so a run of
+// spaces cannot line up with a word of the other version.
 function tokenize(text: string): string[] {
-  return text.match(/\s+|\S+/g) ?? []
+  return text.match(/\s*\S+|\s+/g) ?? []
+}
+
+// What a token is matched by: the word without its spaces and its trailing punctuation.
+function matchKey(token: string): string {
+  const word = token.trimStart()
+  if (word === '') return token
+  const bare = word.replace(TRAILING_PUNCTUATION, '')
+  return bare === '' ? word : bare
 }
 
 // Adds a token to the pieces, merging it into the last piece when the mark is the same.
@@ -34,6 +47,8 @@ export function diffWords(before: string, after: string): WordDiff {
       after: [{ text: after, changed: true }],
     }
   }
+  const keysA = a.map(matchKey)
+  const keysB = b.map(matchKey)
 
   // table[i * width + j] is the length of the longest common sequence of a[i..] and b[j..].
   const n = a.length
@@ -43,7 +58,7 @@ export function diffWords(before: string, after: string): WordDiff {
   for (let i = n - 1; i >= 0; i--) {
     for (let j = m - 1; j >= 0; j--) {
       table[i * width + j] =
-        a[i] === b[j]
+        keysA[i] === keysB[j]
           ? table[(i + 1) * width + j + 1] + 1
           : Math.max(table[(i + 1) * width + j], table[i * width + j + 1])
     }
@@ -54,7 +69,7 @@ export function diffWords(before: string, after: string): WordDiff {
   let i = 0
   let j = 0
   while (i < n && j < m) {
-    if (a[i] === b[j]) {
+    if (keysA[i] === keysB[j]) {
       push(beforePieces, a[i], false)
       push(afterPieces, b[j], false)
       i++

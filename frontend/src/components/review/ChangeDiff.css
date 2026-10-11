@@ -22,8 +22,9 @@
   overflow-wrap: anywhere;
 }
 
-.change-none {
-  font-style: italic;
+/* The sentence above a new line, naming the section it goes into. */
+.change-note {
+  font-size: 0.875rem;
   color: var(--muted);
 }
 

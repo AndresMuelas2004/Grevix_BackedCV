@@ -17,13 +17,15 @@ export function knockoutItems(analysis: AnalysisReport): KnockoutItem[] {
   for (const assessment of Object.values(analysis.assessments)) {
     const question = assessment.question
     if (question === null) continue
-    const answer: boolean | undefined = answers[assessment.requirement_id]
-    if (assessment.status !== 'unknown' && answer === undefined) continue
+    // Only a saved yes (true) or no (false) is an answer. A missing or other value is unanswered.
+    const saved: unknown = answers[assessment.requirement_id]
+    const answer = typeof saved === 'boolean' ? saved : null
+    if (assessment.status !== 'unknown' && answer === null) continue
     items.push({
       requirementId: assessment.requirement_id,
       label: labels.get(assessment.requirement_id) ?? assessment.requirement_id,
       question,
-      answer: answer ?? null,
+      answer,
     })
   }
   return items

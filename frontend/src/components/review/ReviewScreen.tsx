@@ -160,6 +160,7 @@ export default function ReviewScreen({
                   decision={effectiveDecision(suggestion, decisions)}
                   requirementLabels={requirementLabels}
                   citations={citations}
+                  sectionTitle={group.title}
                   onDecide={(choice) => decide(suggestion.id, choice)}
                   onSaveEdit={(text) => checkEdit(suggestion.id, text)}
                 />
