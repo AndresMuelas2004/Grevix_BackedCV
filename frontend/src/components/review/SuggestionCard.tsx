@@ -1,6 +1,7 @@
 import { useRef, useState, type FormEvent } from 'react'
-import type { Suggestion, SuggestionKind, VerificationStatus } from '../../api/types'
+import type { Suggestion, VerificationStatus } from '../../api/types'
 import { describeError } from '../../lib/errors'
+import { SUGGESTION_KIND_LABELS } from '../../lib/labels'
 import CitationTag, { CitedText } from '../CitationTag'
 import ChangeDiff from './ChangeDiff'
 import './SuggestionCard.css'
@@ -20,16 +21,11 @@ interface SuggestionCardProps {
   onSaveEdit: (text: string) => Promise<void>
 }
 
-const KIND_LABELS: Record<SuggestionKind, string> = {
-  align_wording: 'Align wording',
-  add_skill: 'Add skill',
-  tailor_summary: 'Tailor summary',
-}
-
 const STATUS_CHIPS: Record<VerificationStatus, { label: string; chip: string }> = {
   verified: { label: 'Verified', chip: 'chip-met' },
   unsupported: { label: 'Unsupported', chip: 'chip-missing' },
   pending: { label: 'Not checked', chip: 'chip-unknown' },
+  refused: { label: 'Refused', chip: 'chip-missing' },
 }
 
 export default function SuggestionCard({
@@ -93,7 +89,7 @@ export default function SuggestionCard({
   return (
     <article className="suggestion card" data-status={status} aria-labelledby={titleId}>
       <div className="suggestion-head">
-        <h4 id={titleId}>{KIND_LABELS[suggestion.kind]}</h4>
+        <h4 id={titleId}>{SUGGESTION_KIND_LABELS[suggestion.kind]}</h4>
         <span role="status">
           <span className={`chip ${chip.chip}`}>{chip.label}</span>
         </span>

@@ -13,6 +13,7 @@ import { formatScore } from '../../lib/format'
 import { SECTION_LABELS } from '../../lib/labels'
 import { useSaving } from '../../lib/saving'
 import HowComputed from '../HowComputed'
+import RefusedGroup from './RefusedGroup'
 import ScoreValue from './ScoreValue'
 import SuggestionCard, { type Decision } from './SuggestionCard'
 import './ReviewScreen.css'
@@ -53,7 +54,21 @@ export default function ReviewScreen({
     analysis,
     accepted.length > 0 ? accepted.map((s) => s.id) : verified.map((s) => s.id),
   )
-  const groups = groupSuggestions(analysis)
+  // Refused suggestions are not offered here: they are listed in the refused group at the end.
+  const groups = groupSuggestions(
+    analysis,
+    suggestions.filter((suggestion) => !isRefused(suggestion)),
+  )
+  const refused = suggestions.filter(isRefused)
+  const refusedIds = new Set(refused.map((suggestion) => suggestion.id))
+  // A refusal of a suggestion is shown on that suggestion's card; the other refusals on their own.
+  const refusals = (analysis.refusals ?? []).filter(
+    (refusal) => refusal.suggestion_id === null || !refusedIds.has(refusal.suggestion_id),
+  )
+  const refusedItems = groupSuggestions(analysis, refused).flatMap((group) =>
+    group.suggestions.map((suggestion) => ({ suggestion, sectionTitle: group.title })),
+  )
+  const hasRefused = refusals.length > 0 || refusedItems.length > 0
   // No suggestions, and the suggest step itself failed on the server: not the same as "none needed".
   const suggestFailed =
     suggestions.length === 0 && analysis.errors.some((error) => error.node === 'suggest')
@@ -167,7 +182,7 @@ export default function ReviewScreen({
         </section>
       )}
 
-      {groups.length === 0 && !suggestFailed && (
+      {groups.length === 0 && !suggestFailed && !hasRefused && (
         <section className="card">
           <p>No suggestions were found for this CV and posting.</p>
         </section>
@@ -195,6 +210,15 @@ export default function ReviewScreen({
         </section>
       ))}
 
+      {hasRefused && (
+        <RefusedGroup
+          refusals={refusals}
+          items={refusedItems}
+          requirementLabels={requirementLabels}
+          citations={citations}
+        />
+      )}
+
       <HowComputed usage={analysis.usage} />
     </div>
   )
@@ -202,6 +226,11 @@ export default function ReviewScreen({
 
 function isVerified(suggestion: Suggestion): boolean {
   return suggestion.verification.status === 'verified'
+}
+
+// Refused by the gate: backed by the CV but not viable. Such a suggestion can never be accepted.
+function isRefused(suggestion: Suggestion): boolean {
+  return suggestion.verification.status === 'refused'
 }
 
 // Turns the saved lists back into one decision per suggestion.
@@ -341,13 +370,13 @@ interface SuggestionGroup {
   suggestions: Suggestion[]
 }
 
-// Groups suggestions by the CV section they change, in CV order. Sections that the CV does not
-// have yet (a new skills or summary section) come after them.
-function groupSuggestions(analysis: AnalysisReport): SuggestionGroup[] {
+// Groups the given suggestions by the CV section they change, in CV order. Sections that the CV does
+// not have yet (a new skills or summary section) come after them.
+function groupSuggestions(analysis: AnalysisReport, list: Suggestion[]): SuggestionGroup[] {
   const sections = analysis.cv?.sections ?? []
   const lines = analysis.cv?.lines ?? []
   const byKey = new Map<string, Suggestion[]>()
-  for (const suggestion of analysis.suggestions) {
+  for (const suggestion of list) {
     const key =
       sectionIdFor(suggestion, sections) ??
       (suggestion.kind === 'align_wording' ? 'other' : suggestion.target)

@@ -4,6 +4,7 @@ import type {
   CandidateFacts,
   CoveragePreview,
   ErrorBody,
+  HiddenRiskSample,
   InputsUpdate,
   OptimizeStep,
   ProgressEvent,
@@ -74,6 +75,17 @@ export async function getSamples(): Promise<Samples> {
   if (!response.ok) throw await readError(response)
   const body: unknown = await response.json()
   if (!isSamples(body)) {
+    throw new ApiError(response.status, 'bad_response', 'The sample could not be read.')
+  }
+  return body
+}
+
+// The Card 1 sample: a posting with hidden barriers, and its CV as pasted text (no file).
+export async function getHiddenRiskSample(): Promise<HiddenRiskSample> {
+  const response = await send(`${API_BASE}/samples/hidden-risk`, {})
+  if (!response.ok) throw await readError(response)
+  const body: unknown = await response.json()
+  if (!isHiddenRiskSample(body)) {
     throw new ApiError(response.status, 'bad_response', 'The sample could not be read.')
   }
   return body
@@ -378,6 +390,10 @@ function isSamples(value: unknown): value is Samples {
     typeof value.cv_docx_url === 'string' &&
     typeof value.cv_filename === 'string'
   )
+}
+
+function isHiddenRiskSample(value: unknown): value is HiddenRiskSample {
+  return isRecord(value) && typeof value.cv_text === 'string' && typeof value.job_text === 'string'
 }
 
 interface SseMessage {

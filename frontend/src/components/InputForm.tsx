@@ -7,6 +7,7 @@ import {
   type KeyboardEvent,
 } from 'react'
 import {
+  getHiddenRiskSample,
   getSampleCvFile,
   getSamples,
   isSampleCvFile,
@@ -54,7 +55,9 @@ export default function InputForm({ draft, onChange, onSubmit }: InputFormProps)
   const [fileError, setFileError] = useState<string | null>(null)
   const [dragging, setDragging] = useState(false)
   const [sampleLoading, setSampleLoading] = useState(false)
+  const [hiddenSampleLoading, setHiddenSampleLoading] = useState(false)
   const [sampleError, setSampleError] = useState<string | null>(null)
+  const sampleBusy = sampleLoading || hiddenSampleLoading
   const fileInput = useRef<HTMLInputElement>(null)
   const cvTextInput = useRef<HTMLTextAreaElement>(null)
   const jobTextInput = useRef<HTMLTextAreaElement>(null)
@@ -118,7 +121,7 @@ export default function InputForm({ draft, onChange, onSubmit }: InputFormProps)
   // Loads the sample CV as a PDF upload and fills the posting. When the PDF cannot be fetched,
   // the sample text goes in paste mode instead.
   async function loadSample() {
-    if (sampleLoading) return
+    if (sampleBusy) return
     setSampleLoading(true)
     setSampleError(null)
     setFileError(null)
@@ -134,6 +137,22 @@ export default function InputForm({ draft, onChange, onSubmit }: InputFormProps)
       setSampleError(`The sample could not be loaded. ${describeError(error)}`)
     } finally {
       setSampleLoading(false)
+    }
+  }
+
+  // Loads the posting that hides barriers, with its CV as pasted text (no file).
+  async function loadHiddenRiskSample() {
+    if (sampleBusy) return
+    setHiddenSampleLoading(true)
+    setSampleError(null)
+    setFileError(null)
+    try {
+      const sample = await getHiddenRiskSample()
+      update({ cvMode: 'text', cvText: sample.cv_text, jobText: sample.job_text })
+    } catch (error) {
+      setSampleError(`The sample could not be loaded. ${describeError(error)}`)
+    } finally {
+      setHiddenSampleLoading(false)
     }
   }
 
@@ -163,14 +182,24 @@ export default function InputForm({ draft, onChange, onSubmit }: InputFormProps)
       <section className="form-section" aria-labelledby="cv-heading">
         <div className="section-head">
           <h3 id="cv-heading">Your CV</h3>
-          <button
-            type="button"
-            className="btn btn-secondary"
-            onClick={loadSample}
-            aria-disabled={sampleLoading}
-          >
-            {sampleLoading ? 'Loading sample...' : 'Try the sample'}
-          </button>
+          <div className="sample-actions">
+            <button
+              type="button"
+              className="btn btn-secondary"
+              onClick={loadSample}
+              aria-disabled={sampleBusy}
+            >
+              {sampleLoading ? 'Loading sample...' : 'Try the sample'}
+            </button>
+            <button
+              type="button"
+              className="btn btn-secondary"
+              onClick={loadHiddenRiskSample}
+              aria-disabled={sampleBusy}
+            >
+              {hiddenSampleLoading ? 'Loading sample...' : 'Try a posting with hidden barriers'}
+            </button>
+          </div>
         </div>
         {sampleError && (
           <p className="notice notice-error" role="alert">
