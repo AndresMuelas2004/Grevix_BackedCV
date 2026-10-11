@@ -1,0 +1,37 @@
+[
+  {
+    "id": "curated-two-column",
+    "description": "Curated demo CV, as a two-column PDF, against a junior AI posting.",
+    "cv": "samples/curated/cv.pdf",
+    "job": "samples/curated/job.txt",
+    "expect": {
+      "requirements": [{"knockout_type": "work_authorization", "screening_question": true}],
+      "flags": [{"rule": "R1"}, {"rule": "R2"}],
+      "banners": ["R3"],
+      "parse_warnings": ["multi_column"]
+    }
+  },
+  {
+    "id": "simple-sample",
+    "description": "Bundled text sample: a junior posting that asks for 5+ years of LangGraph.",
+    "cv": "samples/sample_cv.txt",
+    "job": "samples/sample_job.txt",
+    "expect": {
+      "requirements": [{"knockout_type": "work_authorization", "screening_question": true}],
+      "flags": [{"rule": "R1", "contains": "LangGraph"}]
+    }
+  },
+  {
+    "id": "nurse-rn",
+    "description": "Fictional registered nurse and a hospital posting. The Ohio RN license is held, so it must not be asked. Spanish is preferred.",
+    "cv": "evals/smoke/nurse_rn_cv.txt",
+    "job": "evals/smoke/nurse_rn_job.txt",
+    "expect": {
+      "requirements": [
+        {"contains": "license", "status": "met", "screening_question": false},
+        {"contains": "Spanish", "importance": "preferred"}
+      ],
+      "verdict_not": ["likely_screened_out"]
+    }
+  }
+]

@@ -45,6 +45,25 @@ For the headline number, use the `heldout` section and report guards and verifie
 
 The newest live run is `evals/results/fabrication-live-20261011-0257.md`. On the `heldout` split, the guards caught 3 of the 10 invented rewrites and the verifier 7, with none missed. The verifier blocked 1 of the 10 faithful rewrites by mistake (C29), and the guards none. The verifier took 10 calls and cost USD 0.0067, with no failed calls. Earlier runs stay in the same folder to show the variation between runs: C13 was blocked by mistake in two earlier live runs, and C09 was missed in two.
 
+## Smoke pairs
+
+Three synthetic CV and posting pairs run through the real analysis, up to the report. Each pair lists what its report must show: a screening question, a flag, a banner, a parse warning or a verdict. The checks test those properties, not exact scores. `smoke/pairs.json` holds the pairs:
+
+- `cv` and `job` are paths from `backend/`, or the text itself when it has line breaks. A PDF or DOCX is read like an upload; any other file as pasted text.
+- `expect` keys: `requirements` (a requirement with these properties exists: `contains`, `importance`, `knockout_type`, `status`, `screening_question`), `flags` (`rule`, and optionally `contains`, a phrase the flagged requirement must have), `banners` and `parse_warnings` (rule IDs and codes), `verdict_not` (verdict labels it must not have).
+
+| Command | What runs | Cost |
+|---|---|---|
+| `uv run python -m evals.run_smoke --live` | The three pairs, with the model. Needs `OPENAI_API_KEY` in `.env`. | Model calls |
+| `uv run python -m evals.run_smoke --live --langsmith` | The same, plus one experiment on the LangSmith dataset `backedcv-smoke`. Needs `LANGSMITH_API_KEY` in `.env`. | Model calls |
+
+Notes:
+
+- `--live` is required: there is no offline mode.
+- Each run writes `evals/results/smoke-<YYYYMMDD-HHMM>.md` (checks, analysis per pair, cost) and exits with 1 when a check fails.
+- `--langsmith` reuses the dataset if it exists; delete it in LangSmith to upload changed pairs. The experiment replays the live checks, so the model is paid once.
+- The checker's tests make no model call: `uv run pytest -q tests/unit/test_smoke_runner.py`.
+
 ## Tests
 
 ```
