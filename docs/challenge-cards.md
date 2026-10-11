@@ -51,6 +51,6 @@ Screenshots: [hidden risks](screenshots/08-hidden-risks.png), [Looks met, but...
 
 ### Measured
 
-- **Everything that existed still works:** 614 backend tests pass (505 before the card), and the full click-through of the original flow (sample, answers, optimize, review, build, downloads) passes every step.
-- **End-to-end pairs, live with the model:** 4 of 4 pairs and 19 of 19 checks, for $0.0123. The fourth pair checks the card's goal: a high work permit risk, Kubernetes downgraded by recency and flagged "Looks met, but...".
+- **Everything that existed still works:** 625 backend tests pass (505 before the card), the full click-through of the original flow (sample, answers, optimize, review, build, downloads) passes every step, the Docker image builds and serves, and an axe-core audit of the new screens finds 0 accessibility violations.
+- **End-to-end pairs, live with the model:** 4 of 4 pairs and 20 of 20 checks, for $0.0119. The fourth pair checks the card's goal: a high work permit risk, Kubernetes downgraded by recency, flagged "Looks met, but..." and its edit refused as not viable.
 - **The first live run caught a miss:** the posting's extraction also turned the buried work permit sentence into a knockout requirement, and my first rule capped such risks at medium. Now a risk tied to a knockout keeps its real level and only leaves the question and the verdict to the knockout. Both run reports are kept in `backend/evals/results/`.

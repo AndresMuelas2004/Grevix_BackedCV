@@ -46,7 +46,8 @@
     "expect": {
       "hidden_risks": [{"kind": "work_authorization", "risk": "high"}],
       "recency": [{"contains": "Kubernetes", "effect": "downgraded"}],
-      "screening_flags": [{"contains": "Kubernetes"}]
+      "screening_flags": [{"contains": "Kubernetes"}],
+      "refusals": [{"gate": "recent_enough", "contains": "Kubernetes"}]
     }
   }
 ]

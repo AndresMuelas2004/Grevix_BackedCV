@@ -45,6 +45,7 @@ EXPECT_KEYS = {
     "hidden_risks",
     "recency",
     "screening_flags",
+    "refusals",
 }
 SELECTOR_KEYS = {"contains", "importance", "knockout_type", "status", "screening_question"}
 SELECTOR_VALUES = {
@@ -58,6 +59,7 @@ BANNER_RULES = ("R3", "R4")
 VERDICT_LABELS = get_args(VerdictLabel)
 HIDDEN_RISK_VALUES = {"kind": get_args(BarrierKind), "risk": get_args(RiskLevel)}
 RECENCY_EFFECTS = ("none", "warning", "downgraded")
+REFUSAL_GATES = ("recent_enough", "not_blocked")
 ANALYSIS_HEADER = (
     "Pair",
     "Verdict",
@@ -174,6 +176,11 @@ def validate_expect(expect: dict[str, Any]) -> None:
     for flag in expect.get("screening_flags", []):
         if set(flag) != {"contains"}:
             raise ValueError(f"bad screening flag {flag}: use the key contains")
+    for refusal in expect.get("refusals", []):
+        if set(refusal) != {"gate", "contains"}:
+            raise ValueError(f"bad refusal {refusal}: use the keys gate and contains")
+        if refusal["gate"] not in REFUSAL_GATES:
+            raise ValueError(f"gate must be one of {REFUSAL_GATES}, got {refusal['gate']!r}")
 
 
 def is_inline(value: str) -> bool:
@@ -236,6 +243,7 @@ def check_expectations(expect: dict[str, Any], projection: dict) -> list[Check]:
     checks += [
         _screening_flag_check(flag, projection) for flag in expect.get("screening_flags", [])
     ]
+    checks += [_refusal_check(refusal, projection) for refusal in expect.get("refusals", [])]
     return checks
 
 
@@ -382,6 +390,19 @@ def _screening_flag_check(expect: dict, projection: dict) -> Check:
     if hits:
         return Check(name, True, f"flagged: {', '.join(hits)}")
     return Check(name, False, f"not flagged (flags: {_ids(flags, 'requirement_id')})")
+
+
+def _refusal_check(expect: dict, projection: dict) -> Check:
+    name = f"refusal {_describe(expect)}"
+    refusals = projection.get("refusals") or []
+    named = {r["id"] for r in _named(expect["contains"], projection)}
+    if not named:
+        return Check(name, False, f"no requirement contains {expect['contains']!r}")
+    hits = [f for f in refusals if f["gate"] == expect["gate"] and f["requirement_id"] in named]
+    if hits:
+        return Check(name, True, f"{hits[0]['requirement_id']}: {hits[0]['reason']}")
+    found = ", ".join(f"{f['requirement_id']} {f['gate']}" for f in refusals) or "none"
+    return Check(name, False, f"no matching refusal (refusals: {found})")
 
 
 def _ids(items: list[dict] | None, key: str) -> str:

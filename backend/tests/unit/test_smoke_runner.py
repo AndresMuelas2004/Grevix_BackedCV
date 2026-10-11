@@ -4,12 +4,16 @@ import pytest
 
 from backedcv.api.projection import project
 from backedcv.domain.models import (
+    HiddenRisk,
     ParseWarning,
     PostingBanner,
+    RecencyCheck,
+    Refusal,
     Requirement,
     RequirementAssessment,
     RequirementFlag,
     ScoreBreakdown,
+    ScreeningFlag,
     Verdict,
 )
 from evals import run_smoke
@@ -29,6 +33,8 @@ SPANISH = "Spanish is preferred: many of our patients and their families speak S
 LANGGRAPH = "5+ years of hands-on experience with LangGraph"
 LANGCHAIN = "Hands-on experience with LangChain."
 AUTHORIZATION = "Must be authorized to work in the United States without visa sponsorship."
+KUBERNETES = "3+ years of hands-on Kubernetes experience within the last 5 years."
+TERRAFORM = "Hands-on experience with Terraform and AWS."
 
 
 def _expect(pair_id: str) -> dict:
@@ -47,7 +53,18 @@ def _assessment(req_id: str, status="met", question=None) -> dict:
 
 
 def _report(
-    requirements, *, assessments=(), flags=(), banners=(), warnings=(), verdict="apply", paused=True
+    requirements,
+    *,
+    assessments=(),
+    flags=(),
+    banners=(),
+    warnings=(),
+    verdict="apply",
+    paused=True,
+    hidden_risks=(),
+    recency=(),
+    screening_flags=(),
+    refusals=(),
 ):
     """The projection that project() builds from a snapshot shaped like LangGraph's."""
     values = {
@@ -60,6 +77,10 @@ def _report(
         "score": ScoreBreakdown(
             fit=80, coverage=60, coverage_numerator=1, coverage_denominator=2, pending_points=0
         ).model_dump(),
+        "hidden_risks": [h.model_dump() for h in hidden_risks],
+        "recency": {c.requirement_id: c.model_dump() for c in recency},
+        "screening_flags": [f.model_dump() for f in screening_flags],
+        "refusals": [r.model_dump() for r in refusals],
     }
     interrupts = [SimpleNamespace(value={"stage": "report_ready"})] if paused else []
     next_node = ("await_optimize",) if paused else ("prepare_job",)
@@ -221,6 +242,56 @@ def test_an_analysis_that_has_not_paused_fails_first():
     assert checks[0].reason == "status stalled, stage none"
 
 
+def _hidden_risk(refusals=()) -> dict:
+    """The hidden-risk pair's report: a high work-permit risk, and Kubernetes evidence from
+    2015-2017 that falls outside the 5-year window, so the requirement is downgraded and flagged."""
+    requirements = [
+        _req("R01", "Kubernetes experience", KUBERNETES, category="experience_years", min_years=3),
+        _req("R02", "Terraform", TERRAFORM, category="hard_skill"),
+    ]
+    return _report(
+        requirements,
+        hidden_risks=[
+            HiddenRisk(
+                id="H01", kind="work_authorization", risk="high", explanation="No visa sponsorship."
+            )
+        ],
+        recency=[
+            RecencyCheck(
+                requirement_id="R01",
+                original_status="partial",
+                effect="downgraded",
+                explanation="Last used in 2017.",
+            )
+        ],
+        screening_flags=[ScreeningFlag(requirement_id="R01", risk="medium")],
+        refusals=refusals,
+    )
+
+
+def test_hidden_risk_pair_passes_when_the_report_refuses_kubernetes():
+    refusal = Refusal(requirement_id="R01", gate="recent_enough", reason="Not viable: old.")
+
+    checks = check_expectations(_expect("hidden-risk"), _hidden_risk([refusal]))
+
+    assert _failed(checks) == []
+
+
+@pytest.mark.parametrize(
+    "refusals",
+    [
+        [],
+        [Refusal(requirement_id="R01", gate="not_blocked", reason="Not viable: blocked.")],
+        [Refusal(requirement_id="R02", gate="recent_enough", reason="Not viable: old.")],
+    ],
+    ids=["no-refusal", "wrong-gate", "other-requirement"],
+)
+def test_hidden_risk_pair_fails_without_a_recent_enough_refusal_of_kubernetes(refusals):
+    checks = check_expectations(_expect("hidden-risk"), _hidden_risk(refusals))
+
+    assert _failed(checks) == ["refusal gate=recent_enough, contains=Kubernetes"]
+
+
 @pytest.mark.parametrize(
     "expect",
     [
@@ -233,6 +304,12 @@ def test_an_analysis_that_has_not_paused_fails_first():
         {"flags": [{"rule": "R9"}]},
         {"banners": ["R1"]},
         {"verdict_not": ["maybe"]},
+        {"hidden_risks": [{"kind": "visa"}]},
+        {"hidden_risks": [{"kind": "location", "level": "high"}]},
+        {"recency": [{"contains": "Kubernetes", "effect": "maybe"}]},
+        {"screening_flags": [{"contains": "Kubernetes", "risk": "high"}]},
+        {"refusals": [{"gate": "maybe", "contains": "Kubernetes"}]},
+        {"refusals": [{"gate": "recent_enough", "containz": "Kubernetes"}]},
     ],
 )
 def test_misspelled_expectations_are_rejected(expect):

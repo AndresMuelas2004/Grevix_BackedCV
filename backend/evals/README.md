@@ -47,11 +47,11 @@ The newest live run is `evals/results/fabrication-live-20261011-0257.md`. On the
 
 ## Smoke pairs
 
-Four synthetic CV and posting pairs run through the real analysis, up to the report. Each pair lists what its report must show: a screening question, a flag, a banner, a parse warning, a verdict, a hidden risk, a recency result or a screening flag. The checks test those properties, not exact scores. `smoke/pairs.json` holds the pairs:
+Four synthetic CV and posting pairs run through the real analysis, up to the report. Each pair lists what its report must show: a screening question, a flag, a banner, a parse warning, a verdict, a hidden risk, a recency result, a screening flag or a refusal. The checks test those properties, not exact scores. `smoke/pairs.json` holds the pairs:
 
 - `cv` and `job` are paths from `backend/`, or the text itself when it has line breaks. A PDF or DOCX is read like an upload; any other file as pasted text.
-- `expect` keys: `requirements` (a requirement with these properties exists: `contains`, `importance`, `knockout_type`, `status`, `screening_question`), `flags` (`rule`, and optionally `contains`, a phrase the flagged requirement must have), `banners` and `parse_warnings` (rule IDs and codes), `verdict_not` (verdict labels it must not have), `hidden_risks` (`kind` and `risk`, e.g. `work_authorization` at `high`), `recency` (`contains` and `effect`: `none`, `warning` or `downgraded`), `screening_flags` (`contains`: the requirement with that phrase must be flagged).
-- `hidden-risk` (pair 4) tests buried rules: a work-permit sentence in the posting's last paragraph, and a 5-year Kubernetes window that the CV's only Kubernetes evidence (2015-2017) falls outside of.
+- `expect` keys: `requirements` (a requirement with these properties exists: `contains`, `importance`, `knockout_type`, `status`, `screening_question`), `flags` (`rule`, and optionally `contains`, a phrase the flagged requirement must have), `banners` and `parse_warnings` (rule IDs and codes), `verdict_not` (verdict labels it must not have), `hidden_risks` (`kind` and `risk`, e.g. `work_authorization` at `high`), `recency` (`contains` and `effect`: `none`, `warning` or `downgraded`), `screening_flags` (`contains`: the requirement with that phrase must be flagged), `refusals` (`gate` and `contains`: a refusal with that gate on a requirement with that phrase).
+- `hidden-risk` (pair 4) tests buried rules: a work-permit sentence in the posting's last paragraph, and a 5-year Kubernetes window that the CV's only Kubernetes evidence (2015-2017) falls outside of. The report must refuse that requirement as not viable.
 
 | Command | What runs | Cost |
 |---|---|---|
