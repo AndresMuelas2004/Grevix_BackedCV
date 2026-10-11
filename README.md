@@ -1,37 +1,177 @@
 # BackedCV
 
-> Work in progress. Built solo during the Grevix AfterCode 24-hour hackathon (October 2026).
+Is this job worth applying to? Paste a posting, upload your CV, and see what would screen you out and how to tailor your CV without inventing experience.
 
-I'm building BackedCV. You paste a job posting, upload your CV, and it tells you if the job is worth applying to, what is likely to get you screened out, and how to tailor your CV to that posting without inventing anything.
+I built BackedCV solo during the Grevix AfterCode 24-hour hackathon (October 2026). It is a FastAPI and React web app that calls OpenAI models.
 
 ## Why
 
-People send dozens of applications blind and never find out why they were rejected. Most automatic rejections come from knockout questions (work permit, licenses, minimum years, location), not from keyword counts. But the popular tools give you an opaque keyword score, and plenty of AI resume writers happily add experience you don't have. I'm moving my career into AI and job hunting right now, so I'm user number one.
+Most applicant tracking systems (ATS) do not auto-reject on keywords. Knockout questions usually do: work authorization, licenses, minimum years, location. Volume is the bigger problem: an entry-level role can draw hundreds of applications. Popular tools mostly give one opaque keyword score, which does not show what would screen you out. Some AI CV writers add experience you do not have.
+
+## What it does
+
+1. **Reads your CV.** It extracts the text from a PDF or DOCX and shows what a parser reads, line by line. It flags parse warnings, such as a two-column PDF.
+2. **Splits the posting into requirements.** Each one has a type (skill, job title, education, years, language) and is required or preferred. Knockouts are the questions an employer usually screens on, such as work authorization or location. Red flags catch absurd requirements, such as 3 or more years for an entry-level role, or years asked for a technology younger than that.
+3. **Finds the evidence.** Each requirement is linked to the CV lines that prove it, by exact words or by meaning.
+4. **Scores and gives a verdict.** Two scores out of 100: Fit (do you meet the requirements?) and Keyword coverage (would an exact-term search find you?). The verdict is Likely screened out, Answer questions first, Apply, Stretch or Long shot. You can answer the open knockout questions, and the scores and verdict update without a new model call.
+5. **Suggests CV edits and checks each one.** "Optimize my CV" suggests rewording, skills and a summary, aimed at requirements you meet in different words. Each suggestion is checked by code, then by a separate model call. Anything the CV does not back is marked unsupported and cannot be accepted.
+6. **You review.** Accept or reject each suggestion. You can edit one, and the edited version is checked again.
+7. **Builds the new CV.** Only accepted, verified changes are applied, in code. An agent may reorder sections and items, but it cannot write text. You get a DOCX and a PDF, and the report shows keyword coverage before and after.
+
+## Screenshots
+
+![Input screen](docs/screenshots/01-input.png)
+
+Input: try the sample, or upload your CV and paste the posting.
+
+![Report](docs/screenshots/02-report.png)
+
+Report: the verdict, both scores, the questions an employer may ask, and the CV as a parser reads it.
+
+![Report after answering](docs/screenshots/03-report-answered.png)
+
+After answering the questions, the verdict changes to Long shot.
+
+![Review](docs/screenshots/04-review.png)
+
+Review: each suggestion shows before and after, the CV lines it rests on, and whether it is verified.
+
+![Built CV summary](docs/screenshots/05-built.png)
+
+Built: keyword coverage goes from 38 to 49, while Fit stays at 52 because rewording adds no experience.
+
+![Rebuilt CV](docs/screenshots/06-new-cv.png)
+
+The rebuilt CV as a PDF (sample data), with the accepted rewrite in Experience.
+
+![Report on a phone](docs/screenshots/07-report-mobile.png)
+
+The report on a phone-sized screen.
+
+## What is different
+
+- **Knockouts and absurd requirements.** Screening questions are marked as knockouts and come first in the verdict. Absurd requirements are flagged.
+- **No invented experience.** Each rewrite passes code checks, then an independent verifier that does not see the rewriter's reasoning, then your review. An unsupported rewrite cannot be accepted. The misses are reported below.
+- **A published, explainable score.** The weights and rules are in [docs/scoring.md](docs/scoring.md). Every point traces back to one requirement and its status.
+- **Matching by meaning.** A model matches requirements to CV lines by meaning, not only by exact words. If the model skips a requirement or fails, the code falls back to exact matches.
+- **Cheap and honest.** A cheaper model handles extraction and matching; a stronger one handles only rewrites and their checks. Identical model calls reuse a stored answer. In the live runs, the verifier cost under one cent per run. The score is marked indicative, and this README reports the misses.
+
+**Not a new idea.** BackedCV is inspired by Jobscan and similar tools, such as Rezi and Teal. Match scores and CV suggestions already exist in those tools. I claim only the five points above.
+
+## Measured, not assumed
+
+The fabrication set tests the no-invention rule. It has 40 synthetic CV rewrites, all written by hand: 20 faithful to the CV and 20 that invent something (a tool, a title, a number, a degree, a bigger role). It has two splits of 20, `dev` and `heldout`, each with 10 of each kind. The headline number uses `heldout`.
+
+Latest live run (2026-10-11, 02:57), `heldout`: 10 of 10 invented rewrites blocked (3 by the code checks, 7 by the verifier). 1 of 10 faithful rewrites blocked by mistake (C29, by the verifier). Across all 40 cases: 20 of 20 invented rewrites blocked, and 19 of 20 faithful rewrites passed.
+
+Variation across the four live runs of 2026-10-11. Heldout gave the same totals in all four. Dev did not: two runs missed one invented rewrite (C09) and blocked one faithful rewrite (C13).
+
+| Run | Heldout: invented blocked | Heldout: faithful blocked by mistake | Dev: invented missed | Dev: faithful blocked by mistake |
+|---|---|---|---|---|
+| 02:45 | 10 of 10 | 1 (C29) | 0 | 0 |
+| 02:46 | 10 of 10 | 1 (C29) | 1 (C09) | 1 (C13) |
+| 02:49 | 10 of 10 | 1 (C29) | 1 (C09) | 1 (C13) |
+| 02:57 | 10 of 10 | 1 (C29) | 0 | 0 |
+
+The verifier is a language model, so its answers can change between runs. The live runs skip the answer cache, so the verifier is asked again each time. A new code check was also added between the 02:49 and 02:56 runs: a computed years total cannot be attached to one job or skill. It now catches C09 and C36 before the verifier does. Verifier cost was $0.0047 to $0.0070 per live run (10 calls, no failures). All live runs used `gpt-6-luna`, the cheap model, for every call, to fit the event's API budget.
+
+A missed case is an invented rewrite that passed the code checks and the verifier, so it would show as verified. Your review is the last check. A faithful rewrite that is blocked by mistake cannot be accepted as it is, but an edited version is checked again.
+
+The offline run needs no API key and runs only the code checks. Commands and the case list are in [backend/evals/README.md](backend/evals/README.md).
 
 ## How it works
 
-- It reads the CV (PDF or DOCX) and shows the text the way screening software sees it.
-- It splits the posting into requirements, flags the knockouts and the unrealistic ones, and links each requirement to the exact CV line that proves it, by keyword or by meaning.
-- The score uses published weights, so every point has a reason.
-- Each suggested rewrite is checked against real lines of the CV, and the ones with no backing can't be accepted.
-- At the end an agent builds the new CV (DOCX and PDF) from the accepted edits only.
+The backend is a FastAPI app. Each analysis runs as one LangGraph graph, and it pauses twice for you: after the report, and at review. FastAPI also serves the built React frontend at `/`.
 
-## Stack
+- Model calls use OpenAI with strict output schemas. By default, `gpt-6-luna` handles extraction, matching and ordering, and `gpt-6.1-sol` handles rewrites and their checks.
+- The score is computed in code from published weights. The model never computes it.
+- Analyses are stored in SQLite and deleted after 24 hours (see [Privacy and limits](#privacy-and-limits)).
 
-Python, FastAPI, LangGraph, LangChain, OpenAI structured outputs, LangSmith and React.
+Details: [docs/architecture.md](docs/architecture.md) (graph, model calls, API, the no-invention pipeline) and [docs/scoring.md](docs/scoring.md) (weights, rules, verdicts).
 
-## Not a new idea
+## Run it
 
-Jobscan, Rezi and Teal already exist, and BackedCV is inspired by Jobscan's scan, optimize and build flow. What I haven't found is a tool that puts knockout detection, line-by-line evidence and a no-invention rule together.
+The analysis calls OpenAI, so you need an API key.
+
+### Docker Compose
+
+1. Copy the example settings file, then set `OPENAI_API_KEY` in `.env`:
+
+   ```
+   cp .env.example .env
+   ```
+
+2. Build and start:
+
+   ```
+   docker compose up --build
+   ```
+
+3. Open http://localhost:8000 and click **Try the sample** to load a sample CV and posting.
+
+### Local development
+
+You need Python 3.12 or newer, uv and Node.js (the Docker build uses Node 24). The backend reads `.env` from the repository root, so set your key there as above.
+
+Backend, from `backend/`:
+
+```
+uv run uvicorn backedcv.main:app --reload --port 8000
+```
+
+Frontend, from `frontend/`, in a second terminal:
+
+```
+npm install
+npm run dev
+```
+
+Open the address Vite prints (http://localhost:5173 by default). Vite sends `/api` requests to port 8000.
+
+Tests, from `backend/`:
+
+```
+uv run pytest
+```
+
+## Technologies and AI tools used
+
+- Python 3.12
+- FastAPI
+- LangGraph
+- LangChain
+- OpenAI API (default models gpt-6-luna and gpt-6.1-sol)
+- LangSmith (optional tracing)
+- pdfplumber
+- python-docx
+- lxml
+- Typst
+- React 19
+- TypeScript
+- Vite
+- Docker
+- uv
+- ruff
+- pytest
+- Claude Code (AI coding assistant)
+
+## How it evolved
+
+BackedCV adapts to the hackathon's Challenge Cards as they arrive. Each card's decisions, and the options I rejected, are recorded in [docs/decision-log.md](docs/decision-log.md). The cards themselves go in `docs/challenge-cards.md` once a card arrives.
+
+## Privacy and limits
+
+- The uploaded file is not kept. The app reads it during the request and stores only the extracted text. An analysis (its CV text, posting and results) is deleted after 24 hours. A purge runs at startup and then every hour. `DELETE /api/analyses/{analysis_id}` deletes one earlier.
+- OpenAI receives the CV and posting text in each model call.
+- Model answers, which can contain text from your CV, are cached in `data/llm_cache.sqlite` (the `backedcv-data` volume under Docker Compose) so identical calls are not paid twice. The 24-hour purge does not clear this file. Set `BACKEDCV_LLM_CACHE=false` to turn the cache off.
+- LangSmith tracing is optional. Without `BACKEDCV_ENV=prod`, traces include the CV and posting text. With it, inputs and outputs are hidden. The default is `dev`.
+- Limits: a CV file up to 4 MB and 6 PDF pages, with up to 30,000 characters of text; a posting of 150 to 20,000 characters. Model-using requests are limited to 30 per IP address per hour and 300 per UTC day for all users (defaults, set with `BACKEDCV_RATE_LIMIT_PER_HOUR` and `BACKEDCV_DAILY_MODEL_RUNS`).
+- The score is indicative. It shows how your CV lines up with a posting under these published rules. No tool can reproduce a specific company's real ATS score.
 
 ## Transparency note
 
 At registration I submitted a different idea (website URL to promo video). I dropped it before the event started, with no code written for it, and chose this problem instead. BackedCV is being built from scratch during these 24 hours.
 
-## Status
-
-Sections for setup, architecture, the Challenge Cards and the demo are added as the project is built. Decisions are recorded in [docs/decision-log.md](docs/decision-log.md).
-
 ## License
 
-MIT
+MIT. See [LICENSE](LICENSE).
