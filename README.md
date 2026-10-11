@@ -26,23 +26,23 @@ Input: try the sample, or upload your CV and paste the posting.
 
 ![Report](docs/screenshots/02-report.png)
 
-Report: the verdict, both scores, the questions an employer may ask, and the CV as a parser reads it.
+Report: the verdict with its reasons, both scores, the questions an employer may ask, and your CV as screening software reads it.
 
 ![Report after answering](docs/screenshots/03-report-answered.png)
 
-After answering the questions, the verdict changes to Long shot.
+After answering the questions, the verdict changes to Stretch.
 
 ![Review](docs/screenshots/04-review.png)
 
-Review: each suggestion shows before and after, the CV lines it rests on, and whether it is verified.
+Review: each suggestion shows before and after, the CV line it rests on, and whether it is verified.
 
 ![Built CV summary](docs/screenshots/05-built.png)
 
-Built: keyword coverage goes from 38 to 49, while Fit stays at 52 because rewording adds no experience.
+Built: keyword coverage goes up, while Fit stays the same because rewording adds no experience.
 
 ![Rebuilt CV](docs/screenshots/06-new-cv.png)
 
-The rebuilt CV as a PDF (sample data), with the accepted rewrite in Experience.
+The rebuilt CV as a PDF (sample data): the accepted rewrite is in Experience, and the new skill is in Skills.
 
 ![Report on a phone](docs/screenshots/07-report-mobile.png)
 
