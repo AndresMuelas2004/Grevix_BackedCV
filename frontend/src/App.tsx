@@ -285,6 +285,13 @@ export default function App() {
     setFlow({ kind: 'idle' })
   }
 
+  // Returns to the form with the CV kept and the posting cleared, to check another job.
+  function analyzeAnotherPosting() {
+    stopRun()
+    setDraft((previous) => ({ ...previous, jobText: '' }))
+    setFlow({ kind: 'idle' })
+  }
+
   // Repeats the step a stopped run was in: the build, the suggestions, or the analysis itself.
   function retryStalled(analysis: AnalysisReport) {
     if (analysis.decisions) void startBuild(analysis, analysis.decisions)
@@ -310,9 +317,9 @@ export default function App() {
       case 'loading':
         return (
           <section className="card loading-card" aria-live="polite">
-            <h2 tabIndex={-1} data-screen-heading>
+            <h1 tabIndex={-1} data-screen-heading>
               Opening your analysis
-            </h2>
+            </h1>
           </section>
         )
 
@@ -345,9 +352,9 @@ export default function App() {
         const text = friendlyText('still_running')
         return (
           <section className="card error-card" aria-labelledby="error-title">
-            <h2 id="error-title" tabIndex={-1} data-screen-heading>
+            <h1 id="error-title" tabIndex={-1} data-screen-heading>
               {text.message}
-            </h2>
+            </h1>
             <p className="error-next">{text.next}</p>
             <div className="error-actions">
               <button type="button" className="btn btn-secondary" onClick={startOver}>
@@ -362,25 +369,16 @@ export default function App() {
         const { analysis } = flow
         return (
           <>
-            <Toolbar onStartOver={startOver} />
+            <Toolbar
+              onStartOver={startOver}
+              label="New analysis"
+              context={reportContext(analysis)}
+            />
             <ReportView
               analysis={analysis}
               onAnalysisChange={updateReport}
-              actions={(busy) => (
-                <div className="optimize-action">
-                  <button
-                    type="button"
-                    className="btn btn-primary"
-                    disabled={analysis.stage !== 'report_ready' || busy}
-                    onClick={() => startOptimize(analysis)}
-                  >
-                    Optimize my CV
-                  </button>
-                  <p className="optimize-hint">
-                    Suggests rewording, skills and a summary. Each one is checked against your CV.
-                  </p>
-                </div>
-              )}
+              onImprove={() => void startOptimize(analysis)}
+              onAnotherPosting={analyzeAnotherPosting}
             />
           </>
         )
@@ -429,9 +427,9 @@ export default function App() {
         const step = stepOf(analysis)
         return (
           <section className="card error-card" aria-labelledby="error-title">
-            <h2 id="error-title" tabIndex={-1} data-screen-heading>
+            <h1 id="error-title" tabIndex={-1} data-screen-heading>
               {friendlyText(STALLED_ERRORS[step]).message}
-            </h2>
+            </h1>
             <div className="error-actions">
               <button
                 type="button"
@@ -453,9 +451,9 @@ export default function App() {
         const failure = describeFailure(error)
         return (
           <section className="card error-card" aria-labelledby="error-title">
-            <h2 id="error-title" tabIndex={-1} data-screen-heading>
+            <h1 id="error-title" tabIndex={-1} data-screen-heading>
               {failure.message}
-            </h2>
+            </h1>
             {failure.next && <p className="error-next">{failure.next}</p>}
             {failure.detail && <p className="error-detail">Details: {failure.detail}</p>}
             <div className="error-actions">
@@ -486,7 +484,9 @@ export default function App() {
     <div className="app">
       <header className="app-header">
         <div className="app-header-inner brand">
-          <h1 className="brand-name">BackedCV</h1>
+          <p className="brand-name">
+            Backed<span className="brand-accent">CV</span>
+          </p>
           <p className="brand-tagline">
             Is this job worth applying to? Every point backed by your CV.
           </p>
@@ -507,14 +507,32 @@ export default function App() {
   )
 }
 
-function Toolbar({ onStartOver }: { onStartOver: () => void }) {
+interface ToolbarProps {
+  onStartOver: () => void
+  label?: string
+  context?: string | null // what is being checked, e.g. "Platform Engineer · Sable Creek"
+}
+
+function Toolbar({ onStartOver, label = 'Start over', context = null }: ToolbarProps) {
   return (
-    <div className="toolbar">
+    <div className={context ? 'toolbar toolbar-context' : 'toolbar'}>
+      {context && <p className="toolbar-text">{context}</p>}
       <button type="button" className="btn btn-secondary" onClick={onStartOver}>
-        Start over
+        {label}
       </button>
     </div>
   )
+}
+
+// One line naming the posting and the CV of a report.
+function reportContext(analysis: AnalysisReport): string | null {
+  const job = analysis.job
+  const name = analysis.cv?.contact.name?.value ?? null
+  const parts = [job?.title, job?.company, job?.location].filter(
+    (part): part is string => typeof part === 'string' && part.trim() !== '',
+  )
+  if (name) parts.push(`CV: ${name}`)
+  return parts.length > 0 ? parts.join(' · ') : null
 }
 
 // The analysis id in the address bar (?analysis=...), or null.

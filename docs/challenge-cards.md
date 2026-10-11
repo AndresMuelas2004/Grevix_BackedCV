@@ -67,9 +67,22 @@ Share the project on LinkedIn or Reddit mentioning GREVIX (or in community group
 
 | | What | Why |
 |---|---|---|
-| New | Posts on LinkedIn (mentioning GREVIX) and r/SideProject, and a message for community groups, all ending with the same three questions | Answers that point at something specific to change |
+| New | Posts on LinkedIn (mentioning GREVIX), X (mentioning @Grevixofficial), r/LangChain, r/hackathon and the participants' WhatsApp group, all ending with the same three questions | Answers that point at something specific to change |
 | New | A public feedback form in the repository (GitHub issue form) | A timestamped, checkable record; it asks people not to paste personal data |
 | New | A temporary live demo, [backedcv.onrender.com](https://backedcv.onrender.com) (Render free plan, cheap model, hourly and daily limits, privacy note on the first screen) | People can try it instead of only watching a video |
 | New | [feedback/](../feedback/README.md): where it was shared, what people said (screenshots, names blurred unless agreed), what changed and what did not | The card's proof, kept honest |
 | Changes | Only what a specific comment points at, each change linked to its comment | Feedback drives the change, not the other way round |
 | Stays | Everything from the build and Card 1 | Nothing in the card asks to remove anything |
+
+### What the feedback changed
+
+Three participants answered (their words and screenshots: [feedback/README.md](../feedback/README.md)). Two found the report overwhelming and too long; one asked for side-by-side quotes, hard deal-breakers apart from soft preferences, and a preview of the parsed dates.
+
+| | What | Comment it answers |
+|---|---|---|
+| Rebuilt | The report, from simple to complex: the verdict in one sentence and one number; the open yes/no questions right under it, with "Improve my CV" locked until they are answered; a numbered "What to fix, most important first" list in three tiers (could rule you out, serious gap, worth improving), each item with the posting's sentence next to the CV line and one thing to do; "Already strong"; everything else folded into details | "way too overwhelming", "a bit too lengthy", side-by-side quotes |
+| Changes | Only legal bans (work permit, clearance, license) give "Likely screened out" on their own; a missing language or degree caps the verdict at "Long shot"; location and availability are asked | Deal-breakers apart from preferences |
+| New | "How we read your dates": each entry's dates as read and the time counted; a missing month says "month unknown" and is never guessed | A preview of the parsed timelines |
+| Changes | Every explanation is one short sentence, without internal IDs | "a bit too lengthy" |
+| New | The first screen plays an example of the report before anyone uploads anything | "improve the landing page ui" |
+| Fixed | From an AI-run test (not counted as feedback): whitespace no longer changes the report, the built-in samples always give the same result, missing minimum years is a serious gap, one question per fact, no "aging" for degrees, dates glued to a city, keyword-stuffing suggestions filtered out | Determinism and correctness |

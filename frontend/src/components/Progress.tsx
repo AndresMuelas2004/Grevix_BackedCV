@@ -23,9 +23,9 @@ const STATE_TEXT: Record<StepState, string> = {
 export default function Progress({ title, rows, note }: ProgressProps) {
   return (
     <section className="progress card" aria-labelledby="progress-title">
-      <h2 id="progress-title" tabIndex={-1} data-screen-heading>
+      <h1 id="progress-title" tabIndex={-1} data-screen-heading>
         {title}
-      </h2>
+      </h1>
       {note && <p className="notice notice-info">{note}</p>}
       {rows && (
         <div aria-live="polite">

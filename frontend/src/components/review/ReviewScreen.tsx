@@ -115,9 +115,9 @@ export default function ReviewScreen({
     <div className="review">
       <section className="card review-summary" aria-labelledby="review-title">
         <p className="eyebrow">Review</p>
-        <h2 id="review-title" tabIndex={-1} data-screen-heading>
+        <h1 id="review-title" tabIndex={-1} data-screen-heading>
           Choose the changes for your new CV
-        </h2>
+        </h1>
         <p>Only verified changes can be accepted. Nothing reaches your new CV unless you accept it.</p>
 
         <ul className="counts" aria-label="Suggestion counts">
