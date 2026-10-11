@@ -38,8 +38,8 @@ def flag_requirements(
                 )
 
     releases = load("tech_release_years").get("technologies", {})
-    for req in job.requirements:
-        if req.min_years is None or any(req.id in f.requirement_ids for f in flags):
+    for req in job.requirements:  # also when R1 already flags it: both flags can apply
+        if req.min_years is None:
             continue
         text = " ".join([req.quote, req.label, *req.terms])
         for tech, year in releases.items():
@@ -60,4 +60,9 @@ def flag_requirements(
 
 
 def flags_by_requirement(flags: list[RequirementFlag]) -> dict[str, str]:
-    return {rid: f.rule_id for f in flags for rid in f.requirement_ids}
+    """Requirement ID -> its rule IDs joined with "+" (e.g. "R1+R2" when both flag it)."""
+    rules: dict[str, set[str]] = {}
+    for flag in flags:
+        for rid in flag.requirement_ids:
+            rules.setdefault(rid, set()).add(flag.rule_id)
+    return {rid: "+".join(sorted(ids)) for rid, ids in rules.items()}

@@ -161,3 +161,33 @@ def test_r1_flags_entry_level_years_and_r1_leaves_fit():
     assert score.fit == 100
     assert verdict.label == "apply"
     assert "screening_risk" in verdict.badges
+
+
+def test_r2_still_flags_a_requirement_that_r1_already_flags():
+    job = _job(
+        req(
+            "R01",
+            category="experience_years",
+            min_years=5,
+            terms=["LangGraph"],
+            quote="5+ years of experience with LangGraph",
+            knockout_type="experience_years",
+        ),
+        req("R02"),
+        seniority="Entry level",
+    )
+
+    flags = flag_requirements(job, today=date(2026, 10, 11))
+    flagged = flags_by_requirement(flags)
+    assessments = {"R01": assess("R01", "missing"), "R02": assess("R02", "met")}
+    score = compute_score(job.requirements, assessments, flagged=flagged)
+    verdict = compute_verdict(job, assessments, score, flagged=flagged)
+    reasons = {c.requirement_id: c.excluded_reason for c in score.contributions}
+
+    assert [(f.rule_id, f.requirement_ids) for f in flags] == [("R1", ["R01"]), ("R2", ["R01"])]
+    assert "entry-level" in flags[0].explanation and "LangGraph" in flags[1].explanation
+    assert flagged == {"R01": "R1+R2"}
+    assert reasons == {"R01": "flagged_R1+R2", "R02": None}
+    assert score.fit == 100
+    assert verdict.label == "apply"
+    assert verdict.badges.count("screening_risk") == 1

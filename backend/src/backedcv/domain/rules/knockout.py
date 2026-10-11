@@ -47,6 +47,16 @@ def apply_facts(
     if assessment.status != "unknown" or not is_knockout(requirement):
         return assessment
 
+    answer = facts.answers.get(requirement.id)
+    if answer is not None:  # a direct yes/no answer beats the typed facts
+        return assessment.model_copy(
+            update={
+                "status": "met" if answer else "missing",
+                "source": "user_answer",
+                "rationale": "You answered yes." if answer else "You answered no.",
+            }
+        )
+
     status = None
     if requirement.knockout_type == "work_authorization":
         if facts.needs_sponsorship is True and _mentions_sponsorship(requirement):
