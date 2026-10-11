@@ -137,3 +137,10 @@ async def stream_graph(graph: Any, graph_input: Any, config: dict, run: Run) -> 
     async for mode, chunk in graph.astream(graph_input, config, stream_mode=["custom", "updates"]):
         if mode == "custom":
             run.emit(ServerSentEvent(event="progress", data=chunk))
+
+
+def emit_progress(run: Run, step: str, status: str, **extra: Any) -> None:
+    """A progress event shaped like the ones the nodes write (see graph/nodes.py `_progress`), for
+    steps that run outside the graph, where the nodes cannot write them."""
+    data = {"type": "progress", "step": step, "status": status, **extra}
+    run.emit(ServerSentEvent(event="progress", data=data))

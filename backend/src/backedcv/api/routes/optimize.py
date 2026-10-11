@@ -2,6 +2,7 @@
 api/runs.py), so a closed connection does not stop them. Every refusal (429, 404, 409, 422) is
 decided before the stream opens, so it arrives as a JSON error."""
 
+import asyncio
 from collections.abc import AsyncIterable, Callable
 from contextlib import aclosing
 from typing import Annotated, Any
@@ -16,12 +17,13 @@ from backedcv.api.projection import (
     BUILD_STEP,
     OPTIMIZE_STEP,
     project,
+    shown_errors,
     stalled_in,
     waiting_at_report,
     waiting_at_review,
 )
 from backedcv.api.rate_limit import count_model_run
-from backedcv.api.runs import Run, stream_graph
+from backedcv.api.runs import Run, emit_progress, stream_graph
 from backedcv.domain.guards import apply_guards
 from backedcv.domain.models import JobPosting, ParsedCV, ReviewDecisions, Suggestion, Verification
 from backedcv.graph.builder import run_config
@@ -57,14 +59,20 @@ async def _claim(request: Request, analysis_id: str, refuse: Callable[[Any], Non
 
 
 async def start_optimize(request: Request, analysis_id: str) -> Run:
-    """Starts the optimize run. A failed optimize is run again from the step that failed."""
+    """Starts the optimize run. A failed optimize runs again from the step that failed. A suggest
+    step that failed inside the graph (the review has no suggestions) runs again from the review."""
     snapshot = await _claim(request, analysis_id, _require_report)
     graph, config = request.app.state.graph, run_config(analysis_id)
+    llm, values = request.app.state.llm, snapshot.values
+    suggest_again = _suggest_failed(snapshot)
     # Never {}: LangGraph ignores an empty resume and the run would not move on.
     resume = Command(resume={"action": "optimize"}) if waiting_at_report(snapshot) else None
 
     async def work(run: Run) -> dict:
-        await stream_graph(graph, resume, config, run)
+        if suggest_again:
+            await _suggest_again(run, llm, graph, config, values)
+        else:
+            await stream_graph(graph, resume, config, run)
         return project(analysis_id, await graph.aget_state(config))
 
     return request.app.state.runs.launch(
@@ -147,8 +155,23 @@ async def verify_suggestion(
 
 
 def _require_report(snapshot: Any) -> None:
-    if not (waiting_at_report(snapshot) or stalled_in(snapshot, OPTIMIZE_STEP)):
+    if not (
+        waiting_at_report(snapshot)
+        or stalled_in(snapshot, OPTIMIZE_STEP)
+        or _suggest_failed(snapshot)
+    ):
         raise ApiError(409, "wrong_stage", "Suggestions can only be made once the report is ready.")
+
+
+def _suggest_failed(snapshot: Any) -> bool:
+    """The suggest step failed inside the graph: the run still reached the review, with no
+    suggestions and an error from that step, because the graph does not stop on it."""
+    values = snapshot.values or {}
+    return (
+        waiting_at_review(snapshot)
+        and not values.get("suggestions")
+        and any(error.get("node") == "suggest" for error in shown_errors(values.get("errors")))
+    )
 
 
 def _require_review(snapshot: Any, message: str) -> None:
@@ -182,6 +205,40 @@ def _find_suggestion(values: dict, suggestion_id: str) -> dict:
     if row is None:
         raise ApiError(404, "suggestion_not_found", "This suggestion does not exist.")
     return row
+
+
+async def _suggest_again(
+    run: Run, llm: StructuredLLM, graph: Any, config: dict, values: dict
+) -> None:
+    """Runs the suggest step here, because the graph cannot run a step again from the review. Then
+    each verification group runs as the graph would run it. The result is written as if verify_batch
+    had just run, so the run still waits at the review. The `resolves` entry supersedes the error of
+    the failed step."""
+    nodes = make_optimize_nodes(llm)
+    emit_progress(run, "suggest", "started")
+    found = await nodes["suggest"](values)
+    suggestions: list[dict] = found["suggestions"]
+    emit_progress(run, "suggest", "done", suggestions=len(suggestions))
+    usage, errors = list(found.get("usage", [])), list(found.get("errors", []))
+
+    routed = nodes["route_verification"]({**values, "suggestions": suggestions})
+    if isinstance(routed, list):  # one verification per CV section, grouped as the graph does
+        for _ in routed:
+            emit_progress(run, "verify", "started")
+        results = await asyncio.gather(*(nodes["verify_batch"](send.arg) for send in routed))
+        checked = {row["id"]: row for row in suggestions}
+        for result in results:
+            emit_progress(run, "verify", "done", suggestions=len(result["suggestions"]))
+            checked.update({row["id"]: row for row in result["suggestions"]})
+            usage += result.get("usage", [])
+            errors += result.get("errors", [])
+        suggestions = list(checked.values())
+
+    await graph.aupdate_state(
+        config,
+        {"suggestions": suggestions, "usage": usage, "errors": [{"resolves": "suggest"}, *errors]},
+        as_node="verify_batch",
+    )
 
 
 async def _check_edit(llm: StructuredLLM, values: dict, row: dict, after: str) -> dict:

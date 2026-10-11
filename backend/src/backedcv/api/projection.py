@@ -49,6 +49,18 @@ def usage_total(usage: list[dict]) -> dict:
     }
 
 
+def shown_errors(errors: list[dict] | None) -> list[dict]:
+    """The error log as the frontend sees it. The graph only appends to the log, so a step that ran
+    again writes a `resolves` entry: the errors of that step written before it are not shown."""
+    shown: list[dict] = []
+    for entry in errors or []:
+        if "resolves" in entry:
+            shown = [error for error in shown if error.get("node") != entry["resolves"]]
+        else:
+            shown.append(entry)
+    return shown
+
+
 def project(
     analysis_id: str, snapshot: Any, running: bool = False, error: dict | None = None
 ) -> dict:
@@ -74,7 +86,7 @@ def project(
         "facts": values.get("facts") or {},
         "excluded_ids": values.get("excluded_ids") or [],
         "included_flagged_ids": values.get("included_flagged_ids") or [],
-        "errors": values.get("errors", []),
+        "errors": shown_errors(values.get("errors")),
         "usage": usage_total(values.get("usage", [])),
     }
     if error is not None:  # the same body as the `error` event of the run that failed

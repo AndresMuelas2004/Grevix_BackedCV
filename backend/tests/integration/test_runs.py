@@ -3,6 +3,7 @@
 import asyncio
 import json
 import time
+from collections import Counter
 from urllib.parse import urlencode
 
 import pytest
@@ -15,6 +16,8 @@ from backedcv.api.rate_limit import RunLimiter
 from backedcv.api.runs import Run, RunManager
 from backedcv.graph import build_nodes, optimize_nodes
 from backedcv.llm.drafts import JobExtractionDraft
+from backedcv.llm.drafts_optimize import SuggestionsDraft
+from backedcv.llm.structured import LLMError
 from backedcv.main import create_app
 from tests.fakes import CV_TEXT, JOB_TEXT, FakeLLM
 from tests.fakes_optimize import FakeOptimizeLLM
@@ -180,6 +183,73 @@ def test_an_optimize_that_fails_once_can_be_retried(monkeypatch, step_function):
         "paused",
         "review_ready",
     )
+
+
+class FlakySuggestLLM(FakeOptimizeLLM):
+    """The first `failures` suggest calls fail, the later ones answer as usual."""
+
+    def __init__(self, failures: int = 1):
+        super().__init__()
+        self.failures = failures
+        self.suggest_calls = 0
+
+    async def run(self, prompt, data, schema, *, node):
+        if schema is SuggestionsDraft:
+            self.suggest_calls += 1
+            if self.suggest_calls <= self.failures:
+                raise LLMError("suggest: invalid structured output")
+        return await super().run(prompt, data, schema, node=node)
+
+
+def _progress_steps(events: list[tuple[str, dict]]) -> Counter:
+    return Counter((data["step"], data["status"]) for name, data in events if name == "progress")
+
+
+def test_a_failed_suggest_step_is_run_again_from_the_review():
+    # The first suggest call fails and the next ones succeed, so a second analysis run normally.
+    with TestClient(create_app(llm=FlakySuggestLLM(), checkpointer=InMemorySaver())) as client:
+        analysis_id = _analysis_id(client)
+        # The graph does not stop on the error: the run waits at the review, with no suggestions.
+        failed = _events(_optimize(client, analysis_id).text)[-1][1]
+        assert (failed["stage"], failed["suggestions"]) == ("review_ready", [])
+        assert [error["node"] for error in failed["errors"]] == ["suggest"]
+
+        retried = _events(_optimize(client, analysis_id).text)
+        normal = _events(_optimize(client, _analysis_id(client)).text)
+        built = _events(_build(client, analysis_id, DECISIONS).text)[-1]
+
+    assert retried[0][0] == "progress" and retried[-1][0] == "suggestions"
+    assert _progress_steps(retried) == _progress_steps(normal)  # the same steps as a normal run
+    projection = retried[-1][1]
+    assert (projection["status"], projection["stage"]) == ("paused", "review_ready")
+    assert projection["errors"] == []  # the failure is no longer shown
+    statuses = {s["id"]: s["verification"]["status"] for s in projection["suggestions"]}
+    assert statuses == {"S01": "verified", "S02": "unsupported", "S03": "verified"}
+    assert built[0] == "built"  # the run still waits at the review, so the build goes on
+
+
+def test_a_suggest_step_that_fails_again_is_shown_once_and_can_be_run_again():
+    llm = FlakySuggestLLM(failures=2)
+    with TestClient(create_app(llm=llm, checkpointer=InMemorySaver())) as client:
+        analysis_id = _analysis_id(client)
+        _optimize(client, analysis_id)
+        again = _events(_optimize(client, analysis_id).text)[-1][1]
+        recovered = _events(_optimize(client, analysis_id).text)[-1][1]
+
+    assert [error["node"] for error in again["errors"]] == ["suggest"]  # one error, not two
+    assert (again["suggestions"], again["stage"]) == ([], "review_ready")
+    assert (recovered["errors"], len(recovered["suggestions"])) == ([], 3)
+
+
+def test_an_empty_review_without_a_suggest_failure_is_not_optimized_again():
+    llm = FakeOptimizeLLM(suggestions=[])
+    with TestClient(create_app(llm=llm, checkpointer=InMemorySaver())) as client:
+        analysis_id = _analysis_id(client)
+        assert _events(_optimize(client, analysis_id).text)[-1][0] == "suggestions"
+
+        response = _optimize(client, analysis_id)
+
+    assert (response.status_code, response.json()["code"]) == (409, "wrong_stage")
 
 
 def test_rejected_requests_do_not_use_up_the_quota():
