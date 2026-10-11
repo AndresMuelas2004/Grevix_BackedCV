@@ -43,12 +43,13 @@ def apply_facts(
     facts: CandidateFacts,
     job: JobPosting,
 ) -> RequirementAssessment:
-    """Resolve an unknown knockout from the user's answers. Never guesses from names or places."""
-    if assessment.status != "unknown" or not is_knockout(requirement):
+    """Resolve an unknown assessment from the user's answers. Never guesses from names or places."""
+    if assessment.status != "unknown":
         return assessment
 
     answer = facts.answers.get(requirement.id)
-    if answer is not None:  # a direct yes/no answer beats the typed facts
+    # A yes/no answer settles any assessment that asks a question, required or not.
+    if answer is not None and (assessment.question is not None or is_knockout(requirement)):
         return assessment.model_copy(
             update={
                 "status": "met" if answer else "missing",
@@ -56,6 +57,9 @@ def apply_facts(
                 "rationale": "You answered yes." if answer else "You answered no.",
             }
         )
+
+    if not is_knockout(requirement):  # typed facts only settle active knockouts
+        return assessment
 
     status = None
     if requirement.knockout_type == "work_authorization":

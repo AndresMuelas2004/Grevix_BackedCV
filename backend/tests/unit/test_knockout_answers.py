@@ -17,13 +17,13 @@ KNOCKOUT_TYPES = [
 ]
 
 
-def knockout(rid, knockout_type, label=None, quote=None):
+def knockout(rid, knockout_type, label=None, quote=None, importance="required"):
     return Requirement(
         id=rid,
         label=label or f"{knockout_type} requirement",
         quote=quote or f"Requirement: {knockout_type}",
         category=knockout_type,
-        importance="required",
+        importance=importance,
         knockout_type=knockout_type,
     )
 
@@ -42,9 +42,13 @@ def verdict_after(job, assessments, facts):
     return compute_verdict(job, resolved, compute_score(job.requirements, resolved))
 
 
+@pytest.mark.parametrize("importance", ["required", "preferred"])
 @pytest.mark.parametrize("knockout_type", KNOCKOUT_TYPES)
-def test_yes_and_no_answers_settle_every_knockout_type(knockout_type):
-    job = JobPosting(location="Madrid, Spain", requirements=[knockout("R01", knockout_type)])
+def test_yes_and_no_answers_settle_every_knockout_type(knockout_type, importance):
+    job = JobPosting(
+        location="Madrid, Spain",
+        requirements=[knockout("R01", knockout_type, importance=importance)],
+    )
     requirement = job.requirements[0]
     assessment = unknown(requirement, job)
 
@@ -53,6 +57,41 @@ def test_yes_and_no_answers_settle_every_knockout_type(knockout_type):
 
     assert (yes.status, yes.source, yes.rationale) == ("met", "user_answer", "You answered yes.")
     assert (no.status, no.source, no.rationale) == ("missing", "user_answer", "You answered no.")
+
+
+@pytest.mark.parametrize(
+    ("importance", "status"),
+    [("required", "met"), ("preferred", "unknown")],
+)
+def test_without_a_question_only_a_required_knockout_takes_an_answer(importance, status):
+    requirement = knockout("R01", "location", importance=importance)
+    job = JobPosting(requirements=[requirement])
+    no_question = RequirementAssessment(requirement_id="R01", status="unknown")
+
+    result = apply_facts(requirement, no_question, CandidateFacts(answers={"R01": True}), job)
+
+    assert result.status == status
+
+
+def test_answering_a_preferred_question_settles_it_but_not_the_verdict():
+    python_skill = Requirement(
+        id="R01", label="Python", quote="Python", category="hard_skill", importance="required"
+    )
+    onsite = knockout("R02", "location", importance="preferred")
+    job = JobPosting(location="Madrid, Spain", requirements=[python_skill, onsite])
+    assessments = {
+        "R01": RequirementAssessment(requirement_id="R01", status="met"),
+        "R02": unknown(onsite, job),
+    }
+
+    before = verdict_after(job, assessments, CandidateFacts())
+    assert (before.label, before.provisional) == ("apply", False)
+
+    for answer, status in ((True, "met"), (False, "missing")):
+        facts = CandidateFacts(answers={"R02": answer})
+        assert apply_facts(onsite, assessments["R02"], facts, job).status == status
+        after = verdict_after(job, assessments, facts)
+        assert (after.label, after.provisional) == ("apply", False)
 
 
 def test_a_no_answer_makes_the_verdict_likely_screened_out():
