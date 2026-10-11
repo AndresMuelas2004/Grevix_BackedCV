@@ -1,4 +1,5 @@
 import io
+from pathlib import Path
 
 import docx
 import pytest
@@ -8,6 +9,13 @@ from docx.oxml import parse_xml
 from backedcv.ingestion import IngestionError, read_cv, read_cv_text
 
 W_NS = 'xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"'
+PAGE = "#set page(width: 210mm, height: 297mm, margin: 20mm)\n"
+NARROW_PAGE = "#set page(width: 90mm, height: 200mm, margin: 10mm)\n"
+BULLET = (
+    "Built ETL jobs in Python that load two million rows a day into the PostgreSQL warehouse "
+    "for the analytics team"
+)
+CURATED_DIR = Path(__file__).resolve().parents[2] / "samples" / "curated"
 
 
 def _pdf(tmp_path, markup: str) -> bytes:
@@ -45,6 +53,87 @@ def test_pdf_lines_in_reading_order_with_bold_headings(tmp_path):
     assert "Data Engineer, Acme Corp, Jan 2020 - Present" in texts
     assert texts[-1] == "Built ETL pipelines in Python and SQL"
     assert next(line for line in result.lines if line.text == "Experience").bold
+
+
+def _pdf_texts(tmp_path, markup: str) -> list[str]:
+    return [line.text for line in read_cv(_pdf(tmp_path, markup), "cv.pdf").lines]
+
+
+def test_wrapped_bullet_becomes_one_line(tmp_path):
+    assert _pdf_texts(tmp_path, NARROW_PAGE + f"- {BULLET}\n") == [BULLET]
+
+
+def test_consecutive_bullets_stay_separate_lines(tmp_path):
+    second = "Led a team of four analysts through the warehouse migration to the cloud platform"
+
+    texts = _pdf_texts(tmp_path, NARROW_PAGE + f"- {BULLET}\n- {second}\n")
+
+    assert texts == [BULLET, second]
+
+
+def test_wrapped_paragraph_becomes_one_line(tmp_path):
+    summary = (
+        "Software engineer with three years of data and backend work, now moving into AI "
+        "engineering. I build LLM features with agent frameworks and tool calling."
+    )
+
+    assert _pdf_texts(tmp_path, NARROW_PAGE + f"{summary}\n") == [summary]
+
+
+def test_one_skill_per_line_stays_separate(tmp_path):
+    # The bullet sets the column's right edge; the short skill lines stop far short of it.
+    markup = NARROW_PAGE + f"- {BULLET}\n\nPython \\\nSQL \\\nDocker\n"
+
+    assert _pdf_texts(tmp_path, markup) == [BULLET, "Python", "SQL", "Docker"]
+
+
+def test_heading_right_after_a_paragraph_is_not_merged(tmp_path):
+    markup = (
+        PAGE + "We build data pipelines for the analytics team and the finance group \\\n"
+        "*Experience*\n"
+    )
+
+    assert _pdf_texts(tmp_path, markup) == [
+        "We build data pipelines for the analytics team and the finance group",
+        "Experience",
+    ]
+
+
+def test_date_line_is_not_merged_into_the_title_above(tmp_path):
+    markup = PAGE + "Data Engineer, Acme Corp \\\nJan 2020 - Present\n"
+
+    assert _pdf_texts(tmp_path, markup) == ["Data Engineer, Acme Corp", "Jan 2020 - Present"]
+
+
+def test_hyphen_at_a_line_break_joins_a_lowercase_word(tmp_path):
+    # The first line is the widest in its block, so it reaches the edge like a real wrap.
+    markup = PAGE + (
+        "Built ETL pipelines for the analytics team across every region and the data-\\\n"
+        "driven dashboard for the team\n"
+    )
+
+    assert _pdf_texts(tmp_path, markup) == [
+        "Built ETL pipelines for the analytics team across every region and the data-driven "
+        "dashboard for the team"
+    ]
+
+
+def test_curated_sample_keeps_bullets_and_wrapped_paragraphs_whole():
+    texts = [line.text for line in read_cv((CURATED_DIR / "cv.pdf").read_bytes(), "cv.pdf").lines]
+    source = (CURATED_DIR / "cv.txt").read_text(encoding="utf-8").splitlines()
+    bullets = [line[2:] for line in source if line.startswith("- ")]
+    paragraphs = [
+        "Software engineer with three years of data and backend work, now moving into AI "
+        "engineering. I build LLM features with agent frameworks and tool calling, measure them "
+        "on labeled test sets, and serve them through FastAPI.",
+        "Python, SQL, PostgreSQL, Pandas, FastAPI, Docker, Git, OpenAI API, pgvector, "
+        "prompt evaluation",
+    ]
+
+    assert [text for text in bullets + paragraphs if text not in texts] == []
+    assert "Wrote ETL jobs in Python that load 2 million rows a day into PostgreSQL." in texts
+    assert not {"PostgreSQL.", "analysts."} & set(texts)
+    assert {"Valencia, Spain", "nuria.calvo@example.com"} <= set(texts)
 
 
 def _docx_bytes(document) -> bytes:

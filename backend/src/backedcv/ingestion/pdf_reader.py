@@ -8,9 +8,10 @@ import pdfplumber
 
 from backedcv.ingestion.columns import page_order
 from backedcv.ingestion.errors import IngestionError
-from backedcv.ingestion.lines import RawLine
+from backedcv.ingestion.lines import BULLET_GLYPHS, Fragment, RawLine, join_fragments
 
 _BOLD_HINTS = ("bold", "black", "heavy", "semibold", "demi")
+_BIGGER = 1.08  # a line this many times the page's running text size is a heading
 
 
 @dataclass
@@ -35,12 +36,16 @@ def read_pdf(data: bytes, max_pages: int) -> PdfRead:
         multi_column = False
         for page_number, page in enumerate(pdf.pages, start=1):
             words = page.extract_words(
-                keep_blank_chars=False, use_text_flow=False, extra_attrs=["fontname", "size"]
+                keep_blank_chars=False,
+                use_text_flow=False,
+                extra_attrs=["fontname", "size"],
+                return_chars=True,
             )
             order = page_order(words, float(page.width))
             multi_column = multi_column or order.multi_column
+            body = _body_size(words)
             for block in order.blocks:
-                rows.extend(_group_lines(block, page_number))
+                rows.extend(join_fragments(_group_lines(block, page_number, body)))
 
     if not rows:
         raise IngestionError(
@@ -51,8 +56,14 @@ def read_pdf(data: bytes, max_pages: int) -> PdfRead:
     return PdfRead(rows=rows, multi_column=multi_column)
 
 
-def _group_lines(words: list[dict], page_number: int) -> list[RawLine]:
-    """Words whose vertical positions overlap form one line; lines run top to bottom."""
+def _body_size(words: list[dict]) -> float:
+    """Median font size of the page: the size of its running text."""
+    sizes = [float(w["size"]) for w in words if w.get("size")]
+    return median(sizes) if sizes else 0.0
+
+
+def _group_lines(words: list[dict], page_number: int, body: float) -> list[Fragment]:
+    """Words whose vertical positions overlap form one physical line; lines run top to bottom."""
     words = sorted(words, key=lambda w: (round(w["top"]), w["x0"]))
     groups: list[list[dict]] = []
     for word in words:
@@ -65,12 +76,33 @@ def _group_lines(words: list[dict], page_number: int) -> list[RawLine]:
                 continue
         groups.append([word])
 
-    rows = []
+    fragments: list[Fragment] = []
     for group in groups:
         group.sort(key=lambda w: w["x0"])
-        text = " ".join(w["text"] for w in group)
         fonts = [str(w.get("fontname", "")).lower() for w in group]
         bold = all(any(h in f for h in _BOLD_HINTS) for f in fonts)
         size = round(median(float(w.get("size") or 0) for w in group), 1)
-        rows.append(RawLine(text=text, page=page_number, bold=bold, size=size or None))
-    return rows
+        fragments.append(
+            Fragment(
+                text=" ".join(w["text"] for w in group),
+                page=page_number,
+                x0=min(w["x0"] for w in group),
+                x1=max(w["x1"] for w in group),
+                top=min(w["top"] for w in group),
+                bottom=max(w["bottom"] for w in group),
+                text_x0=_text_x0(group),
+                size=size,
+                bold=bold,
+                heading=bold or (body > 0 and size >= body * _BIGGER),
+            )
+        )
+    return fragments
+
+
+def _text_x0(group: list[dict]) -> float:
+    """Left edge of the first letter or digit, so a bullet glyph in front of it is skipped."""
+    chars = sorted((c for w in group for c in w.get("chars", [])), key=lambda c: c["x0"])
+    for char in chars:
+        if char["text"].strip() and char["text"] not in BULLET_GLYPHS:
+            return float(char["x0"])
+    return float(min(w["x0"] for w in group))

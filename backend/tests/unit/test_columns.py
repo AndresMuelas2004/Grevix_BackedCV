@@ -121,6 +121,33 @@ Linux
 Terraform
 """
 
+# A wrapped bullet in the left column, with right-column lines level with its wrapped lines.
+BULLET_BESIDE_TEXT_CV = """\
+#set page(width: 210mm, height: 297mm, margin: 15mm)
+#set text(size: 10pt)
+#grid(
+  columns: (1fr, 1fr),
+  gutter: 8mm,
+  [
+    *Experience*
+
+    Data Engineer, Acme Corp
+
+    - Built ETL pipelines in Python and SQL for the analytics team across three regions
+    - Led a team of four analysts through the warehouse migration to the cloud platform
+  ],
+  [
+    *Skills*
+
+    Python, SQL, Docker, Airflow and dbt
+
+    *Languages*
+
+    English and Spanish
+  ],
+)
+"""
+
 SAMPLE_CV = Path(__file__).resolve().parents[2] / "samples" / "curated" / "cv.pdf"
 
 
@@ -232,3 +259,20 @@ def test_sample_cv_reads_header_then_left_column_then_right_column():
     assert right_positions == sorted(right_positions)
     # Strictly before: a line holding a left item and a right item would give equal positions.
     assert max(left_positions) < min(right_positions)
+
+
+def test_wrapped_bullet_stays_whole_beside_the_other_column(tmp_path):
+    result = read_cv(_pdf(tmp_path, BULLET_BESIDE_TEXT_CV), "cv.pdf")
+    texts = [line.text for line in result.lines]
+
+    assert result.multi_column
+    assert texts == [
+        "Experience",
+        "Data Engineer, Acme Corp",
+        "Built ETL pipelines in Python and SQL for the analytics team across three regions",
+        "Led a team of four analysts through the warehouse migration to the cloud platform",
+        "Skills",
+        "Python, SQL, Docker, Airflow and dbt",
+        "Languages",
+        "English and Spanish",
+    ]
