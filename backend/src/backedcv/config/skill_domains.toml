@@ -1,0 +1,120 @@
+# Technologies per skill domain, for rule R3 (tool sprawl). Terms are lowercase and match whole
+# words only (domain/keywords.py). A term may sit in more than one domain. Generic tools that
+# appear in almost every posting (Python, Git, Jira) are left out on purpose, so they never
+# count as a domain by themselves.
+
+[domains.frontend]
+name = "frontend"
+terms = [
+    "react", "reactjs", "react.js", "vue", "vuejs", "vue.js", "angular", "angularjs",
+    "svelte", "sveltekit", "next.js", "nextjs", "nuxt", "gatsby", "ember.js",
+    "javascript", "typescript", "html", "html5", "css", "css3", "sass", "scss",
+    "tailwind", "bootstrap", "redux", "webpack", "vite", "storybook", "jquery",
+    "frontend", "front-end", "material ui", "chakra ui", "styled components",
+]
+
+[domains.backend]
+name = "backend"
+terms = [
+    "java", "spring boot", "spring framework", "hibernate", "golang", "c#", ".net", "dotnet",
+    "asp.net", "node.js", "nodejs", "node js", "express.js", "expressjs", "nestjs", "django",
+    "flask", "fastapi", "ruby", "ruby on rails", "php", "laravel", "symfony", "rest api",
+    "graphql", "grpc", "microservices", "rabbitmq", "celery", "elixir", "erlang", "scala", "rust",
+]
+
+[domains.mobile]
+name = "mobile"
+terms = [
+    "ios", "android", "android studio", "swift", "swiftui", "objective-c", "xcode",
+    "testflight", "kotlin", "jetpack compose", "flutter", "dart", "react native", "xamarin",
+    "maui", "cocoapods", "google play",
+]
+
+[domains.data_engineering]
+name = "data engineering"
+terms = [
+    "airflow", "dbt", "kafka", "spark", "pyspark", "apache hive", "hadoop", "flink",
+    "databricks", "snowflake", "bigquery", "redshift", "fivetran", "talend", "informatica",
+    "prefect", "dagster", "nifi", "data pipeline", "data warehouse", "data lake", "etl", "elt",
+    "pandas",
+]
+
+[domains.ml_ai]
+name = "ML/AI"
+terms = [
+    "pytorch", "tensorflow", "keras", "scikit-learn", "sklearn", "xgboost", "lightgbm",
+    "catboost", "numpy", "opencv", "hugging face", "huggingface", "langchain", "langgraph",
+    "llamaindex", "openai", "anthropic", "llm", "llms", "large language model",
+    "generative ai", "gen ai", "genai", "prompt engineering", "rag",
+    "retrieval augmented generation", "vector database", "pinecone", "weaviate", "chromadb",
+    "faiss", "machine learning", "deep learning", "computer vision",
+    "natural language processing", "nlp", "mlops", "mlflow",
+]
+
+[domains.devops_cloud]
+name = "DevOps/cloud"
+terms = [
+    "aws", "amazon web services", "ec2", "s3", "eks", "ecs", "azure", "gcp", "google cloud",
+    "docker", "kubernetes", "k8s", "helm", "openshift", "istio", "terraform", "ansible",
+    "pulumi", "cloudformation", "jenkins", "github actions", "gitlab ci", "circleci",
+    "argo cd", "argocd", "ci/cd", "continuous integration", "continuous delivery",
+    "infrastructure as code", "prometheus", "grafana", "datadog", "nginx", "serverless",
+    "devops", "site reliability", "sre",
+]
+
+[domains.databases]
+name = "databases"
+terms = [
+    "sql", "sql server", "mysql", "postgresql", "postgres", "mongodb", "mongo", "redis",
+    "sqlite", "mariadb", "oracle database", "oracle db", "cassandra", "dynamodb", "firestore",
+    "elasticsearch", "opensearch", "neo4j", "couchdb", "cockroachdb", "influxdb", "memcached",
+    "database", "nosql",
+]
+
+[domains.security]
+name = "security"
+terms = [
+    "owasp", "siem", "splunk", "burp suite", "metasploit", "nessus", "wireshark", "nmap",
+    "kali linux", "penetration testing", "pentesting", "vulnerability management",
+    "threat modeling", "threat intelligence", "soc 2", "iso 27001", "cissp", "oauth", "oauth2",
+    "saml", "okta", "zero trust", "identity and access management", "crowdstrike",
+    "palo alto networks", "firewall", "encryption", "cryptography", "gdpr", "cybersecurity",
+    "information security",
+]
+
+[domains.embedded]
+name = "embedded"
+terms = [
+    "embedded c", "embedded c++", "embedded systems", "embedded linux", "rtos", "freertos",
+    "zephyr", "yocto", "arduino", "raspberry pi", "stm32", "esp32", "microcontroller",
+    "firmware", "fpga", "verilog", "vhdl", "uart", "i2c", "can bus", "jtag", "platformio",
+    "mqtt", "modbus", "autosar", "plc", "iot",
+]
+
+[domains.design]
+name = "design"
+terms = [
+    "figma", "sketch app", "adobe xd", "adobe photoshop", "photoshop", "illustrator",
+    "adobe illustrator", "indesign", "after effects", "invision", "zeplin", "framer", "axure",
+    "balsamiq", "canva", "blender", "wireframe", "wireframing", "ux", "ui design",
+    "user research", "design system", "motion design", "graphic design", "web design",
+]
+
+[domains.testing_qa]
+name = "testing/QA"
+terms = [
+    "selenium", "cypress", "playwright", "puppeteer", "jest", "vitest", "mocha", "pytest",
+    "junit", "testng", "cucumber", "jmeter", "locust", "k6", "gatling", "appium", "postman",
+    "soapui", "robot framework", "testrail", "test automation", "api testing", "manual testing",
+    "unit testing", "load testing", "performance testing", "regression testing", "e2e testing",
+    "end-to-end testing", "quality assurance", "qa", "istqb", "tdd", "bdd",
+]
+
+[domains.erp_crm]
+name = "ERP/CRM"
+terms = [
+    "salesforce", "hubspot", "netsuite", "sap", "s/4hana", "s4hana", "microsoft dynamics",
+    "dynamics 365", "d365", "oracle erp", "oracle ebs", "oracle fusion", "peoplesoft",
+    "jd edwards", "siebel", "odoo", "zoho", "pipedrive", "sugarcrm", "sage intacct",
+    "quickbooks", "xero", "workday", "servicenow", "zendesk", "crm", "erp",
+]
