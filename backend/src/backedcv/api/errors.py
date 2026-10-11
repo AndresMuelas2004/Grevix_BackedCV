@@ -21,7 +21,7 @@ def _body(code: str, title: str, detail: str) -> dict:
 
 
 def error_detail(exc: Exception) -> str:
-    """The message of an exception, cut to 200 characters, for the frontend to show as it is."""
+    """The exception message, cut to 200 characters."""
     return str(exc).strip()[:200] or NO_DETAIL
 
 

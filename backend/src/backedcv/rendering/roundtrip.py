@@ -8,9 +8,7 @@ from backedcv.ingestion import IngestionError, read_cv
 
 
 def roundtrip_check(pdf: bytes, doc: CVDocument) -> tuple[bool, list[str]]:
-    """Return (ok, issues). An issue is a document line whose letters and digits are missing from
-    the PDF text. Line breaks, hyphens and punctuation are ignored, so a wrapped link still matches.
-    """
+    """Return (ok, issues): the document lines that are missing from the PDF text."""
     try:
         extracted = read_cv(pdf, "cv.pdf").lines
     except IngestionError as error:
@@ -26,7 +24,7 @@ def roundtrip_check(pdf: bytes, doc: CVDocument) -> tuple[bool, list[str]]:
 
 
 def _squash(text: str) -> str:
-    """Lowercase letters and digits only, in order. Spaces, breaks and punctuation are dropped."""
+    """Lowercase letters and digits only, so line breaks, hyphens and punctuation do not matter."""
     return "".join(char for char in fold_lower(text) if char.isalnum())
 
 

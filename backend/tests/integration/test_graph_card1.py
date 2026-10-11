@@ -1,5 +1,4 @@
-"""Challenge Card 1 through the graph: a visa barrier buried in the posting, and a recency rule the
-CV fails. The Kubernetes requirement looks met, is downgraded, and is refused by the gate."""
+"""A visa barrier buried in the posting and a recency rule the CV fails, through the graph."""
 
 import uuid
 

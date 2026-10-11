@@ -41,7 +41,6 @@ export default function CvView({
   const scrollTarget = firstEvidence ?? firstNote
   const highlightKey = `${highlightIds.join('|')}#${noteIds.join('|')}`
 
-  // Bring the first highlighted line into view whenever the highlight changes.
   useEffect(() => {
     if (!scrollTarget) return
     const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches
@@ -150,9 +149,8 @@ function LineItem({ id, label, text, heading = false, evidence, noted, warned }:
   )
 }
 
-// Lines keep their reading order. Each run of lines in the same section forms one group. A section
-// with a heading line gets no title, because its heading line is listed in place (so the heading
-// shows once). Lines outside any section are "Other lines".
+// Each run of lines in the same section forms one group. A section with a heading line gets no
+// title, so its heading shows only once. Lines outside any section are "Other lines".
 function groupLines(cv: ParsedCv, headings: ReadonlySet<string>): LineGroup[] {
   const sectionByLine = new Map<string, CvSection>()
   for (const section of cv.sections) {
@@ -179,7 +177,7 @@ function groupLines(cv: ParsedCv, headings: ReadonlySet<string>): LineGroup[] {
   return groups
 }
 
-// The heading lines of the sections. A heading line counts only when it is one of the CV's lines.
+// A heading line counts only when it is one of the CV's lines.
 function headingLineIds(cv: ParsedCv): Set<string> {
   const lineIds = new Set(cv.lines.map((line) => line.id))
   const headings = new Set<string>()
@@ -191,7 +189,6 @@ function headingLineIds(cv: ParsedCv): Set<string> {
   return headings
 }
 
-// The title of a section's group: its type, or null when its heading line is listed in place.
 function sectionTitle(section: CvSection, headings: ReadonlySet<string>): string | null {
   if (section.heading_line_id !== null && headings.has(section.heading_line_id)) return null
   return SECTION_LABELS[section.type]

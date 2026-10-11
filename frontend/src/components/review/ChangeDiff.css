@@ -22,13 +22,11 @@
   overflow-wrap: anywhere;
 }
 
-/* The sentence above a new line, naming the section it goes into. */
 .change-note {
   font-size: 0.875rem;
   color: var(--muted);
 }
 
-/* Removed words: struck through, with a tinted background. */
 .change-diff del {
   color: var(--danger);
   text-decoration: line-through;
@@ -37,7 +35,6 @@
   border-radius: 3px;
 }
 
-/* Added words: underlined and bold, with a tinted background. */
 .change-diff ins {
   color: #0b5f58;
   font-weight: 600;

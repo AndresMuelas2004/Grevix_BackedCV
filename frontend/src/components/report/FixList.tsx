@@ -8,7 +8,6 @@ interface FixListProps {
 // How many items show before "Show more". Everything that could rule the candidate out always shows.
 const FIRST_ITEMS = 5
 
-// "What to fix, most important first": the numbered list from lib/priorities.
 export default function FixList({ items }: FixListProps) {
   const [toggled, setToggled] = useState<Record<string, boolean>>({})
   const [showAll, setShowAll] = useState(false)

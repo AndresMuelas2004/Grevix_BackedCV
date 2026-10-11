@@ -1,5 +1,4 @@
-"""The Fit score does not move when the model splits one posting bullet into several requirements:
-the requirements of one unit share its weight (domain/scoring.py)."""
+"""The Fit score does not change when one posting bullet is split into several requirements."""
 
 from backedcv.domain.models import Requirement, RequirementAssessment
 from backedcv.domain.scoring import compute_score
@@ -54,7 +53,7 @@ def test_a_split_with_mixed_statuses_scores_like_the_bullet_half_met():
 
 
 def test_without_shared_units_a_split_used_to_move_the_score():
-    """The old behaviour, kept for requirements with no unit: each one weighs on its own."""
+    """Requirements with no unit each weigh on their own."""
     reqs = [_req(rid, None) for rid in ("R01", "R02", "R03")] + [_req("R10", None, "education")]
     score = compute_score(reqs, _status(("R01", "met"), ("R02", "met"), ("R03", "met")))
     assert score.fit == round(100 * 18 / 22, 1)

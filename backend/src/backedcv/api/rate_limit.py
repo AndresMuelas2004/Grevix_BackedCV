@@ -1,5 +1,4 @@
-"""Abuse and budget limits for the routes that call the model: a rolling hour per client address,
-and a daily total shared by everyone. A request is counted only when it is accepted to run."""
+"""Per-client hourly and shared daily limits on the routes that call the model."""
 
 import math
 from collections import deque
@@ -63,8 +62,8 @@ def _wait(delta: timedelta) -> str:
 
 
 def count_model_run(request: Request) -> None:
-    """Counts one model run for the client, or raises the 429. Call it only after the request has
-    passed its validation and its stage checks, so a refused request uses no quota. It has no
-    await, so the check and the count cannot interleave with another request."""
+    """Counts one model run for the client, or raises the 429. Call it after validation and stage
+    checks, so a refused request uses no quota. It has no await, so check and count cannot
+    interleave with another request."""
     client = request.client.host if request.client else "unknown"
     request.app.state.limiter.check(client)

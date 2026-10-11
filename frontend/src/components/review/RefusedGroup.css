@@ -1,5 +1,4 @@
-/* Refused edits look like the unsupported ones: greyed, with a dashed border. They have no decision
-   controls, so the cards are read-only. */
+/* Styled like unsupported suggestions: greyed, dashed border. */
 .refused-list {
   display: grid;
   gap: 0.75rem;

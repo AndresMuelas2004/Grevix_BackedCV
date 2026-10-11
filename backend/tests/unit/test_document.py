@@ -207,9 +207,8 @@ def test_missing_heading_gets_a_standard_one_and_lines_outside_sections_are_kept
 
 
 def _contact_block_cv(heading: str, first_id: str) -> ParsedCV:
-    """The left column of a two-column CV as the reader gives it: name, headline, then a contact
-    heading and its details, then the summary. The model's contact section starts at first_id and
-    has no heading_line_id, the way the model often returns it."""
+    """Left column of a two-column CV: name, headline, contact heading and details, summary.
+    The model's contact section starts at first_id and has no heading_line_id."""
     texts = [
         ("L001", "Ana Ruiz"),
         ("L002", HEADLINE),

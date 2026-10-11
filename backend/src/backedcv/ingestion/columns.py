@@ -1,8 +1,6 @@
-"""Reading order for PDF pages with two columns: header rows, then the left column, then the right.
+"""Reading order for two-column PDF pages: header rows, then the left column, then the right.
 
-A page is two-column when an empty vertical band (a gutter at least 12 pt wide, between 25% and
-75% of the page width) stays empty for most body rows. The header is every row above the first
-row with words on both sides of the gutter.
+A page is two-column when an empty vertical band (the gutter) stays clear for most body rows.
 """
 
 import math
@@ -29,10 +27,9 @@ class PageOrder:
 
 
 def page_order(words: list[dict], page_width: float) -> PageOrder:
-    """Split one page's words into reading blocks: header, left column, right column.
+    """Split a page's words (pdfplumber dicts) into header, left and right blocks.
 
-    Words are pdfplumber-style dicts with x0, x1, top, bottom and text. A page without a gutter
-    comes back as a single block, in the order it was given.
+    Without a gutter the words come back as one block, in the order given.
     """
     rows = _rows(words)
     for band in _candidate_gutters(rows, page_width):

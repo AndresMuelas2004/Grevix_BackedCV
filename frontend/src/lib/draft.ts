@@ -31,7 +31,6 @@ export interface DraftProblems {
   job: string | null
 }
 
-// Returns a message when the file cannot be used, or null when it can.
 export function fileProblem(file: File): string | null {
   if (!/\.(pdf|docx)$/i.test(file.name)) return 'Upload a PDF or DOCX file.'
   if (file.size === 0) return 'This file is empty.'

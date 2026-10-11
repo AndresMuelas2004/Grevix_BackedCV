@@ -1,13 +1,11 @@
-"""A SQLite cache of model answers: the same call with the same input gets the stored answer back,
-at no cost. The key covers everything that decides the answer (see `answer_key`). Each row keeps
-its creation time, so the hourly purge in `api/retention.py` can delete the old ones.
+"""SQLite cache of model answers, keyed by everything that decides the answer (`answer_key`).
 
-Pinned answers are the one exception, and they exist only for the built-in samples. They are the
-model's own answers from a real run of those samples (`samples/pinned_answers.json`, written by
-`scripts/pin_samples.py`), read when the app builds its model at startup and held in memory. They
-never expire and are never overwritten, so the samples give the same report on every visit, even
-after a restart wipes the disk. Nothing is made up: an input that is not a sample gets a live
-answer, cached for 24 hours."""
+Rows keep their creation time so the hourly purge in `api/retention.py` can delete old ones.
+
+Pinned answers are real model answers for the built-in samples (`samples/pinned_answers.json`,
+written by `scripts/pin_samples.py`). They are loaded at startup, held in memory, never expire
+and are never overwritten, so the samples give the same report even after a restart wipes the
+disk. Any other input gets a live answer."""
 
 import copy
 import hashlib
@@ -62,8 +60,7 @@ def pinned_entry(
     input_tokens: int,
     output_tokens: int,
 ) -> dict:
-    """One entry of the pinned answers file: a real answer under its cache key, with the model
-    and the prompt version it came from, so a later change can be detected and ignored."""
+    """One entry of the pinned answers file, with the model and prompt version it came from."""
     return {
         "key": key,
         "model": model,
@@ -78,11 +75,9 @@ def pinned_entry(
 
 
 def load_pinned_answers(path: Path, models: Mapping[str, str]) -> dict[str, Stored]:
-    """The pinned answers in `path` that still apply, by key. `models` maps each prompt tier to the
-    model it runs on now. An entry whose prompt version or model no longer match is ignored, so a
-    prompt or model change brings a live call, never a stale answer. The key covers the rest (the
-    prompt text, the effort, the schema and the input). A missing or unreadable file pins nothing:
-    the samples are then answered live, like any other input."""
+    """The pinned answers in `path` that still apply, by key. `models` maps each prompt tier to
+    its current model. An entry whose prompt version or model changed is ignored, so a change
+    brings a live call, never a stale answer. A missing or unreadable file pins nothing."""
     try:
         entries = json.loads(path.read_text(encoding="utf-8"))["entries"]
     except FileNotFoundError:
@@ -108,8 +103,7 @@ def load_pinned_answers(path: Path, models: Mapping[str, str]) -> dict[str, Stor
 
 
 def sample_answers() -> dict[str, Stored]:
-    """The pinned answers of the built-in samples for the current settings: the file in the
-    samples folder, checked against the models of each tier. Read once per process."""
+    """Pinned answers of the built-in samples for the current settings. Read once per process."""
     settings = get_settings()
     path = settings.samples_dir / PINNED_FILE
     return _read_pinned(path, settings.model_fast, settings.model_strong)
@@ -121,8 +115,7 @@ def _read_pinned(path: Path, model_fast: str, model_strong: str) -> dict[str, St
 
 
 def _current_answer(entry: object, models: Mapping[str, str]) -> Stored | None:
-    """The answer of one pinned entry, or None when the entry is unreadable, its prompt no longer
-    exists, or its prompt version or model differ from the current ones."""
+    """The answer of one pinned entry, or None if it is unreadable or out of date."""
     try:
         prompt = load_prompt(entry["prompt_id"])
         key, answer = entry["key"], entry["answer"]
@@ -138,20 +131,17 @@ def _current_answer(entry: object, models: Mapping[str, str]) -> Stored | None:
 
 
 class LLMCache:
-    """Answers stored by key in one SQLite file, after the pinned answers held in memory. A row
-    that cannot be read is a miss, and a broken database never fails an analysis: the cache only
-    saves money."""
+    """Answers by key in one SQLite file, after the pinned ones held in memory. A broken database
+    is only a miss: the cache saves money and must never fail an analysis."""
 
     def __init__(self, path: Path, pinned: Mapping[str, Stored] | None = None) -> None:
-        """`pinned` defaults to the pinned answers of the built-in samples (`sample_answers`),
-        so the model the app builds at startup replays them."""
+        """`pinned` defaults to the pinned answers of the built-in samples (`sample_answers`)."""
         self.path = path
         self.pinned: dict[str, Stored] = dict(sample_answers() if pinned is None else pinned)
 
     def get(self, key: str) -> tuple[dict, int, int] | None:
-        """The stored answer with its token counts, or None on a miss or an unreadable row. A
-        pinned answer comes first. A row with no creation time counts as expired and is never
-        returned."""
+        """The stored answer and its token counts, or None. Pinned answers come first; a row with
+        no creation time counts as expired."""
         if key in self.pinned:
             answer, tokens_in, tokens_out = self.pinned[key]
             return copy.deepcopy(answer), tokens_in, tokens_out
@@ -178,10 +168,9 @@ class LLMCache:
         return None
 
     def put(self, key: str, answer: dict, input_tokens: int, output_tokens: int) -> None:
-        """Stores a successful answer, timestamped now. If the write fails, the next identical call
-        asks again. A pinned key only gets here when its pinned answer no longer fits the schema
-        and the model was asked instead: that pin is dropped from memory (the file is untouched),
-        and the live answer is cached like any other."""
+        """Stores a successful answer; a failed write is only logged. A pinned key gets here only
+        when its pinned answer no longer fits the schema: the pin is dropped from memory (the
+        file is untouched) and the live answer is cached."""
         if self.pinned.pop(key, None) is not None:
             log.warning("A pinned answer no longer fits its schema; using a live answer")
         stored_at = datetime.now(UTC).timestamp()
@@ -202,9 +191,8 @@ class LLMCache:
             log.warning("LLM cache write failed: %s", exc)
 
     def purge_created_before(self, cutoff: datetime) -> int:
-        """Deletes the rows created before `cutoff`, and the rows with no creation time (their age
-        is unknown, so they count as expired). Returns how many rows were deleted. Unlike get and
-        put, this raises when the file cannot be read, so the caller logs it. It creates no file.
+        """Deletes rows created before `cutoff` and rows with no creation time. Returns how many.
+        Unlike get and put, it raises if the file cannot be read, and it never creates the file.
         Pinned answers are not rows, so they never expire."""
         if not self.path.exists():
             return 0
@@ -217,8 +205,8 @@ class LLMCache:
 
     @contextmanager
     def _connect(self) -> Iterator[sqlite3.Connection]:
-        """Opens the file, creating it with its table on first use, and closes it again. A table
-        from before the `created_at` column gets the column; its old rows keep no creation time."""
+        """Opens the file (creating the table on first use) and closes it after. A table without
+        `created_at` gets the column; its old rows stay without a creation time."""
         self.path.parent.mkdir(parents=True, exist_ok=True)
         db = sqlite3.connect(self.path)
         try:

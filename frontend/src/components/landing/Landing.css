@@ -1,6 +1,4 @@
-/* The landing page: shared palette, buttons, hero and benefit cards. The form has InputForm.css and
-   the live example has ExampleWindow.css. Colours fall back to the design values until the global
-   tokens (--ink, --muted, --accent...) are defined. */
+/* Landing palette: each --lp-* colour takes the global token when it exists, else its own default. */
 
 .landing,
 .ew {
@@ -55,7 +53,7 @@
   border: 0;
 }
 
-/* ---- Buttons ---- */
+/* Buttons */
 
 .lp-btn {
   display: inline-flex;
@@ -113,7 +111,7 @@
   font-size: 15px;
 }
 
-/* ---- Hero ---- */
+/* Hero */
 
 .lp-hero {
   display: flex;
@@ -160,7 +158,7 @@
   min-width: 0;
 }
 
-/* ---- Benefit cards ---- */
+/* Benefit cards */
 
 .lp-benefits {
   display: grid;

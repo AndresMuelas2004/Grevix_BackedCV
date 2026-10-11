@@ -1,8 +1,7 @@
 """LLM-facing output schema for the hidden-barrier screen (OpenAI strict mode).
 
-Same rules as drafts.py and drafts_optimize.py: every field required, optional values nullable,
-no dict fields. Field descriptions carry per-field instructions. Domain models are built from
-these drafts in domain/barriers.py, never trusted as-is.
+Same strict-mode rules as drafts.py. Domain models are built from these drafts in
+domain/barriers.py.
 """
 
 from pydantic import BaseModel, Field

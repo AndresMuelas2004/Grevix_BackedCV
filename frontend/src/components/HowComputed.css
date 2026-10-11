@@ -1,5 +1,3 @@
-/* The "How this was computed" panel at the foot of the report, review and built screens. */
-
 .how-computed summary {
   cursor: pointer;
   font-weight: 600;

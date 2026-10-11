@@ -383,7 +383,7 @@ def _total_guard(s, name) -> GuardResult:
 @pytest.mark.parametrize(
     "after",
     [
-        "Data engineer with 3.2 years of experience building Python data pipelines",  # C09
+        "Data engineer with 3.2 years of experience building Python data pipelines",
         "Worked 3.2 years as a data engineer",
         "Built ETL jobs for 3.2 years of experience with Python",
         "Worked 3.2 years in data engineering",

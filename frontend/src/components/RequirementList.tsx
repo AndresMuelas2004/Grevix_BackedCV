@@ -29,8 +29,7 @@ import type { Saving } from '../lib/saving'
 import CitationTag, { CitedText } from './CitationTag'
 import './RequirementList.css'
 
-// What the row toggles need: the report's current lists, where the saved report goes, and the
-// report screen's shared state that every save goes through.
+// What the row toggles need, including the report screen's shared saving state.
 interface RequirementInputs {
   analysisId: string
   excludedIds: string[]
@@ -44,7 +43,7 @@ interface RequirementListProps {
   assessments: Record<string, RequirementAssessment>
   banners: PostingBanner[]
   flags: RequirementFlag[]
-  // Card 1: requirements that look met but may still be rejected, and when the CV last used them.
+  // Requirements that look met but may still be rejected, and when the CV last used them.
   screeningFlags: ScreeningFlag[]
   recency: Record<string, RecencyCheck>
   contributions: Contribution[]
@@ -168,7 +167,7 @@ export default function RequirementList({
 
 interface RowToggles {
   notRelevant: boolean
-  countAnyway: boolean | null // null when the requirement has no R1 or R2 flag
+  countAnyway: boolean | null // null when the requirement has no flag
   busy: boolean
   onNotRelevant: () => void
   onCountAnyway: () => void
@@ -344,7 +343,6 @@ function plainText(text: string): string {
   return text.trim().replace(/\s+/g, ' ')
 }
 
-// The points this requirement won out of its maximum, or that it is not counted.
 function PointsLine({ contribution }: { contribution: Contribution }) {
   if (contribution.excluded_reason !== null) {
     return <p className="req-points">Points: none, not counted in Fit.</p>

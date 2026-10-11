@@ -1,5 +1,4 @@
-"""Card 2: a language knockout is settled by the CEFR level the CV states (hidden-risk sample:
-"English (C1)" against "Fluent English (C1 or above)")."""
+"""A language knockout is settled by the CEFR level the CV states, e.g. "English (C1)"."""
 
 from datetime import date
 

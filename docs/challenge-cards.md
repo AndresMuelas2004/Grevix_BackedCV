@@ -45,7 +45,7 @@ verify_batch (pass 1: backed) -> gate_recency (pass 2) -> gate_barriers (pass 3)
 
 Press **Try a posting with hidden barriers** on the first screen. The posting is for a platform engineer in Austin and hides "we are unable to sponsor work visas, so you must already have the right to work in the United States" in its closing notes; it asks for Kubernetes "within the last 5 years". The CV belongs to an engineer in Valencia whose only Kubernetes evidence is "Deployed and operated microservices on K8s clusters" in a 2015-2017 job.
 
-BackedCV flags the work permit and the Austin office days as high hidden risks (the CV is located in Spain) and points to the matching deal-breaker questions, marks Kubernetes "Looks met, but..." (the keyword is there, but the experience ended in 2017), and in the review lists the Kubernetes edit under "Refused as not viable" instead of rewording the old line. Because the posting states the 5-year window, the Kubernetes requirement no longer counts as met, so the verdict is "Likely screened out" until the candidate's situation changes.
+BackedCV flags the work permit and the Austin office days as high hidden risks (the CV is located in Spain) and points to the matching deal-breaker questions, marks Kubernetes "Looks met, but..." (the keyword is there, but the experience ended in 2017), and in the review lists the Kubernetes edit under "Refused as not viable" instead of rewording the old line. Because the posting states the 5-year window, the Kubernetes requirement no longer counts as met, so the verdict is "Likely screened out" until the candidate's situation changes. (Card 2 later narrowed this: the old Kubernetes evidence now caps the verdict at "Long shot", and only a "No" to the work permit question screens the candidate out.)
 
 Screenshots: [hidden risks](screenshots/08-hidden-risks.png), [Looks met, but...](screenshots/09-looks-met.png), [Refused as not viable](screenshots/10-refused.png).
 
@@ -57,7 +57,7 @@ Screenshots: [hidden risks](screenshots/08-hidden-risks.png), [Looks met, but...
 
 ## Card 2: real-world feedback
 
-Received 2026-10-11, about 13:35 (Madrid). Built on the `card-2` branch.
+Received 2026-10-11, about 13:35 (Madrid). Built on the `card-2` branch and merged into `main`.
 
 ### What the card asks
 
@@ -85,4 +85,4 @@ Three participants answered (their words and screenshots: [feedback/README.md](.
 | New | "How we read your dates": each entry's dates as read and the time counted; a missing month says "month unknown" and is never guessed | A preview of the parsed timelines |
 | Changes | Every explanation is one short sentence, without internal IDs | "a bit too lengthy" |
 | New | The first screen plays an example of the report before anyone uploads anything | "improve the landing page ui" |
-| Fixed | From an AI-run test (not counted as feedback): whitespace no longer changes the report, the built-in samples always give the same result, missing minimum years is a serious gap, one question per fact, no "aging" for degrees, dates glued to a city, keyword-stuffing suggestions filtered out | Determinism and correctness |
+| Fixed | From extra testing (not counted as feedback): whitespace no longer changes the report, the built-in samples always give the same result, missing minimum years is a serious gap, one question per fact, no "aging" for degrees, dates glued to a city, keyword-stuffing suggestions filtered out | Determinism and correctness |

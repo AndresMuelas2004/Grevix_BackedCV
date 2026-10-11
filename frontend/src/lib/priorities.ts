@@ -1,6 +1,4 @@
-// What to fix, most important first. A pure function of the report: it reads the requirements,
-// their assessments, the hidden risks, the "looks met, but..." flags and the parse warnings, and
-// returns one plain item per problem, in the order the candidate should work through them.
+// What to fix, most important first: one plain item per problem, built from the report alone.
 import type {
   AnalysisReport,
   BarrierKind,
@@ -30,7 +28,7 @@ export interface PriorityItem {
   tier: Tier
   tag: string // one short context tag, e.g. "Legal requirement"
   title: string
-  why: string // one sentence
+  why: string
   jobQuote: string | null // the posting's sentence
   cvQuote: string | null // the CV line that shows it, or null when nothing does
   cvSource: string | null // the CV entry or section of that line

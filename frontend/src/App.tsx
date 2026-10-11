@@ -35,7 +35,6 @@ import {
 } from './lib/progress'
 import type { RunStep } from './lib/runWatch'
 
-// The screens of the flow. Each stream (analysis, optimize, build) has its own progress.
 type Flow =
   | { kind: 'idle' }
   | { kind: 'loading' }
@@ -70,7 +69,6 @@ const BUILD_STEPS: readonly { id: BuildStep; label: string }[] = [
   { id: 'checks', label: 'Checking' },
 ]
 
-// The plain error of a run that stopped, by the step it stopped at.
 const STALLED_ERRORS: Record<RunStep, KnownCode> = {
   analysis: 'analysis_failed',
   optimize: 'optimize_failed',
@@ -145,7 +143,6 @@ export default function App() {
     return controller.signal
   }
 
-  // Cancels the run in progress, if any, and forgets the analysis in the address bar.
   function stopRun() {
     controllerRef.current?.abort()
     controllerRef.current = null
@@ -285,14 +282,12 @@ export default function App() {
     setFlow({ kind: 'idle' })
   }
 
-  // Returns to the form with the CV kept and the posting cleared, to check another job.
   function analyzeAnotherPosting() {
     stopRun()
     setDraft((previous) => ({ ...previous, jobText: '' }))
     setFlow({ kind: 'idle' })
   }
 
-  // Repeats the step a stopped run was in: the build, the suggestions, or the analysis itself.
   function retryStalled(analysis: AnalysisReport) {
     if (analysis.decisions) void startBuild(analysis, analysis.decisions)
     else if (analysis.verdict) void startOptimize(analysis)
@@ -524,7 +519,6 @@ function Toolbar({ onStartOver, label = 'Start over', context = null }: ToolbarP
   )
 }
 
-// One line naming the posting and the CV of a report.
 function reportContext(analysis: AnalysisReport): string | null {
   const job = analysis.job
   const name = analysis.cv?.contact.name?.value ?? null
@@ -535,7 +529,6 @@ function reportContext(analysis: AnalysisReport): string | null {
   return parts.length > 0 ? parts.join(' · ') : null
 }
 
-// The analysis id in the address bar (?analysis=...), or null.
 function readAnalysisId(): string | null {
   return new URLSearchParams(window.location.search).get(ANALYSIS_PARAM) || null
 }
@@ -558,8 +551,6 @@ function initialFlow(): Flow {
   return readAnalysisId() ? { kind: 'loading' } : { kind: 'idle' }
 }
 
-// The screen for an analysis, from the stage it is at. A run still going shows the wait, and a run
-// that stopped shows the step it stopped at.
 function flowFor(analysis: AnalysisReport, decisions: ReviewDecisions | null): Flow {
   if (analysis.status === 'running') {
     return { kind: 'waiting', analysisId: analysis.analysis_id, step: stepOf(analysis) }
@@ -584,7 +575,6 @@ function stepOf(analysis: AnalysisReport): RunStep {
   return analysis.verdict === null ? 'analysis' : 'optimize'
 }
 
-// The screen for an analysis as the server has it now, or null when it cannot be read.
 async function flowFromServer(analysisId: string, signal: AbortSignal): Promise<Flow | null> {
   try {
     const analysis = await getAnalysis(analysisId, signal)
@@ -605,7 +595,7 @@ function backLabel(analysis: AnalysisReport): string {
   }
 }
 
-// Rows of the analysis progress. The requirement count appears once the posting is read.
+// The requirement count appears once the posting is read.
 function analysisRows(progress: ProgressState): ProgressRow[] {
   const count = progress.requirements
   return PROGRESS_STEPS.map((step) => ({

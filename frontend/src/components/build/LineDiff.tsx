@@ -22,7 +22,6 @@ const STATUS_CHIPS: Record<DiffStatus, { label: string; chip: string }> = {
   removed: { label: 'Removed', chip: 'chip-missing' },
 }
 
-// The line diff of the new CV. Unchanged lines are folded away; changes are shown in full.
 export default function LineDiff({ lines, titles }: LineDiffProps) {
   const sections = groupBySection(lines, titles)
   return (
@@ -93,8 +92,7 @@ function groupBySection(lines: DiffLine[], titles: ReadonlyMap<string, string>):
   return sections
 }
 
-// The heading of a section: the CV's own heading when it has one, else the section name with a
-// capital letter (e.g. "contact" becomes "Contact").
+// The CV's own heading, else the section name with a capital letter ("contact" becomes "Contact").
 function sectionTitle(sectionId: string, titles: ReadonlyMap<string, string>): string {
   const heading = titles.get(sectionId)
   if (heading) return heading

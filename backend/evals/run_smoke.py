@@ -1,7 +1,7 @@
-"""Runs the smoke pairs through the real analysis graph and checks what each report shows.
+"""Run the smoke pairs through the real analysis graph and check what each report shows.
 
-Every pair calls the model, so the run needs --live and costs money. Each analysis stops at the
-report pause (no optimize, no build). Run from backend/: uv run python -m evals.run_smoke --help
+Every pair calls the model, so the run needs --live and costs money.
+Run from backend/: uv run python -m evals.run_smoke --help
 """
 
 import argparse
@@ -113,9 +113,6 @@ class PairRun:
         return (self.projection or {}).get("usage") or {}
 
 
-# Pairs and inputs --------------------------------------------------------------------------
-
-
 def load_pairs(path: Path = PAIRS_PATH) -> list[Pair]:
     pairs = [Pair(**row) for row in json.loads(path.read_text(encoding="utf-8"))]
     ids = [pair.id for pair in pairs]
@@ -192,7 +189,6 @@ def read_text(value: str) -> str:
 
 
 def read_cv_source(value: str) -> ReadResult:
-    """A PDF or DOCX is read like an upload; anything else is read like pasted text."""
     if not is_inline(value) and Path(value).suffix.lower() in BINARY_SUFFIXES:
         path = BACKEND_DIR / value
         return read_cv(path.read_bytes(), path.name)
@@ -226,9 +222,6 @@ def prepare(pair: Pair) -> PairRun:
     }
     cv_text = "\n".join(line.text for line in cv.lines)
     return PairRun(pair, analysis_id, state, cv_text, job_text)
-
-
-# Checks: each expectation against the projection of its analysis --------------------------
 
 
 def check_expectations(expect: dict[str, Any], projection: dict) -> list[Check]:
@@ -351,7 +344,6 @@ def _verdict_check(label: str, projection: dict) -> Check:
 
 
 def _named(phrase: str, projection: dict) -> list[dict]:
-    """The requirements whose label, quote or terms contain the phrase."""
     return [r for r in _requirements(projection) if fold_lower(phrase) in _text(r)]
 
 
@@ -409,9 +401,6 @@ def _ids(items: list[dict] | None, key: str) -> str:
     return ", ".join(sorted({item[key] for item in items or []})) or "none"
 
 
-# Running the pairs ------------------------------------------------------------------------
-
-
 def make_graph():
     """The analysis graph backed by the model from settings. Imported only for --live."""
     from langgraph.checkpoint.memory import InMemorySaver
@@ -441,9 +430,6 @@ async def run_all(runs: list[PairRun], graph) -> None:
             run.checks = [Check("reaches the report", False, failure)]
         else:
             run.checks = check_expectations(run.pair.expect, run.projection)
-
-
-# Reports ----------------------------------------------------------------------------------
 
 
 def _one_line(text: str | None) -> str:
@@ -535,11 +521,7 @@ def summary_lines(runs: list[PairRun], report: Path) -> list[str]:
     ]
 
 
-# LangSmith --------------------------------------------------------------------------------
-
-
 def _record_in_langsmith(runs: list[PairRun]) -> None:
-    """Uploads the pairs and records the live run in LangSmith. Only for --langsmith."""
     from langsmith import Client
 
     client = Client()

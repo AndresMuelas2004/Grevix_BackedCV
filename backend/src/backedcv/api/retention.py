@@ -1,5 +1,4 @@
-"""Analyses and cached model answers expire after 24 hours: an hourly task deletes the old ones
-(and the checkpoints of the analyses)."""
+"""Analyses and cached model answers expire after 24 hours; an hourly task deletes them."""
 
 import asyncio
 import logging
@@ -69,12 +68,8 @@ async def purge_expired(
     cache: LLMCache | None = None,
 ) -> list[str]:
     """Deletes the analyses created more than `max_age` before `now`, with their checkpoints, and
-    the cache rows created that long before it (rows with no creation time count as old).
-
-    An analysis that is running is skipped and the next pass looks at it again. Returns the IDs
-    that were deleted. A failure on one analysis is logged and the others still go on. A failure
-    on the cache raises, so the hourly pass logs it.
-    """
+    the cache rows that old (rows with no creation time count as old). Returns the deleted IDs.
+    A failure on one analysis is logged and the rest go on; a failure on the cache raises."""
     cutoff = now - max_age
     purged: list[str] = []
     for analysis_id in ledger.created_before(cutoff):

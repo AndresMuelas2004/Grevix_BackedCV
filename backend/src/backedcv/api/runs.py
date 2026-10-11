@@ -1,11 +1,7 @@
-"""Graph runs as background tasks. A run starts with its request and goes on until it ends, even if
-the browser that started it has gone. A stream only adds a listener to the run: when the listener
-leaves, the run keeps going.
-
-A run holds the analysis lock from start to end and gives it back before its final event is sent,
-so a client that reacts to that event finds the analysis free. Every event is kept in a buffer, so
-a listener that starts late still gets all of them; each listener also has its own queue for the
-events that come after."""
+"""Graph runs as background tasks. A run keeps going if its client leaves: a stream only listens
+to it. The run gives the analysis lock back before its final event is sent, so a client that
+reacts to that event finds the analysis free. Events are buffered, so a late listener gets all of
+them."""
 
 import asyncio
 import logging
@@ -140,7 +136,7 @@ async def stream_graph(graph: Any, graph_input: Any, config: dict, run: Run) -> 
 
 
 def emit_progress(run: Run, step: str, status: str, **extra: Any) -> None:
-    """A progress event shaped like the ones the nodes write (see graph/nodes.py `_progress`), for
-    steps that run outside the graph, where the nodes cannot write them."""
+    """A progress event shaped like the ones graph/nodes.py `_progress` writes, for steps that run
+    outside the graph."""
     data = {"type": "progress", "step": step, "status": status, **extra}
     run.emit(ServerSentEvent(event="progress", data=data))

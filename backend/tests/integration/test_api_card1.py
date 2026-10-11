@@ -1,5 +1,4 @@
-"""Challenge Card 1 over the API: the screening keys in the projection, barrier answers in PATCH
-inputs, and a suggestion the corroboration gate refuses, which cannot be accepted."""
+"""Screening keys in the projection, barrier answers in PATCH inputs, and refused suggestions."""
 
 import asyncio
 import json

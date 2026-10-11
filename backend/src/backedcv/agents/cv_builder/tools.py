@@ -1,5 +1,4 @@
-"""Tools for the order agent. They change only the order of sections and items, and they report
-problems as text so that the agent can read them and try again."""
+"""Tools for the order agent. They only reorder, and report problems as text the agent can read."""
 
 from dataclasses import dataclass, field
 
@@ -19,7 +18,7 @@ class Workspace:
     accepted_ids: set[str]
     approved: bool = False  # True when the last finalize returned "ok"
     usage: list[dict] = field(default_factory=list)  # one usage record per model call
-    error: Exception | None = None  # why the run failed, if it did
+    error: Exception | None = None
 
 
 def make_tools(ws: Workspace) -> list[BaseTool]:

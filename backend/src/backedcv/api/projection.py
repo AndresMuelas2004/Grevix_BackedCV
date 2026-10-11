@@ -104,10 +104,8 @@ def project(
 
 
 def cv_view(cv: dict | None) -> dict | None:
-    """The CV with every field of the current model, so the date timeline keys (`month_unknown`,
-    `months_counted`, `total_months`, `total_is_minimum`, `dates_note`) are always present, with
-    their defaults for analyses saved before they existed. A CV that does not validate is shown
-    as stored."""
+    """The CV with every field of the current model, so analyses saved before a field existed still
+    show its default. A CV that does not validate is shown as stored."""
     if cv is None:
         return None
     try:

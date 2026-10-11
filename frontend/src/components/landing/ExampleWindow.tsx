@@ -10,7 +10,6 @@ import { EXAMPLE, TIER_LABELS, type ExampleSnippet } from '../../demo/example'
 import './Landing.css'
 import './ExampleWindow.css'
 
-// The frames of the example, in the order they play.
 type Scene = 'inputs' | 'steps' | 'report' | 'detail'
 
 const SCENES: readonly { id: Scene; label: string }[] = [
@@ -51,7 +50,6 @@ function prefersReducedMotion(): boolean {
   return window.matchMedia(REDUCED_MOTION).matches
 }
 
-// True when the element got the focus from the keyboard (not from a click or a tap).
 function focusedByKeyboard(element: Element): boolean {
   try {
     return element.matches(':focus-visible')
@@ -60,15 +58,12 @@ function focusedByKeyboard(element: Element): boolean {
   }
 }
 
-// A stagger index for CSS: each item starts a little after the one before.
 function stagger(index: number): CSSProperties {
   return { '--i': index } as CSSProperties
 }
 
-// A framed mini app window that plays the example on its own, in a loop: the inputs, the four
-// steps, the report summary, then one problem opened. It is decorative for screen readers, who get
-// a short text alternative instead. Hovering it pauses it; keyboard focus on its control stops it
-// until Play is pressed. With reduced motion only the last frame shows.
+// Decorative for screen readers, who get a text alternative instead. Hovering pauses the loop;
+// keyboard focus on the control stops it until Play is pressed.
 export default function ExampleWindow() {
   const reduced = useSyncExternalStore(subscribeReducedMotion, prefersReducedMotion, () => false)
   const [beatIndex, setBeatIndex] = useState(0)
@@ -210,7 +205,6 @@ function SnippetCard({ snippet, kind }: { snippet: ExampleSnippet; kind: 'postin
   )
 }
 
-// The report summary as the design shows it: the steps, the verdict, the score and the top fixes.
 // With detailOpen, the fix that has quotes shows them.
 function ReportLayer({ className, detailOpen }: { className: string; detailOpen: boolean }) {
   const { detail } = EXAMPLE

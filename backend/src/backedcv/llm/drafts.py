@@ -1,8 +1,7 @@
 """LLM-facing output schemas (OpenAI strict mode).
 
-Rules for strict mode: every field required, optional values nullable, no dict fields.
-Field descriptions carry per-field instructions; they reach the model through the schema.
-Domain models are built from these drafts in code, never trusted as-is.
+Strict mode: every field required, optional values nullable, no dict fields. Field descriptions
+reach the model through the schema. Domain models are built from these drafts in code.
 """
 
 from typing import Literal
@@ -46,9 +45,6 @@ KnockoutKind = Literal[
 ]
 
 
-# 1. CV structure ---------------------------------------------------------------------
-
-
 class SectionDraft(BaseModel):
     type: SectionKind
     heading_line_id: str | None = Field(
@@ -75,9 +71,6 @@ class CVStructureDraft(BaseModel):
     )
     sections: list[SectionDraft]
     entries: list[EntryDraft]
-
-
-# 2. Job posting --------------------------------------------------------------------------
 
 
 class RequirementDraft(BaseModel):
@@ -117,9 +110,6 @@ class JobExtractionDraft(BaseModel):
     employment_type: str | None
     salary_present: bool
     requirements: list[RequirementDraft]
-
-
-# 3. Matching ------------------------------------------------------------------------------
 
 
 class AssessmentDraft(BaseModel):

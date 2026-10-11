@@ -51,7 +51,6 @@ interface SampleError {
   message: string
 }
 
-// The sample PDF as a File, or null when it cannot be fetched.
 async function fetchSamplePdf(sample: Samples): Promise<File | null> {
   try {
     return await getSampleCvFile(sample)
@@ -60,7 +59,6 @@ async function fetchSamplePdf(sample: Samples): Promise<File | null> {
   }
 }
 
-// The first screen: the hero with the live example, the benefits, and the form.
 export default function InputForm({ draft, onChange, onSubmit }: InputFormProps) {
   const [showProblems, setShowProblems] = useState(false)
   const [fileError, setFileError] = useState<string | null>(null)
@@ -85,7 +83,6 @@ export default function InputForm({ draft, onChange, onSubmit }: InputFormProps)
     onChange({ ...draft, ...patch })
   }
 
-  // Scrolls to the form and puts the cursor in its first field.
   function goToForm() {
     const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches
     formRef.current?.scrollIntoView({ behavior: reduced ? 'auto' : 'smooth', block: 'start' })
@@ -137,8 +134,7 @@ export default function InputForm({ draft, onChange, onSubmit }: InputFormProps)
     document.getElementById(`cv-tab-${mode}`)?.focus()
   }
 
-  // Loads the sample CV as a PDF upload and fills the posting. When the PDF cannot be fetched,
-  // the sample text goes in paste mode instead.
+  // Falls back to the sample text in paste mode when the PDF cannot be fetched.
   async function loadSample() {
     if (sampleBusy) return
     setSampleLoading(true)
@@ -159,8 +155,8 @@ export default function InputForm({ draft, onChange, onSubmit }: InputFormProps)
     }
   }
 
-  // Loads the posting that hides barriers, with its CV as pasted text (no file): the pair the live
-  // example shows. From the hero it also starts the analysis, so one click opens the full report.
+  // The posting that hides barriers, with its CV as pasted text. From the hero it also starts the
+  // analysis, so one click opens the full report.
   async function loadHiddenRiskSample(source: SampleSource) {
     if (sampleBusy) return
     setHiddenSampleLoading(source)

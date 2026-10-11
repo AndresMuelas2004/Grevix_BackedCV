@@ -118,7 +118,7 @@ def check(effect: str, rid: str = "R02", refs=("L004",), within: bool | None = N
     )
 
 
-# 1. Model items ----------------------------------------------------------------------------
+# Model items
 
 
 def test_unlocated_quotes_are_dropped_and_located_spans_kept():
@@ -159,7 +159,7 @@ def test_at_most_eight_model_items_are_kept():
     assert [item.id for item in items] == [f"H{n:02d}" for n in range(1, 9)]
 
 
-# 2. Rule items -----------------------------------------------------------------------------
+# Rule items
 
 
 def test_rule_patterns_find_sponsorship_and_the_right_to_work_with_its_place():
@@ -183,7 +183,7 @@ def test_rule_patterns_find_sponsorship_and_the_right_to_work_with_its_place():
     }
 
 
-# 3. Merge ----------------------------------------------------------------------------------
+# Merge
 
 
 def test_merge_dedupes_links_requirements_and_renumbers():
@@ -232,7 +232,7 @@ def test_a_model_recency_item_takes_the_window_of_its_rule():
     ]
 
 
-# 4. Risks ----------------------------------------------------------------------------------
+# Risks
 
 
 def test_work_authorization_in_another_country_is_high_and_cites_the_location_line():
@@ -315,7 +315,7 @@ def test_a_barrier_tied_to_a_knockout_asks_no_question_and_met_or_no_settles_it(
 
 
 def test_a_work_authorization_knockout_with_a_place_the_cv_lacks_is_high():
-    # The buried sentence was also extracted as a knockout (R20): the place check still applies.
+    # Also extracted as a knockout: the place check still applies.
     job = JobPosting(requirements=[req("R20", VISA, knockout="work_authorization")])
     barrier = US_BARRIER.model_copy(update={"id": "H03", "requirement_ids": ["R20"]})
     missing = {"R20": RequirementAssessment(requirement_id="R20", status="missing")}
@@ -324,7 +324,7 @@ def test_a_work_authorization_knockout_with_a_place_the_cv_lacks_is_high():
 
 
 def test_a_location_knockout_for_another_city_is_high_and_the_same_city_is_low():
-    # "Austin office" was also extracted as a location knockout (R01): the city check still applies.
+    # Also extracted as a location knockout: the city check still applies.
     job = JobPosting(requirements=[req("R01", "Work from our Austin office.", knockout="location")])
     barrier = BarrierItem(
         id="H01",
@@ -344,8 +344,7 @@ def test_a_location_knockout_for_another_city_is_high_and_the_same_city_is_low()
 
 
 def test_a_recency_knockout_follows_its_downgraded_check():
-    # "3+ years of Kubernetes within the last 5 years" was also extracted as an experience
-    # knockout (R01). apply_recency has already downgraded it, so the recency check decides.
+    # Also an experience knockout, but apply_recency downgrades it, so the recency check decides.
     job = JobPosting(requirements=[req("R01", K8S, knockout="experience_years")])
     barrier = BarrierItem(
         id="H02",
@@ -469,7 +468,7 @@ def test_risks_are_ordered_composite_then_high_medium_and_low():
     ]
 
 
-# 5. Flags ----------------------------------------------------------------------------------
+# Flags
 
 
 def test_screening_flags_name_requirements_that_look_met_but_carry_a_risk():
@@ -570,7 +569,7 @@ def test_screening_flags_never_repeat_a_sentence():
     assert flags[0].risk_ids == ["H01", "H02", "H03", "H04"]
 
 
-# 6. Schemas and prompt ---------------------------------------------------------------------
+# Schemas and prompt
 
 
 def test_barrier_draft_has_the_contract_fields():

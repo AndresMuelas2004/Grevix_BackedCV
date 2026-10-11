@@ -1,7 +1,7 @@
-"""Deterministic clean-up of the requirements the model extracted, so its run-to-run variance
-cannot change them. Each requirement is tied to the posting bullet or sentence its quote sits in
-(its unit), importance follows the posting's own wording and section headings, the same skill is
-kept once, and the order and the IDs follow the posting. Pure: no I/O."""
+"""Deterministic clean-up of the extracted requirements, so the model's run-to-run variance cannot
+change them. Each requirement is tied to the posting unit its quote sits in, importance follows the
+posting's own wording and headings, duplicates are merged, and order and IDs follow the posting.
+Pure: no I/O."""
 
 import re
 from dataclasses import dataclass
@@ -69,8 +69,8 @@ class Unit:
 
 
 def posting_units(posting: str) -> tuple[str, list[Unit]]:
-    """The folded lowercase posting (lines joined by a space, as `fold_lower` gives it) and its
-    units in order: each line split into sentences, each tagged with the section it sits in."""
+    """The folded lowercase posting (lines joined by a space) and its units in order: each line
+    split into sentences, each tagged with the section it sits in."""
     pieces: list[str] = []
     units: list[Unit] = []
     offset = 0
@@ -225,8 +225,8 @@ def _importance(req: Requirement, unit: Unit | None) -> Requirement:
 
 
 def canonical_requirements(job: JobPosting, posting: str) -> JobPosting:
-    """The job with its requirements tied to posting units, importance from the posting where it
-    is clear, duplicates merged, sorted by position in the posting and renumbered R01, R02..."""
+    """The job with its requirements tied to posting units, duplicates merged, sorted by position
+    in the posting and renumbered R01, R02..."""
     folded, units = posting_units(posting)
     placed: list[tuple[int, int, Requirement]] = []
     for index, req in enumerate(job.requirements):

@@ -1,5 +1,4 @@
-"""Card 2: hard dealbreakers (legal bans) apart from soft ones, so nobody self-rejects from a
-flexible role (real user feedback, 2026-10-11)."""
+"""Hard dealbreakers (legal bans) stay apart from soft ones, so flexible roles are not ruled out."""
 
 import pytest
 

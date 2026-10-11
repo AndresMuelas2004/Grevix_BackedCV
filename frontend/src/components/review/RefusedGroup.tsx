@@ -18,8 +18,7 @@ interface RefusedGroupProps {
   citations: ReadonlyMap<string, string> // CV line and fact IDs to their text
 }
 
-// Edits that the CV backs but that are not viable for this posting. They cannot be accepted, so
-// nothing here can be decided.
+// Edits the CV backs but that are not viable for this posting: they cannot be accepted.
 export default function RefusedGroup({
   refusals,
   items,
@@ -83,7 +82,7 @@ function RefusalCard({ headingId, label, refusal, citations }: RefusalCardProps)
   )
 }
 
-// A generated suggestion that a gate pass refused. It shows the change and the pass that failed.
+// A generated suggestion that a gate pass refused.
 function RefusedSuggestion({ item }: { item: RefusedItem }) {
   const { suggestion, sectionTitle } = item
   const titleId = `refused-${suggestion.id}-title`

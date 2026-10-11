@@ -1,9 +1,8 @@
 """Corroboration gate for suggested CV edits, and requirements whose edits are not viable.
 
-Pass 1 ("backed") is the guards and the verifier that already ran. Passes 2 and 3 refuse an edit
-as not viable: its evidence is too old for a stated recency window ("recent_enough"), or a hidden
-barrier blocks its requirement ("not_blocked"). Everything here is pure: no model call, and the
-date is a parameter.
+Pass 1 ("backed") is what the guards and the verifier already did. Pass 2 ("recent_enough") and
+pass 3 ("not_blocked") refuse an edit whose evidence is too old for a stated recency window or
+whose requirement a hidden barrier blocks. Pure: no model call, and the date is a parameter.
 """
 
 from collections.abc import Iterable
@@ -22,7 +21,7 @@ from backedcv.domain.models import (
 )
 from backedcv.domain.models.screening import join_sentences, short_sentence
 
-STALE_AFTER_YEARS = 6.0  # the "stale" recency band, kept local on purpose
+STALE_AFTER_YEARS = 6.0  # years after which a cited line counts as stale
 PASS_ORDER = ("backed", "recent_enough", "not_blocked")  # the order the gate runs the passes in
 
 
@@ -44,9 +43,9 @@ def not_viable_targets(
     risks: list[HiddenRisk],
     excluded: Iterable[str],
 ) -> list[Refusal]:
-    """Requirements whose edits are refused before any edit is generated: their only evidence is
-    outside a stated recency window, or a hidden barrier blocks a requirement the CV meets. The
-    suggest step skips them. Requirements the candidate excluded are left out."""
+    """Requirements whose edits are refused before any is generated: their only evidence is outside
+    a stated recency window, or a hidden barrier blocks a requirement the CV meets. Requirements
+    the candidate excluded are left out."""
     skipped = set(excluded)
     refusals: list[Refusal] = []
     for req in job.requirements:
@@ -80,8 +79,8 @@ def not_viable_targets(
 
 def backed_pass(s: Suggestion) -> GatePass:
     """Pass 1: the guards and the verifier already tie the edit to real CV lines. A refused edit
-    was backed too, so it passes. An edit that never verified fails here, but apply_pass does not
-    refuse it: it was not viable to begin with, only unsupported."""
+    was backed too, so it passes. An unverified edit fails here, but apply_pass does not refuse
+    it: it is unsupported, not unviable."""
     if s.verification.status in ("verified", "refused"):
         return GatePass(name="backed", ok=True)
     return GatePass(
@@ -138,10 +137,9 @@ def barrier_pass(s: Suggestion, risks: list[HiddenRisk]) -> GatePass:
 
 def apply_pass(s: Suggestion, p: GatePass) -> Suggestion:
     """A copy of the suggestion with the pass recorded. Running a pass again replaces its earlier
-    result, and the passes always stay in PASS_ORDER, so the outcome does not depend on the order
-    the passes ran in. A verified or refused suggestion is refused while a hard pass fails (the
-    first failing detail is the reason), and verified again once none does. Other statuses are
-    left alone."""
+    result and the passes stay in PASS_ORDER, so the outcome does not depend on run order. A
+    verified or refused suggestion is refused while a hard pass fails (the first failing detail is
+    the reason) and verified again once none does. Other statuses are left alone."""
     kept = [q for q in s.verification.passes if q.name != p.name]
     passes = sorted([*kept, p], key=lambda q: PASS_ORDER.index(q.name))
     verification = s.verification.model_copy(update={"passes": passes})
@@ -156,8 +154,7 @@ def apply_pass(s: Suggestion, p: GatePass) -> Suggestion:
 
 
 def refusals_from(suggestions: list[Suggestion]) -> list[Refusal]:
-    """One refusal per refused suggestion: the first requirement it targets, the gate that refused
-    it, and the lines it cites."""
+    """One refusal per refused suggestion, for the first requirement it targets."""
     refusals: list[Refusal] = []
     for s in suggestions:
         targets = _targets(s)
@@ -190,8 +187,8 @@ def _open(rid: str, risks: list[HiddenRisk]) -> list[HiddenRisk]:
 
 
 def _blocking(rid: str, risks: list[HiddenRisk]) -> list[HiddenRisk]:
-    """The unresolved risks that make the requirement high from an eligibility kind or a composite.
-    Same rule as requirement_risk, but only eligibility and composite risks count. Empty if none."""
+    """The unresolved eligibility or composite risks that make the requirement high, by the same
+    rule as requirement_risk. Empty if none."""
     own = [r for r in _open(rid, risks) if r.kind in ELIGIBILITY_KINDS or r.kind == "composite"]
     if sum(r.risk == "medium" for r in own) >= 2:
         return [r for r in own if r.risk != "low"]
@@ -212,8 +209,7 @@ def _stale_reason(label: str, check: RecencyCheck) -> str:
 
 
 def _blocked_reason(blocking: list[HiddenRisk]) -> str:
-    """The refusal for a hidden barrier, written from the first risk's own words: short
-    sentences, no raw IDs, each ending with a full stop."""
+    """The refusal text for a hidden barrier, built from the first risk's own explanation."""
     why = next((short_sentence(r.explanation) for r in blocking if r.explanation.strip()), "")
     advice = "A CV edit cannot fix this."
     if any(r.question and not r.confirmed for r in blocking):

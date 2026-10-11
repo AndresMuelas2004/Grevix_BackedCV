@@ -1,6 +1,4 @@
-"""The same CV and posting always give the same verdict and score: whitespace and invisible
-characters do not matter, and neither does how finely the model splits a bullet. Runs the curated
-sample pair through the API with a fake model."""
+"""Same CV and posting, same verdict and score, whatever the whitespace or requirement split."""
 
 import json
 from pathlib import Path
@@ -31,8 +29,8 @@ CV = (SAMPLES / "cv.txt").read_text(encoding="utf-8")
 
 
 def messy(text: str) -> str:
-    """What the AI-run test did (a leading newline, a space after a heading) and more: CRLF, NBSP,
-    a zero-width space, a BOM, tabs, trailing spaces and a longer gap between sections."""
+    """Messy variant of a text: BOM, leading newline, CRLF, NBSP, a zero-width space, tabs,
+    trailing spaces and a longer gap between sections."""
     text = "\U0000feff\n" + text.replace("About the role\n", "About the role \n", 1)
     text = text.replace("Python and SQL", "Python\xa0and SQL\U0000200b", 1)
     text = text.replace("Requirements\n", "Requirements \t \n", 1)

@@ -44,8 +44,8 @@ class Requirement(BaseModel):
     min_years: float | None = None
     aliases: list[str] = Field(default_factory=list)
     # The posting bullet or sentence the quote sits in ("U07": the 7th), set in code from the
-    # posting text. Requirements that share a unit share its weight in the score; None (older
-    # states) means the requirement is a unit of its own.
+    # posting text. Requirements that share a unit share its weight in the score; None means
+    # the requirement is a unit of its own.
     source_unit: str | None = None
 
 

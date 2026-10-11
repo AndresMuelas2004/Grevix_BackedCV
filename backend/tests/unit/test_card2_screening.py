@@ -1,5 +1,4 @@
-"""Card 2 screening fixes: minimum years, verdict badges, plain text, one question per fact,
-no recency for degrees, and dates glued to a city (AI-run test findings, 2026-10-11)."""
+"""Screening: minimum years, verdict badges, plain text, one question per fact, degrees, dates."""
 
 import re
 from datetime import date
@@ -138,7 +137,7 @@ def verdict_for(cv, facts=None):
     )
 
 
-# 6. Dates glued to a city, and no invented month ---------------------------------------------
+# Dates glued to a city, and no invented month
 
 
 def test_a_month_glued_to_the_city_is_read():
@@ -188,7 +187,7 @@ def test_a_year_only_job_is_flagged_and_the_total_says_it_is_a_minimum():
     assert "at least" in cv.facts[0].text
 
 
-# 7. The projection carries the timeline fields, also for older analyses ----------------------
+# The projection carries the timeline fields, also for older analyses
 
 
 def test_the_projection_fills_the_timeline_fields_for_older_analyses():
@@ -206,7 +205,7 @@ def test_the_projection_fills_the_timeline_fields_for_older_analyses():
     assert cv_view(None) is None
 
 
-# 1. Minimum years: a serious risk, first, with the numbers -----------------------------------
+# Minimum years: a serious risk, first, with the numbers
 
 
 def test_fewer_years_than_asked_is_missing_first_and_never_apply_or_screened_out():
@@ -254,7 +253,7 @@ def test_enough_years_keep_the_model_status():
     assert assessments["R04"].years_check.share >= 1
 
 
-# 2. Badges follow the verdict ---------------------------------------------------------------
+# Badges follow the verdict
 
 
 def test_a_screened_out_verdict_never_shows_tailor_first():
@@ -272,7 +271,7 @@ def test_a_screened_out_verdict_never_shows_tailor_first():
     assert "tailor_first" not in verdict.badges
 
 
-# 3. Plain text: no raw IDs, sentences joined with a space ------------------------------------
+# Plain text: no raw IDs, sentences joined with a space
 
 
 def test_raw_ids_leave_the_prose_and_labels_replace_requirement_ids():
@@ -332,7 +331,7 @@ def test_verdict_notes_never_show_ids():
     assert verdict.reasons[-1].text == "Hidden screening risk: This sentence may get you dropped."
 
 
-# 4. One question per fact -------------------------------------------------------------------
+# One question per fact
 
 OFFICE = req(
     "R02",
@@ -386,7 +385,7 @@ def test_two_barriers_about_the_same_place_make_one_question():
     assert [b.id for b in merged] == ["H01"]
 
 
-# 5. Degrees and certifications do not expire -------------------------------------------------
+# Degrees and certifications do not expire
 
 
 def test_a_degree_gets_no_recency_band():

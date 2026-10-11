@@ -1,4 +1,4 @@
-"""How well the CV covers each requirement, always with receipts."""
+"""How well the CV covers each requirement."""
 
 from typing import Literal
 

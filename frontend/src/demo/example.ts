@@ -3,7 +3,6 @@
 // backend/samples/hidden_risk; the report figures are the real report for that sample, which replays
 // pinned model answers (backend/samples/pinned_answers.json), so the app shows the same numbers.
 
-// How much a problem hurts, as the report ranks it.
 export type ExampleTier = 'rule-out' | 'serious' | 'improve'
 
 export const TIER_LABELS: Record<ExampleTier, string> = {

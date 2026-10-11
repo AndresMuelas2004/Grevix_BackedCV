@@ -1,6 +1,6 @@
-"""Render the curated sample CV as a two-column PDF (Typst) and a one-column DOCX (python-docx).
+"""Render the curated sample CV as a two-column PDF (Typst) and a one-column DOCX.
 
-Reads backend/samples/curated/cv.txt and writes cv.pdf and cv.docx next to it.
+Reads samples/curated/cv.txt and writes cv.pdf and cv.docx next to it.
 Run from backend/: uv run python scripts/make_samples.py
 """
 
@@ -73,7 +73,7 @@ TYPST_TEMPLATE = """\
 
 
 def parse(text: str) -> tuple[str, str, list[tuple[str, list[str]]]]:
-    """Return the name, the headline and the (heading, lines) sections in source order."""
+    """Return the name, the headline and the (heading, lines) sections."""
     header: list[str] = []
     sections: list[tuple[str, list[str]]] = []
     for raw in text.splitlines():
@@ -194,7 +194,6 @@ def main() -> None:
     with tempfile.TemporaryDirectory() as workdir:
         source = Path(workdir) / "cv.typ"
         source.write_text(markup, encoding="utf-8")
-        # Typst's embedded fonts only: system fonts are ignored.
         PDF_OUT.write_bytes(typst.compile(str(source), ignore_system_fonts=True))
     render_docx(name, headline, sections)
     print(f"wrote {PDF_OUT.name} and {DOCX_OUT.name} in {CURATED}")

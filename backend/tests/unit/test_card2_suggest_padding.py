@@ -1,4 +1,4 @@
-"""Card 2 feedback: a suggestion that only pads its line with posting words is not a better CV."""
+"""A suggestion that only pads its line with posting words is not a better CV."""
 
 import pytest
 
@@ -99,7 +99,7 @@ def _edit(before: str, after: str, kind: str = "align_wording") -> Suggestion:
             "Wrote Python data pipelines (ETL jobs) that load 2 million rows a day into "
             "PostgreSQL.",
             "align_wording",
-            id="one-word-moved-for-the-term",  # what the live run proposed before this change
+            id="one-word-moved-for-the-term",
         ),
         pytest.param(OBSERVABILITY, f"{OBSERVABILITY}.", "align_wording", id="unchanged"),
     ],
@@ -168,7 +168,7 @@ def test_added_lines_and_new_summaries_are_never_padding():
     assert keyword_only(new_summary, JOB) is None
 
 
-# The suggest node --------------------------------------------------------------------------------
+# The suggest node
 
 CV = ParsedCV(
     lines=[

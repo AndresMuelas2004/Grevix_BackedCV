@@ -47,9 +47,6 @@ _PHONE = re.compile(r"\+?\d[\d\s().-]{7,}\d")
 _LINK = re.compile(r"(?:https?://\S+|(?:www\.)?(?:linkedin\.com|github\.com)/\S+)", re.IGNORECASE)
 
 
-# CV ----------------------------------------------------------------------------------------
-
-
 def find_contact(lines: list[CVLine], draft: CVStructureDraft | None) -> Contact:
     """Email, phone and links by regex; name and location from the model's line references."""
     contact = Contact()
@@ -146,8 +143,8 @@ def _entry_dates(lines, index, ids, date_line_id) -> tuple[DateRange | None, str
 
 
 def _add_experience_fact(cv: ParsedCV, periods: list[tuple[DateRange, str]], today: date) -> None:
-    """F01: total experience from the job periods. A date that shows only the year counts at its
-    shortest, and an undated job adds nothing, so the total is then a minimum and says so."""
+    """Add fact F01, the total experience from the job periods. A year-only date counts at its
+    shortest and an undated job adds nothing, so the total is then marked as a minimum."""
     if not periods:
         return
     ranges = [period for period, _ in periods]
@@ -179,9 +176,6 @@ def _dates_note(year_only: bool, undated: int) -> str | None:
     if undated:
         return "Some jobs have no dates, so they are not counted in the total."
     return None
-
-
-# Job posting -----------------------------------------------------------------------------
 
 
 def build_job(posting: str, draft: JobExtractionDraft) -> tuple[JobPosting, list[str]]:
@@ -230,9 +224,6 @@ def build_job(posting: str, draft: JobExtractionDraft) -> tuple[JobPosting, list
 
 def _in_quote(term: str, quote: str) -> bool:
     return contains_term(quote, term) or fold_lower(term) in fold_lower(quote)
-
-
-# Matching ----------------------------------------------------------------------------------
 
 
 def build_assessments(
@@ -309,10 +300,9 @@ def _asked_never_asserted(req: Requirement) -> bool:
 def _with_years(
     req: Requirement, job: JobPosting, cv: ParsedCV, assessment: RequirementAssessment
 ) -> RequirementAssessment:
-    """A minimum-years requirement is checked against the CV's own job dates, not the model. When
-    the dates add up to less, it is missing; when some dates are incomplete (only the year, or a
-    job without dates), the app asks instead of asserting. Enough years keep the model's status:
-    the requirement may be about one skill."""
+    """A minimum-years requirement is checked against the CV's own job dates, not the model. Fewer
+    years than asked is missing; with incomplete dates (year only, or a job without dates) the app
+    asks instead of asserting. Enough years keep the model's status."""
     check = _years_check(req, cv)
     if check is None:
         return assessment

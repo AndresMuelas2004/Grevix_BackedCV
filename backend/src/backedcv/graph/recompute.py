@@ -1,5 +1,5 @@
-"""Assessments, score, verdict and the Card 1 screening results from state. Pure: also used when the
-user edits inputs. Older states (no Card 1 keys) work: the missing keys count as empty."""
+"""Assessments, score, verdict and screening results from state. Pure: also used when the user
+edits inputs. Older states without the screening keys work: missing keys count as empty."""
 
 from datetime import date, datetime
 
@@ -58,9 +58,9 @@ def risks_of(state: dict) -> list[HiddenRisk]:
 
 
 def _model_windows(barriers: list[BarrierItem]) -> list[RecencyRule]:
-    """The recency windows the model found, as rules the CV is checked against too. Code rules are
-    not repeated here. Read from the merged barriers: merge_barriers has already given a model item
-    that shares its sentence with a code rule that rule's window, so every later run agrees."""
+    """The recency windows the model found, as rules too. Code rules are not repeated. Read from
+    the merged barriers: merge_barriers has already given a model item that shares its sentence
+    with a code rule that rule's window, so every later run agrees."""
     return [
         RecencyRule(
             quote=item.quote,
@@ -76,9 +76,9 @@ def _model_windows(barriers: list[BarrierItem]) -> list[RecencyRule]:
 def _shared_answers(
     facts: CandidateFacts, barriers: list[BarrierItem], job: JobPosting
 ) -> CandidateFacts:
-    """One answer per fact. A barrier tied to a gate requirement asks no question of its own (the
-    requirement asks), so an answer saved under the barrier's ID (before the two were linked)
-    answers the requirement too. An answer saved under the requirement's ID always wins."""
+    """A barrier tied to a gate requirement asks no question of its own, so an answer saved under
+    the barrier's ID also answers the requirement. An answer saved under the requirement's ID
+    wins."""
     gates = {r.id for r in job.requirements if r.knockout_type is not None}
     answers = dict(facts.answers)
     for barrier in barriers:

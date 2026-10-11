@@ -1,21 +1,16 @@
 """Pin the model answers of the built-in samples, so the demo gives the same report on every visit.
 
-The answer cache lives 24 hours, and on the live demo the disk is wiped on every restart; a fresh
-model call can then move the fit by a few points. This script runs the two samples the UI offers,
-sent exactly as the UI sends them ("Try the sample": the PDF from GET /api/samples as an upload;
-"hidden barriers": the CV from GET /api/samples/hidden-risk as pasted text), each through the
-analysis and the optimize step, against the real model and an empty cache. It writes every answer
-the model gave to samples/pinned_answers.json, which the app loads at startup (llm/cache.py). Each
-pinned answer is the model's own answer from that run; nothing is written by hand.
+Runs the two samples the UI offers through the analysis and the optimize step, against the real
+model and an empty cache, and writes every answer the model gave (nothing edited by hand) to
+samples/pinned_answers.json, which the app loads at startup (llm/cache.py).
 
 Usage (from backend/):
-    uv run python scripts/pin_samples.py           # real model calls (2 analyses), writes the file
+    uv run python scripts/pin_samples.py           # real model calls, writes the file
     uv run python scripts/pin_samples.py --check   # both samples, twice, empty cache, no model
 
-Run it again after a change to a prompt, a model, or the code that builds the model's input, and
-when a month starts (the CV's computed total experience counts months up to today and is part of
-the matching input). Until then the entries that no longer match are skipped, and the samples are
-answered live. `--check` shows whether the file still covers every call.
+Run it again after a change to a prompt, a model or the code that builds the model's input, and
+when a month starts (the CV's total experience counts months up to today). Entries that no longer
+match are skipped and the samples are answered live; --check shows whether any do.
 """
 
 import argparse
@@ -47,8 +42,7 @@ ABOUT = (
 
 
 class RecordingLLM(OpenAIStructuredLLM):
-    """The real model behind the usual cache. Every answer is recorded under its cache key, and
-    the calls that reached the model are counted with their cost."""
+    """The real model behind the usual cache; records every answer under its cache key."""
 
     def __init__(self, settings: Settings) -> None:
         super().__init__(settings, cache=True)
@@ -80,9 +74,8 @@ class RecordingLLM(OpenAIStructuredLLM):
 
 
 def run_samples(client: TestClient) -> dict[str, dict]:
-    """Both samples as the UI sends them (frontend/src/components/InputForm.tsx and
-    lib/draft.ts: the posting is trimmed, the CV text is not), each through the analysis and the
-    optimize step. Raises RuntimeError when a run fails or reports an error."""
+    """Both samples as the UI sends them (see InputForm.tsx and lib/draft.ts: the posting is
+    trimmed, the CV text is not), each through analysis and optimize. Raises RuntimeError."""
     curated = _ok(client.get("/api/samples")).json()
     pdf = _ok(client.get(curated["cv_pdf_url"])).content
     hidden = _ok(client.get("/api/samples/hidden-risk")).json()
@@ -173,23 +166,20 @@ def generate(path: Path) -> int:
 
 
 def _offline(**_options):
-    """Stands in for ChatOpenAI during --check: a call that is not pinned fails the check instead
-    of reaching (and paying for) the model."""
+    """Stands in for ChatOpenAI in --check: an unpinned call fails instead of reaching the model."""
     raise RuntimeError("this call is not pinned, so it would have reached the model")
 
 
 def check(path: Path, rounds: int = 2) -> int:
-    """Runs both samples `rounds` times through the app as it starts in production, each time on
-    an empty cache and with the model unreachable. Passes when every round gives the same report
-    from pinned answers alone. A report that differs from the pinned run's numbers means the code
-    after the model changed since the file was written: it is still reproducible, but run the
-    script again so the recorded numbers match."""
+    """Runs both samples `rounds` times on an empty cache with the model unreachable. Passes when
+    every round gives the same report from pinned answers alone. Numbers that differ from the
+    pinned run mean the code after the model changed: still reproducible, but pin again."""
     expected = json.loads(path.read_text(encoding="utf-8")).get("samples", {})
     structured.ChatOpenAI = _offline
     seen = []
     for round_no in range(1, rounds + 1):
         with tempfile.TemporaryDirectory(ignore_cleanup_errors=True) as tmp:
-            os.environ["BACKEDCV_DATA_DIR"] = tmp  # a fresh, empty cache location
+            os.environ["BACKEDCV_DATA_DIR"] = tmp
             get_settings.cache_clear()
             try:
                 with TestClient(create_app(checkpointer=InMemorySaver())) as client:

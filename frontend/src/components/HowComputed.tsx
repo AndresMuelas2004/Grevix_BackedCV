@@ -9,8 +9,6 @@ interface HowComputedProps {
   usage: UsageTotal
 }
 
-// A panel, closed by default, at the foot of the report, review and built screens. It says which
-// models ran, what they cost, and how the results are made.
 export default function HowComputed({ usage }: HowComputedProps) {
   const models = usage.models.filter((model) => model !== '')
   return (

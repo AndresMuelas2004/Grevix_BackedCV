@@ -24,9 +24,6 @@ interface ReportViewProps {
   onAnotherPosting: () => void // back to the form with the CV kept
 }
 
-// The report page, simple to complex: the verdict and the one number, the questions to answer,
-// the main action, what to fix in order, what already works, how the dates were read, and the
-// details for whoever wants them.
 export default function ReportView({
   analysis,
   onAnalysisChange,
@@ -316,7 +313,6 @@ function Dates({ analysis }: { analysis: AnalysisReport }) {
   )
 }
 
-// The points behind the skills match, one row per scored requirement.
 function ScoreWorking({ analysis }: { analysis: AnalysisReport }) {
   const score = analysis.score
   if (!score) return <p>No skills match was computed for this posting.</p>
@@ -368,7 +364,6 @@ function ScoreWorking({ analysis }: { analysis: AnalysisReport }) {
   )
 }
 
-// Notes about the posting itself (R3/R4 banners and R1/R2 flags), when there are any.
 function PostingNotes({ analysis }: { analysis: AnalysisReport }) {
   const labels = new Map((analysis.job?.requirements ?? []).map((req) => [req.id, req.label]))
   const notes = [
@@ -409,7 +404,6 @@ interface ClosingBandProps {
   onAnotherPosting: () => void
 }
 
-// The dark band at the foot of the page: the same action as under the questions.
 function ClosingBand({ action, pending, onImprove, onAnotherPosting }: ClosingBandProps) {
   if (action.blocked) {
     return (

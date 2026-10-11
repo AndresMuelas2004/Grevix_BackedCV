@@ -192,7 +192,7 @@
   opacity: 0.55;
 }
 
-/* Card 1: the "Looks met, but..." badge, its reasons, and the recency note. */
+/* "Looks met, but..." badge, its reasons and the recency note */
 .chip.chip-screening {
   background: var(--warn-soft);
   color: var(--warn);

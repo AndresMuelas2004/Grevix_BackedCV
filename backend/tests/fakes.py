@@ -183,7 +183,7 @@ def match_draft(requirement_ids: list[str]) -> MatchChunkDraft:
 
 
 def review_draft() -> PostingReviewDraft:
-    """One contradiction (the example from the prompt), so the posting_red_flags badge shows."""
+    """One contradiction, so the posting_red_flags badge shows."""
     return PostingReviewDraft(
         contradictions=[
             ContradictionDraft(

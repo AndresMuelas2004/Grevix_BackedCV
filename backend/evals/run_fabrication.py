@@ -1,8 +1,6 @@
-"""Measures the fabrication set: how many invented CV rewrites the checks block, and how many
-faithful rewrites they block by mistake.
+"""Measures how many invented CV rewrites the checks block, and how many faithful ones they block.
 
-Offline (default): the deterministic guards only, no network.
-Live (--live): the guards, then the app's real verifier on the suggestions the guards let through.
+Offline (default): the guards only, no network. Live (--live): the guards, then the real verifier.
 Run from backend/: uv run python -m evals.run_fabrication --help
 """
 
@@ -25,7 +23,7 @@ RESULTS_DIR = EVALS_DIR / "results"
 SPLITS = ("dev", "heldout")
 LANGSMITH_DATASET = "backedcv-fabrication"
 
-# What the checks did with one case. "not_checked" means the verifier gave no verdict.
+# "not_checked" means the verifier gave no verdict.
 Verdict = Literal["blocked_by_guards", "blocked_by_verifier", "passed", "not_checked"]
 BLOCKED = ("blocked_by_guards", "blocked_by_verifier")
 FABRICATED_OUTCOMES = ("caught by guards", "caught by verifier", "missed", "not checked")
@@ -110,8 +108,7 @@ def load_cv(path: Path = FIXTURES_DIR / "cv.json") -> ParsedCV:
 
 def load_job(path: Path = FIXTURES_DIR / "job.json") -> JobPosting:
     raw = json.loads(path.read_text(encoding="utf-8"))
-    # The set gives only IDs, labels and terms. The guards read the terms and aliases and nothing
-    # else, so the other fields are placeholders.
+    # The set has only IDs, labels and terms; the guards read nothing else, so the rest is dummy.
     requirements = [
         Requirement(
             id=row["id"],
@@ -127,7 +124,7 @@ def load_job(path: Path = FIXTURES_DIR / "job.json") -> JobPosting:
 
 
 def outcome_of(case: Case, verdict: Verdict) -> str:
-    """The label a case gets in the tables, given what the checks did with it."""
+    """The table label for a case."""
     if verdict == "not_checked":
         return "not checked"
     fabricated = case.expected == "unsupported"

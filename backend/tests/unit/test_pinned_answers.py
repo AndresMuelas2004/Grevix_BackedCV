@@ -1,6 +1,4 @@
-"""Pinned answers for the built-in samples (llm/cache.py): replayed with no model call, never
-expired, ignored once their prompt version or model is out of date, and no change to the normal
-24-hour cache."""
+"""Pinned answers for the built-in samples: replayed with no model call and never expired."""
 
 import asyncio
 import json
@@ -77,8 +75,7 @@ def _run(llm: OpenAIStructuredLLM, data: str = "the sample posting"):
 
 
 def _recorded_key(tmp_path: Path, fake: FakeModel, data: str = "the sample posting") -> str:
-    """The key the cache stores this call under, read back from a throwaway cache, as
-    scripts/pin_samples.py checks its own keys. The call is not counted."""
+    """The key the cache stores this call under, read back from a throwaway cache (not counted)."""
     scratch = tmp_path / "scratch"
     _run(_llm(scratch), data)
     with closing(sqlite3.connect(scratch / "llm_cache.sqlite")) as db:

@@ -64,10 +64,10 @@ Both reports are for the same sample (a Platform Engineer posting with a buried 
 
 Once the changes were live, I answered the LinkedIn comment with what had changed because of it.
 
-Beyond these comments I also had an AI test the app. That is not real-world feedback and I don't count it for this card, but it found real bugs, which I fixed: a blank line in the posting could move the score from 55 to 72, a missing "2+ years" counted as a small partial, the same question was asked twice, a 2023 degree was marked "aging", and some suggestions only stuffed posting words into a line.
+Beyond these comments I also ran extra tests on the app. They are not real-world feedback and I don't count them for this card, but they found real bugs, which I fixed: a blank line in the posting could move the score from 55 to 72, a missing "2+ years" counted as a small partial, the same question was asked twice, a 2023 degree was marked "aging", and some suggestions only stuffed posting words into a line.
 
 ## What I did not change, and why
 
 - **I didn't cut the evidence, I folded it.** C asked for shorter output, and B said the side-by-side quotes are what make a verdict trustworthy. Deleting the detail would answer one comment by breaking the other, so it moved down, behind "See why" and "Details".
 - **I didn't switch to a bigger AI model.** C suggested changing the AI. The texts are shorter because of the prompts and the layout. Every call still uses the cheap model, to stay inside the event's API budget.
-- **No Spanish interface yet.** The AI-run test asked for it when the CV and posting are in Spanish. The analysis reads Spanish input, but translating and re-testing every screen didn't fit in the time left.
+- **No Spanish interface yet.** It would help when the CV and posting are in Spanish. The analysis reads Spanish input, but translating and re-testing every screen didn't fit in the time left.

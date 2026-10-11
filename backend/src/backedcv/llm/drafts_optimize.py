@@ -1,8 +1,6 @@
 """LLM-facing output schemas for the optimize step: suggestions, verification, posting review.
 
-Same rules as drafts.py: strict mode, every field required, optional values nullable, no dict
-fields. Field descriptions carry per-field instructions. Domain models are built from these
-drafts in code, never trusted as-is.
+Same strict-mode rules as drafts.py.
 """
 
 from typing import Literal
@@ -11,9 +9,6 @@ from pydantic import BaseModel, Field
 
 SuggestionKind = Literal["align_wording", "add_skill", "tailor_summary"]
 TermVerdict = Literal["faithful_name", "adds_claim"]
-
-
-# 1. Suggestions ----------------------------------------------------------------------------
 
 
 class SuggestionDraft(BaseModel):
@@ -50,9 +45,6 @@ class SuggestionsDraft(BaseModel):
         description="At most 6, strongest first. Empty when no edit would really help without "
         "inventing or only adding posting words."
     )
-
-
-# 2. Verification ---------------------------------------------------------------------------
 
 
 class ClaimDraft(BaseModel):
@@ -104,9 +96,7 @@ class VerificationBatchDraft(BaseModel):
     )
 
 
-# 3. Posting review (banner only, never scored) ---------------------------------------------
-
-
+# The posting review is shown as a banner and never scored.
 class ContradictionDraft(BaseModel):
     explanation: str = Field(
         description="One short sentence on what clashes. Low confidence: use 'seems' or 'may'."

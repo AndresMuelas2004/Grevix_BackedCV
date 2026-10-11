@@ -130,7 +130,7 @@ class _Answers:
         return self.answer, {**usage, "cost_usd": 0.0}
 
 
-# suggest ---------------------------------------------------------------------------------------
+# suggest
 
 
 @pytest.mark.anyio
@@ -268,7 +268,7 @@ async def test_suggest_model_error_leaves_no_suggestions():
     }
 
 
-# route_verification ----------------------------------------------------------------------------
+# route_verification
 
 
 def test_route_sends_one_verification_per_section_with_pending_suggestions():
@@ -361,7 +361,7 @@ async def test_suggest_verify_and_review_run_as_one_langgraph():
     assert done.values["decisions"] == {"accepted": ["S01"], "rejected": ["S03"]}
 
 
-# verify_batch ----------------------------------------------------------------------------------
+# verify_batch
 
 SUPPORTED = ClaimDraft(text="Built a support bot", supported_by=["L007"], unsupported_reason=None)
 UNPROVEN = ClaimDraft(
@@ -471,7 +471,7 @@ async def test_verify_batch_error_marks_the_group_unsupported():
     assert update["errors"] == [{"node": "verify_batch", "error": "RuntimeError", "detail": "boom"}]
 
 
-# await_review ----------------------------------------------------------------------------------
+# await_review
 
 
 class _ReviewState(TypedDict, total=False):

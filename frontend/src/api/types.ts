@@ -2,7 +2,7 @@
 // report projection (backend/src/backedcv/api/projection.py).
 // Field names stay in the backend's snake_case on purpose.
 
-// ---- CV as read by the backend ------------------------------------------
+// CV as read by the backend
 
 export type LineSource = 'body' | 'header' | 'footer' | 'textbox' | 'table'
 
@@ -52,7 +52,7 @@ export interface CvEntry {
   end: string | null
   date_source: 'parser' | 'model' | 'none'
   line_ids: string[]
-  // Card 2 date timeline. Optional: analyses saved before it have neither.
+  // Optional: analyses saved before the date timeline have neither.
   month_unknown?: boolean // the start or the end shows only the year: no month is invented
   months_counted?: number | null // jobs only: the months this entry adds; null when not counted
 }
@@ -77,13 +77,12 @@ export interface ParsedCv {
   entries: CvEntry[]
   contact: Contact
   total_years: number | null
-  // Card 2 date timeline. Optional: analyses saved before it have none of these.
+  // Optional: analyses saved before the date timeline have none of these.
   total_months?: number | null // job periods, overlaps counted once
   total_is_minimum?: boolean // a job date shows only the year, or a job has no dates
   dates_note?: string | null // one plain sentence saying why the total is a minimum
 }
 
-// A problem found while reading the CV (backend ParseWarning).
 export interface ParseWarning {
   code: string
   severity: 'info' | 'warning' | 'error'
@@ -91,7 +90,7 @@ export interface ParseWarning {
   line_ids: string[]
 }
 
-// ---- Job posting -----------------------------------------------------------
+// Job posting
 
 export type Category =
   | 'hard_skill'
@@ -159,7 +158,7 @@ export interface PostingBanner {
   explanation: string
 }
 
-// ---- Assessment and score --------------------------------------------------
+// Assessment and score
 
 export type Status = 'met' | 'partial' | 'missing' | 'unknown'
 
@@ -248,11 +247,11 @@ export interface Verdict {
   provisional: boolean
 }
 
-// ---- Suggestions and review -------------------------------------------------
+// Suggestions and review
 
 export type SuggestionKind = 'align_wording' | 'add_skill' | 'tailor_summary'
 
-// "refused": backed by the CV but not viable for the posting (Card 1). It can never be accepted.
+// "refused": backed by the CV but not viable for the posting. It can never be accepted.
 export type VerificationStatus = 'pending' | 'verified' | 'unsupported' | 'refused'
 
 // One atomic claim of a suggestion, and the CV references (L and F IDs) backing it.
@@ -276,7 +275,7 @@ export interface Verification {
   claims: ClaimCheck[]
   guards: GuardResult[]
   reason: string | null // the first failing reason, shown to the user
-  // The gate's passes (Card 1). Optional: an analysis saved before Card 1 has none.
+  // The gate's passes. Optional: older saved analyses have none.
   passes?: GatePass[]
 }
 
@@ -296,13 +295,11 @@ export interface Suggestion {
   verification: Verification
 }
 
-// The user's choices on the suggestions, sent to the build.
 export interface ReviewDecisions {
   accepted: string[]
   rejected: string[]
 }
 
-// Answer of POST /api/analyses/{id}/coverage-preview, whose body is {accepted: suggestion IDs}.
 // `coverage` is the keyword coverage if the accepted changes were built, `coverage_now` the
 // current one. `gained_requirement_ids` are the requirements those changes newly cover.
 export interface CoveragePreview {
@@ -311,7 +308,7 @@ export interface CoveragePreview {
   gained_requirement_ids: string[]
 }
 
-// ---- Rebuilt CV ------------------------------------------------------------
+// Rebuilt CV
 
 export type DocLineKind = 'text' | 'bullet'
 
@@ -360,7 +357,6 @@ export interface DiffLine {
   origin: string | null
 }
 
-// What the build changed, and how the new CV was checked.
 export interface BuildReport {
   diff: DiffLine[]
   coverage_before: number | null
@@ -372,7 +368,7 @@ export interface BuildReport {
   validation_errors: string[]
 }
 
-// ---- Screening risks, recency and the gate (Card 1) ------------------------
+// Screening risks, recency and the gate
 
 // How recent the CV's evidence of a requirement is: recent (3 years or less), aging (up to 6),
 // stale (more), or undated (no dated entry shows it).
@@ -386,10 +382,9 @@ export interface RecencyRule {
   source: 'rule' | 'model'
 }
 
-// When the CV last shows a requirement, and what the posting's rule does to it.
 export interface RecencyCheck {
   requirement_id: string
-  original_status: string // the status before the check
+  original_status: string
   last_used: string | null // YYYY-MM of the most recent dated entry that shows it
   years_since: number | null
   band: RecencyBand
@@ -437,7 +432,6 @@ export interface ScreeningFlag {
   risk_ids: string[] // the risk IDs behind it
 }
 
-// The three passes of the corroboration gate.
 export type GateName = 'backed' | 'recent_enough' | 'not_blocked'
 
 // One pass of the gate. A failed hard pass refuses the edit as not viable.
@@ -457,7 +451,7 @@ export interface Refusal {
   suggestion_id: string | null
 }
 
-// ---- Report projection (GET /api/analyses/{id} and the "report" event) ----
+// Report projection (GET /api/analyses/{id} and the "report" event)
 
 export type CvKind = 'pdf' | 'docx' | 'text'
 
@@ -502,7 +496,7 @@ export interface AnalysisReport {
   assessments: Record<string, RequirementAssessment>
   score: ScoreBreakdown | null
   verdict: Verdict | null
-  // Card 1. Optional: an analysis saved before Card 1 has none of these, so read them with a default.
+  // Optional: older saved analyses have none of these, so read them with a default.
   hidden_risks?: HiddenRisk[]
   screening_flags?: ScreeningFlag[]
   recency?: Record<string, RecencyCheck>
@@ -518,7 +512,7 @@ export interface AnalysisReport {
   usage: UsageTotal
 }
 
-// ---- Stream and HTTP payloads ----------------------------------------------
+// Stream and HTTP payloads
 
 export type ProgressStep = 'prepare_cv' | 'prepare_job' | 'match' | 'score'
 
@@ -547,8 +541,7 @@ export interface ErrorBody {
   detail: string
 }
 
-// Body of GET /api/samples. The sample CV is also served as a PDF and a DOCX, at the two URLs.
-// cv_filename is the name the PDF gets when it is uploaded as a CV.
+// Body of GET /api/samples. cv_filename is the name the PDF gets when it is uploaded as a CV.
 export interface Samples {
   cv_text: string
   job_text: string

@@ -107,8 +107,8 @@ def _tokens(text: str) -> list[YearMonth | str]:
 
 
 def parse_date_range(text: str) -> DateRange | None:
-    """Find the first date or date range in a line ("Jan 2020 - Present", "03/2019 - 2021").
-    A date glued to the word before it is read too ("Bilbao, SpainApr 2026 - Present")."""
+    """The first date or date range in a line ("Jan 2020 - Present", "03/2019 - 2021"), also when
+    glued to the word before it."""
     folded = unglue_dates(fold(text)).casefold()
     tokens = _tokens(folded)
     dates = [t for t in tokens if isinstance(t, YearMonth)]
@@ -135,7 +135,7 @@ def _interval(r: DateRange, today: date, longest: bool = False) -> tuple[int, in
     runs from December 2019 to January 2021), or the longest one with `longest`."""
     if not r.is_period:
         return None
-    current = today.year * 12 + today.month - 1  # the current month's index
+    current = today.year * 12 + today.month - 1
     if r.start.month is not None:
         start = r.start.index()
     else:

@@ -118,7 +118,7 @@ def test_the_hourly_limit_counts_each_client_apart_and_rolls_over():
         limiter.check("198.51.100.1")
     limiter.check("198.51.100.2")  # another client has its own budget
 
-    clock.now += timedelta(minutes=51)  # the first run is now more than an hour old
+    clock.now += timedelta(minutes=51)  # the first run is more than an hour old
     limiter.check("198.51.100.1")
 
     assert refused.value.status == 429

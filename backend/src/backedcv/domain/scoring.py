@@ -74,7 +74,7 @@ def unit_weights(counted: list[Requirement], config: ScoringConfig) -> dict[str,
     """The weight of each counted requirement. A posting unit (one bullet or sentence) weighs as
     its heaviest counted requirement, and the counted requirements that come from it share that
     weight equally, so splitting one bullet into several requirements cannot move the score.
-    A requirement with no unit (older analyses) is a unit of its own."""
+    A requirement with no unit is a unit of its own."""
     units: dict[str, list[Requirement]] = {}
     for req in counted:
         units.setdefault(req.source_unit or f"own:{req.id}", []).append(req)

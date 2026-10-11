@@ -1,5 +1,4 @@
-"""The order agent: a small tool-calling model that puts one built CV in the best order for one
-job. It can only reorder. Any failure falls back to the standard section order."""
+"""Reorders one built CV for one job. Any failure falls back to the standard section order."""
 
 import logging
 from typing import Literal
@@ -25,8 +24,8 @@ RECURSION_LIMIT = 25
 async def run_order_agent(
     ws: Workspace, job_summary: str, model: BaseChatModel
 ) -> tuple[CVDocument, Literal["agent", "fallback"]]:
-    """Return the reordered document when the agent finalized it, else the document in the standard
-    section order. A failure is kept on the workspace; this function never raises."""
+    """The agent's order if it finalized one, else the standard order. Never raises: a failure is
+    kept on `ws.error`."""
     original = ws.document
     prompt = load_prompt("build_cv")
     message = (
@@ -59,8 +58,7 @@ async def run_order_agent(
 
 
 def _outline(ws: Workspace) -> str:
-    """One row per section, then one row per item with its first line (and its dates, for jobs).
-    Headings and lines are redacted: the agent sees no contact details."""
+    """One row per section and per item, with contact details redacted."""
     entries = {entry.id: entry for entry in ws.cv.entries}
     rows: list[str] = []
     for section in ws.document.sections:
@@ -78,7 +76,6 @@ def _item_row(item: DocItem, entry: CVEntry | None) -> str:
 
 
 def default_order_model(settings: Settings) -> ChatOpenAI:
-    """The chat model for the order agent, configured like the structured calls in llm/."""
     effort = load("models").get("effort", {}).get("build_cv", "low")
     return ChatOpenAI(
         model=settings.model_fast,

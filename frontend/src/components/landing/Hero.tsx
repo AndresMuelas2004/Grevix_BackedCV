@@ -10,8 +10,6 @@ interface HeroProps {
   sampleError: string | null
 }
 
-// The top of the first screen: the promise, the two ways in, and the live example on the right
-// (under it on phones).
 export default function Hero({ onCheck, onSample, sampleLoading, sampleBusy, sampleError }: HeroProps) {
   function onCheckClick(event: MouseEvent<HTMLAnchorElement>) {
     event.preventDefault()

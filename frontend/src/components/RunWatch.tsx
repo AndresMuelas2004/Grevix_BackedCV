@@ -17,8 +17,7 @@ interface RunWatchProps {
   onFailed: (error: ErrorBody) => void
 }
 
-// The progress screen of a run that is still going on the server. It checks the analysis until the
-// run stops, then hands over. The checks stop when the screen goes away.
+// Progress screen for a run that is still going on the server; checks until it stops.
 export default function RunWatch({
   analysisId,
   step,

@@ -162,8 +162,7 @@ CURATED_SECTIONS = {
 
 
 def _curated_draft(lines: list[CVLine]) -> CVStructureDraft:
-    """The sample's structure as a model would return it. Line IDs come from the read lines, not
-    from fixed numbers: each section runs from its heading to the line before the next heading."""
+    """The sample's structure as a model would return it; line IDs come from the read lines."""
     headings = [i for i, line in enumerate(lines) if line.text in CURATED_SECTIONS]
     sections: list[SectionDraft] = []
     for n, start in enumerate(headings):

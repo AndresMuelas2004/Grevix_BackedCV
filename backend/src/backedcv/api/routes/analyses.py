@@ -1,5 +1,4 @@
-"""Create an analysis (streamed with server-sent events) and read it back. The run starts before the
-stream opens and keeps going if the client leaves: the stream only listens to it (api/runs.py)."""
+"""Create an analysis (streamed with server-sent events) and read it back."""
 
 import json
 import uuid
@@ -43,8 +42,8 @@ async def analysis_input(
     cv_file: Annotated[UploadFile | None, File()] = None,
     facts: Annotated[str | None, Form()] = None,
 ) -> NewAnalysis:
-    """Runs before the stream opens, so bad input gets a proper 4xx JSON error. The posting takes
-    its canonical form here, before anything reads it (the CV does in `ingestion`)."""
+    """Runs before the stream opens, so bad input gets a 4xx JSON error. It also normalizes the
+    posting before anything reads it."""
     job_text = normalize_text(job_text)
     if len(job_text) < JOB_MIN_CHARS:
         raise ApiError(422, "job_too_short", "Paste the full job posting.")

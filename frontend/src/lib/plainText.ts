@@ -47,7 +47,6 @@ export function dropRuleIds(text: string): string {
     .trim()
 }
 
-// The first sentence of a text, ending with punctuation.
 export function firstSentence(text: string): string {
   const clean = text.trim()
   if (clean === '') return ''
@@ -61,7 +60,6 @@ export function ensurePeriod(text: string): string {
   return /[.!?:]$/.test(clean) ? clean : `${clean}.`
 }
 
-// Joins sentences with one space, each ending with punctuation.
 export function joinSentences(...parts: (string | null | undefined)[]): string {
   return parts
     .map((part) => (part ? ensurePeriod(part) : ''))

@@ -1,7 +1,7 @@
-/* Global styles and shared building blocks. Component-specific rules live next to each component. */
+/* Global styles and shared building blocks. */
 
 :root {
-  /* Design tokens (Card 2 design). */
+  /* Design tokens */
   --ink: #101828;
   --ink-2: #344054;
   --muted: #475467;
@@ -25,7 +25,7 @@
   --green-bg: #ecfdf3;
   --green-line: #abefc6;
 
-  /* Older names, kept so every screen picks up the new look. */
+  /* Older token names, aliased to the ones above. */
   --bg: var(--ground);
   --border: var(--line);
   --border-strong: var(--line-strong);
@@ -111,7 +111,7 @@ p {
   padding: 1.25rem 1.5rem;
 }
 
-/* ---- Buttons ---- */
+/* Buttons */
 
 .btn {
   display: inline-flex;
@@ -154,7 +154,7 @@ p {
   background: var(--bg);
 }
 
-/* ---- Chips and tags ---- */
+/* Chips and tags */
 
 .chip {
   display: inline-flex;
@@ -200,7 +200,7 @@ p {
   font-weight: 500;
 }
 
-/* ---- Notices (inline messages) ---- */
+/* Notices */
 
 .notice {
   padding: 0.75rem 1rem;
@@ -227,7 +227,7 @@ p {
   color: var(--blue);
 }
 
-/* ---- Layout ---- */
+/* Layout */
 
 /* Long words, IDs and URLs wrap instead of pushing the page wider than the screen. */
 .app {
@@ -320,7 +320,7 @@ p {
   min-height: 44px;
 }
 
-/* ---- Report layout ---- */
+/* Report layout */
 
 /* Fixed tracks (minmax(0, 1fr)) keep a wide child from stretching the column past the screen. */
 .report {
@@ -356,7 +356,7 @@ p {
   }
 }
 
-/* ---- Error card ---- */
+/* Error card */
 
 .error-card {
   display: grid;
@@ -388,7 +388,7 @@ p {
   margin: 0 auto;
 }
 
-/* ---- Report action and screen notes ---- */
+/* Report action and screen notes */
 
 .optimize-action {
   display: grid;
@@ -407,7 +407,7 @@ p {
   color: var(--muted);
 }
 
-/* ---- Before and after numbers (coverage, fit) ---- */
+/* Before and after numbers (coverage, fit) */
 
 .compare {
   display: flex;
@@ -445,7 +445,7 @@ p {
   color: var(--muted);
 }
 
-/* ---- Small screens (360 to 430 px wide) ---- */
+/* Small screens */
 
 @media (max-width: 480px) {
   .card {

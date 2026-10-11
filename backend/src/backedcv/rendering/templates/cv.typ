@@ -1,7 +1,6 @@
 // ATS-safe CV: one column, plain text, no tables, images, framed boxes or headers.
-// The rules and the grey text are drawing and colour only: the words stay in one column, in order.
-// The document arrives as JSON in sys.inputs.data (see pdf_writer.py). Strings are
-// inserted as plain text, so special characters need no escaping.
+// Rules and grey text are decoration only: the words stay in one column, in order.
+// The document arrives as JSON in sys.inputs.data (see pdf_writer.py), so strings need no escaping.
 
 #let cv = json(bytes(sys.inputs.data))
 #let name = cv.contact.name
@@ -36,9 +35,8 @@
   #par[#cv.contact.headline]
 ]
 
-// Each detail sits in its own unbreakable box, and the boxes are separated by horizontal space
-// only, with no separator character. A long line breaks in that gap, so a wrapped line never ends
-// with a stray bar. Blank details are skipped.
+// Details are unbreakable boxes joined by space, not a separator character: a wrapped line never
+// ends with a stray bar. Blank details are skipped.
 #let details = cv.contact.details.filter(detail => detail.trim() != "")
 #if details.len() > 0 [
   #block(above: 0.5em)[
@@ -47,7 +45,7 @@
 ]
 
 #for section in cv.sections [
-  // A thin rule sits under each heading. The space above a heading separates the sections.
+  // A thin rule under each heading; the space above it separates the sections.
   #if section.heading != "" [
     #block(above: 1.2em, below: 0.7em, sticky: true)[
       #stack(
@@ -58,7 +56,7 @@
       )
     ]
   ]
-  // The lines of one entry sit close together; every entry after the first gets the same gap.
+  // Lines of one entry sit close together; each entry after the first gets the same gap.
   #for (index, item) in section.items.enumerate() [
     #if index > 0 [#v(1em, weak: true)]
     #for group in group-rows(item.lines) [

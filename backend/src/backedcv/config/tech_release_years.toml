@@ -1,7 +1,6 @@
 # First public release year (first public version, beta or open-source release, not 1.0),
-# for rule R2: "years asked exceed the technology's age". Checked on 2026-10-11 against
-# official release notes, repositories, blogs or package indexes; Swift from Wikipedia
-# citing Apple's announcement.
+# for rule R2: "years asked exceed the technology's age". Sources: official release notes,
+# repositories, blogs and package indexes; Swift from Wikipedia, citing Apple's announcement.
 
 [technologies]
 "Docker" = 2013

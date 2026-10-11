@@ -222,7 +222,7 @@ def test_a_failed_suggest_step_is_run_again_from_the_review():
     assert _progress_steps(retried) == _progress_steps(normal)  # the same steps as a normal run
     projection = retried[-1][1]
     assert (projection["status"], projection["stage"]) == ("paused", "review_ready")
-    assert projection["errors"] == []  # the failure is no longer shown
+    assert projection["errors"] == []  # the failure is not shown
     statuses = {s["id"]: s["verification"]["status"] for s in projection["suggestions"]}
     assert statuses == {"S01": "verified", "S02": "unsupported", "S03": "verified"}
     assert built[0] == "built"  # the run still waits at the review, so the build goes on

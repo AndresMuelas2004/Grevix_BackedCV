@@ -12,7 +12,6 @@ const ICON_PROPS = {
   focusable: false,
 } as const
 
-// The three things the check does, under the hero.
 export default function Benefits() {
   return (
     <section className="lp-benefits" aria-label="What the check does">

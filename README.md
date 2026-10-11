@@ -4,7 +4,7 @@ Is this job worth applying to? Paste a posting, upload your CV, and see what wou
 
 I built BackedCV solo during the Grevix AfterCode 24-hour hackathon (October 2026). It is a FastAPI and React web app that calls OpenAI models.
 
-**Try it: [backedcv.onrender.com](https://backedcv.onrender.com)** (a temporary demo on a free server: the first visit may take a minute to wake it up; please use the one-click samples or a CV with fictional details). Feedback is welcome in the [feedback form](https://github.com/AndresMuelas2004/Grevix_BackedCV/issues/new?template=feedback.yml).
+**Try it in 2 minutes: [backedcv.onrender.com](https://backedcv.onrender.com).** Press **Try the sample** or **Try a posting with hidden barriers**, answer the yes/no questions, then press **Improve my CV**. It is a temporary demo on a free server, so the first visit may take a minute to wake it up. Please use the samples or a CV with fictional details. Feedback is welcome in the [feedback form](https://github.com/AndresMuelas2004/Grevix_BackedCV/issues/new?template=feedback.yml).
 
 ![BackedCV demo: the first screen with its example report; a posting with hidden barriers (verdict, skills match, two questions, what to fix, how your dates were read); a No to the work permit question gives Likely screened out; then the default sample: two Yes answers, Improve my CV, the review of verified suggestions and the built CV](docs/screenshots/demo.gif)
 
@@ -74,7 +74,7 @@ In the review, the Kubernetes edit is refused as not viable instead of rewording
 - **Matching by meaning.** A model matches requirements to CV lines by meaning, not only by exact words. If the model skips a requirement or fails, the code falls back to exact matches.
 - **Cheap and honest.** A cheaper model handles extraction and matching; a stronger one handles only rewrites and their checks. Identical model calls reuse a stored answer, and the text is normalized first, so extra spaces or blank lines never change the result; the built-in samples replay answers pinned from a real run, so they always give the same report. In the live runs, the verifier cost under one cent per run. The score is marked indicative, and this README reports the misses.
 
-**Not a new idea.** BackedCV is inspired by Jobscan and similar tools, such as Rezi and Teal. Match scores and CV suggestions already exist in those tools. I claim only the six points above.
+Match scores and CV suggestions already exist in other tools. The six points above are where BackedCV differs.
 
 ## Measured, not assumed
 
@@ -181,7 +181,7 @@ BackedCV adapts to the hackathon's Challenge Cards as they arrive. Each card is 
 
 - **Before the cards (Ignition and the night):** the full flow from CV and posting to a verified, rebuilt CV; then reliability, privacy and matching by meaning.
 - **Card 1, hidden screening barriers and recency:** a model call finds buried disqualifiers with exact quotes, code rates them against the CV and the candidate's answers (two medium risks combine into a high one), evidence outside a stated window stops counting, and a three-pass corroboration gate (backed, recent enough, not blocked) refuses edits that are backed but not viable. Everything that existed keeps working: all earlier tests and end-to-end pairs still pass.
-- **Card 2, real-world feedback:** I put a temporary live demo online and shared it on LinkedIn, X, Reddit and the participants' WhatsApp group. Three participants answered: two found the report overwhelming and too long; one asked for the posting's sentence next to the CV line, deal-breakers kept apart from preferences, and a preview of how the dates were read. The report now goes from simple to complex (the verdict in one sentence, the questions under it, what to fix first in three tiers, what already works, the dates as read, the details folded away), and the first screen plays an example of the result. An AI-run test, which I don't count as feedback, also led to fixes: the same CV and posting now give the same report whatever the whitespace. The proof, with before and after: [feedback/](feedback/README.md).
+- **Card 2, real-world feedback:** I put a temporary live demo online and shared it on LinkedIn, X, Reddit and the participants' WhatsApp group. Three participants answered: two found the report overwhelming and too long; one asked for the posting's sentence next to the CV line, deal-breakers kept apart from preferences, and a preview of how the dates were read. The report now goes from simple to complex (the verdict in one sentence, the questions under it, what to fix first in three tiers, what already works, the dates as read, the details folded away), and the first screen plays an example of the result. Extra testing, which I don't count as feedback, also led to fixes: the same CV and posting now give the same report whatever the whitespace. The proof, with before and after: [feedback/](feedback/README.md).
 
 ## Privacy and limits
 
@@ -194,7 +194,8 @@ BackedCV adapts to the hackathon's Challenge Cards as they arrive. Each card is 
 
 ## Transparency note
 
-At registration I submitted a different idea (website URL to promo video). I dropped it before the event started, with no code written for it, and chose this problem instead. BackedCV is being built from scratch during these 24 hours.
+At registration I submitted a different idea (website URL to promo video) and dropped it before the event started, with no code written for it.
+BackedCV was built from scratch during the 24 hours, and the organizer approved the change.
 
 ## License
 

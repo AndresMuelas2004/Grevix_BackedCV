@@ -1,6 +1,5 @@
-// Plain-language text for each error code the backend or the client can return. Each entry says
-// what happened in one short sentence and what to do next. A code that is not listed falls back
-// to the server's own title (see describeFailure).
+// Plain-language text for each error code the backend or the client can return. A code that is
+// not listed falls back to the server's own title (see describeFailure).
 import type { ErrorBody } from '../api/types'
 
 export interface FriendlyText {
@@ -169,7 +168,6 @@ export function friendlyText(code: KnownCode): FriendlyText {
   return FRIENDLY[code]
 }
 
-// What an error screen shows for one error.
 export interface FailureText {
   message: string // the headline
   next: string | null // what to do next; null for a code this file does not know

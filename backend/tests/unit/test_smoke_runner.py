@@ -147,7 +147,7 @@ def _pair_run(pair_id: str, checks: list[Check]) -> PairRun:
     return PairRun(pair, "analysis-test", {}, "CV text", "Job text", checks=checks)
 
 
-# The expectation checker, on hand-built reports (no model) --------------------------------
+# The expectation checker, on hand-built reports (no model)
 
 
 def test_curated_expectations_pass_on_a_report_that_shows_them():
@@ -192,8 +192,7 @@ def test_langchain_and_langgraph_pass_when_partial_or_met(tools):
 
 
 def test_langchain_fails_when_the_cv_shows_it_missing():
-    # LangGraph is no longer expected as partial: the posting asks for 5+ years of it (flagged R2),
-    # and "agent frameworks" in the CV is too vague to count for that requirement.
+    # The posting asks for 5+ years of LangGraph; "agent frameworks" in the CV is too vague.
     checks = check_expectations(_expect("curated-two-column"), _curated(tools="missing"))
 
     assert _failed(checks) == ["requirement contains=LangChain, status=partial or met"]
@@ -316,7 +315,7 @@ def test_misspelled_expectations_are_rejected(expect):
         run_smoke.validate_expect(expect)
 
 
-# The pairs file and the inputs it points to (no model) -------------------------------------
+# The pairs file and the inputs it points to (no model)
 
 
 def test_pairs_load_and_every_file_they_reference_exists():
@@ -360,7 +359,7 @@ def test_the_runner_refuses_to_run_without_live(tmp_path):
     assert list(tmp_path.iterdir()) == []
 
 
-# LangSmith scoring, with a fake client ----------------------------------------------------
+# LangSmith scoring, with a fake client
 
 
 class _FakeLangSmithClient:

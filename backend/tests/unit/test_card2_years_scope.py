@@ -1,5 +1,4 @@
-"""Card 2: the CV's total years measure only GENERAL years requirements. Years of one skill keep
-their evidence-based status; a shorter total only caps "met" at "partial"."""
+"""The CV's total years apply only to general years requirements, not to years of one skill."""
 
 import pytest
 

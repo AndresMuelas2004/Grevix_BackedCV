@@ -1,5 +1,4 @@
-"""Keyword coverage of the new CV: the formula of domain/scoring.py, with keyword presence checked
-on the new document instead of the original CV."""
+"""Keyword coverage of the new CV: the scoring formula, checking keywords on the new document."""
 
 from collections.abc import Iterable, Mapping, Sequence
 

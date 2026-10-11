@@ -1,6 +1,4 @@
-"""Coverage preview: the keyword coverage a CV would have with some suggestions accepted. The
-document is built the way the build step builds it without the ordering agent, so no model is
-called and nothing is saved."""
+"""Keyword coverage with some suggestions accepted. No model is called and nothing is saved."""
 
 from typing import Any
 

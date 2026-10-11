@@ -1,9 +1,5 @@
-"""Hidden screening barriers: buried disqualifiers, checked against the CV and the answers.
-
-Code finds the work-authorization sentences a model can miss, keeps only the model's quotes that
-really appear in the posting, merges both with the recency rules, and assesses each barrier against
-the CV and the candidate's answers. Pure functions: no I/O and no LLM calls.
-"""
+"""Hidden screening barriers: disqualifiers buried in a posting, checked against the CV and the
+candidate's answers. Pure functions: no I/O and no LLM calls."""
 
 import re
 
@@ -113,14 +109,10 @@ _CITIZENS_ONLY = re.compile(
 )
 
 
-# 1. Model items: keep only what the posting really says -----------------------------------
-
-
 def barriers_from_draft(
     draft: HiddenBarriersDraft, job_text: str, job: JobPosting
 ) -> list[BarrierItem]:
-    """Model barriers that hold up: the quote is in the posting (its span is kept), and only
-    known requirement IDs stay. At most MAX_ITEMS items are kept."""
+    """Model barriers whose quote really is in the posting, with only known requirement IDs."""
     known = {req.id for req in job.requirements}
     labels = {req.id: req.label for req in job.requirements}
     items: list[BarrierItem] = []
@@ -142,8 +134,7 @@ def barriers_from_draft(
                     place=_place_in_text(row.place, job_text),
                     window_years=window,
                     requirement_ids=ids,
-                    # The model's sentences: no IDs (labels replace requirement IDs), one short
-                    # sentence each.
+                    # Model prose: requirement IDs become labels, one short sentence each.
                     explanation=short_sentence(clean_prose(row.explanation, labels)),
                     action=short_sentence(clean_prose(row.action, labels)),
                     question=_clean(short_sentence(clean_prose(row.question, labels))),
@@ -154,9 +145,6 @@ def barriers_from_draft(
         if len(items) == MAX_ITEMS:
             break
     return items
-
-
-# 2. Rule items: work-authorization wording that code can see -----------------------------
 
 
 def find_rule_barriers(job_text: str) -> list[BarrierItem]:
@@ -201,9 +189,6 @@ def _work_rule(sentence: str) -> tuple[bool, str | None]:
     return found, place
 
 
-# 3. Merge: model first, then rules they do not repeat, then recency rules -----------------
-
-
 def merge_barriers(
     model_items: list[BarrierItem],
     rule_items: list[BarrierItem],
@@ -211,9 +196,8 @@ def merge_barriers(
     job: JobPosting,
 ) -> list[BarrierItem]:
     """Model items first, then the code rules they do not repeat, then the recency rules. A rule
-    joins an item of its kind whose quote overlaps it. An eligibility item that asks the question
-    an earlier one asks joins it too: one question per fact. Every item lists each requirement
-    whose quote overlaps its own. IDs run H01... in that order."""
+    joins an item of its kind whose quote overlaps it, and an item that repeats an earlier
+    question joins that one: one question per fact. IDs are renumbered H01... in that order."""
     merged = [item.model_copy() for item in model_items]
     for rule in rule_items:
         if not any(item.kind == rule.kind and _overlaps(item.quote, rule.quote) for item in merged):
@@ -264,8 +248,8 @@ def _recency_item(rule: RecencyRule) -> BarrierItem:
 
 
 def _linked(item: BarrierItem, job: JobPosting) -> BarrierItem:
-    """The item lists every requirement whose quote overlaps its own, and the gate requirement
-    that asks about the same fact (see _same_fact). Its sentences carry no raw IDs."""
+    """The item linked to every requirement whose quote overlaps its own and to the gate that asks
+    about the same fact (see _same_fact), with no raw IDs left in its sentences."""
     ids = _union(item.requirement_ids, _overlapping(item.quote, job))
     twin = _same_fact(item, ids, job)
     labels = {req.id: req.label for req in job.requirements}
@@ -287,7 +271,7 @@ def _same_fact(item: BarrierItem, ids: list[str], job: JobPosting) -> str | None
     """The gate requirement (one with a knockout type) that asks the same question as an
     eligibility barrier, so one answer settles both: same kind, and the place the barrier names
     is in that requirement's words or is the job's location. A barrier without a place matches
-    the only gate requirement of its kind. None when the barrier already lists a gate."""
+    the only gate requirement of its kind."""
     gates = [req for req in job.requirements if req.knockout_type is not None]
     if item.kind not in ELIGIBILITY_KINDS or any(req.id in ids for req in gates):
         return None
@@ -302,9 +286,6 @@ def _same_fact(item: BarrierItem, ids: list[str], job: JobPosting) -> str | None
     return None
 
 
-# 4. Risks: each barrier against the CV and the answers ------------------------------------
-
-
 def assess_risks(
     barriers: list[BarrierItem],
     job: JobPosting,
@@ -314,9 +295,7 @@ def assess_risks(
     recency: dict[str, RecencyCheck],
 ) -> list[HiddenRisk]:
     """One risk per barrier, plus a composite HC1 when two or more open medium risks remain.
-    A barrier tied to a knockout asks no question of its own; see _knockout_risk. Tied barriers
-    never join the composite. Order: the composite first, then high, medium and low, barrier
-    order within each level."""
+    Sorted with the composite first, then high, medium and low."""
     knockouts = {req.id: req for req in job.requirements if req.knockout_type}
     risks: list[HiddenRisk] = []
     tied: set[str] = set()
@@ -341,9 +320,8 @@ def _knockout_risk(
     facts: CandidateFacts,
     recency: dict[str, RecencyCheck],
 ) -> HiddenRisk:
-    """A barrier tied to a knockout. Only three rules are special: it asks no question of its own
-    (the knockout asks); a met knockout resolves it (low); a no from the candidate confirms it
-    (high). Otherwise the barrier's own kind decides, exactly as for any other barrier."""
+    """A barrier tied to a knockout asks no question of its own: a met knockout resolves it (low),
+    a no from the candidate confirms it (high), otherwise its own kind decides."""
     states = [_knockout_state(assessments.get(req.id)) for req in knockouts]
     if "answered_no" in states:
         return _risk(barrier, "high", confirmed=True)
@@ -390,8 +368,7 @@ def _by_kind(
     recency: dict[str, RecencyCheck],
     question: str | None,
 ) -> HiddenRisk:
-    """The level from the barrier's own kind: needs_sponsorship, the place against the CV, the
-    recency checks, or medium or low when the posting alone decides."""
+    """The level decided by the barrier's own kind."""
     if barrier.kind == "work_authorization" and facts.needs_sponsorship is True:
         return _risk(barrier, "high", question=question, confirmed=True)
     if barrier.kind == "recency":
@@ -433,7 +410,7 @@ def _recency_risk(barrier: BarrierItem, recency: dict[str, RecencyCheck]) -> Hid
     worst = [check for check in checks if check.effect == effect]
     why = next((check.explanation for check in worst if check.explanation), "")
     refs = _union(*(check.evidence_refs for check in worst))
-    # One short sentence: the check's own, which names the year and the window.
+    # The check's own sentence names the year and the window.
     return _risk(
         barrier, EFFECT_LEVEL[effect], explanation=why or barrier.explanation, cv_refs=refs
     )
@@ -507,8 +484,8 @@ def _question(barrier: BarrierItem, job_location: str | None) -> str | None:
 
 
 def _question_key(barrier: BarrierItem, job_location: str | None) -> str | None:
-    """What a barrier's question is about: its kind and place when it names one, else the
-    question's own words. Two barriers with the same key ask one question."""
+    """What a question is about: the barrier's kind and place, else the question's own words.
+    Barriers with the same key ask one question."""
     question = _question(barrier, job_location)
     if question is None:
         return None
@@ -517,19 +494,15 @@ def _question_key(barrier: BarrierItem, job_location: str | None) -> str | None:
     return f"{barrier.kind}|{' '.join(re.findall(r'\w+', fold_lower(question)))}"
 
 
-# 5. Flags: looks met, but... ---------------------------------------------------------------
-
-
 def screening_flags(
     job: JobPosting,
     original_assessments: dict[str, RequirementAssessment],
     recency: dict[str, RecencyCheck],
     risks: list[HiddenRisk],
 ) -> list[ScreeningFlag]:
-    """Requirements that look met in the CV (original status met or partial, or the keyword is
-    there) but carry a recency warning or an open medium or high risk. Each sentence is listed
-    once. A recency risk adds no sentence once the requirement's own recency check has spoken;
-    every linked risk still counts toward the level and the risk IDs."""
+    """Requirements that look met in the CV but carry a recency warning or an open medium or high
+    risk. A recency risk adds no sentence once the requirement's own recency check has spoken, but
+    still counts toward the level and the risk IDs."""
     flags: list[ScreeningFlag] = []
     for req in job.requirements:
         before = original_assessments.get(req.id)
@@ -579,9 +552,6 @@ def _looks_met(assessment: RequirementAssessment) -> bool:
     )
 
 
-# Shared helpers ----------------------------------------------------------------------------
-
-
 def _barrier_id(index: int) -> str:
     return f"H{index + 1:02d}"
 
@@ -602,8 +572,8 @@ def _overlaps(a: str, b: str) -> bool:
 
 
 def _add_reason(reasons: list[str], sentence: str) -> None:
-    """Appends a reason unless it is empty or says a point already listed: a sentence that holds a
-    listed reason, or sits inside one, repeats it. Compared folded and ignoring case."""
+    """Appends a reason unless it is empty or repeats one already listed (one contains the other,
+    compared folded and ignoring case)."""
     new = fold_lower(sentence)
     if not new or any(new in fold_lower(old) or fold_lower(old) in new for old in reasons):
         return

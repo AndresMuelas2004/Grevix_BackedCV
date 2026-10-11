@@ -1,5 +1,4 @@
-"""Build nodes: apply the accepted suggestions, let the order agent arrange the result, then run the
-final checks. The checks render the CV, read the PDF back and compare the scores."""
+"""Build nodes: apply the accepted suggestions, order the result, run the final checks."""
 
 import logging
 from collections.abc import Callable

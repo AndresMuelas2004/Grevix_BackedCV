@@ -1,6 +1,5 @@
-"""The optimize, build and verify steps. The optimize and build runs go on in the background (see
-api/runs.py), so a closed connection does not stop them. Every refusal (429, 404, 409, 422) is
-decided before the stream opens, so it arrives as a JSON error."""
+"""The optimize, build and verify steps. Every refusal (429, 404, 409, 422) is decided before the
+stream opens, so it arrives as a JSON error."""
 
 import asyncio
 from collections.abc import AsyncIterable, Callable
@@ -52,8 +51,7 @@ class SuggestionEdit(BaseModel):
 
 async def _claim(request: Request, analysis_id: str, refuse: Callable[[Any], None]) -> Any:
     """Takes the run lock (409 while a run holds it), lets `refuse` check the analysis, and counts
-    the run. A refused request gives the lock back. An accepted one keeps it until its run ends.
-    Returns the snapshot the checks were made on."""
+    the run. A refused request gives the lock back; an accepted one keeps it until its run ends."""
     locks = request.app.state.locks
     locks.acquire(analysis_id)
     try:
@@ -221,10 +219,9 @@ def _find_suggestion(values: dict, suggestion_id: str) -> dict:
 async def _suggest_again(
     run: Run, llm: StructuredLLM, graph: Any, config: dict, values: dict
 ) -> None:
-    """Runs the suggest step here, because the graph cannot run a step again from the review. Then
-    each verification group runs as the graph would run it, and the gate runs on the result. The
-    result is written as if gate_barriers had just run, so the run still waits at the review. The
-    `resolves` entry supersedes the error of the failed step."""
+    """Runs the suggest step here, because the graph cannot run a step again from the review, then
+    the verification groups and the gate as the graph would. Written as if gate_barriers had just
+    run, so the run still waits at the review; `resolves` supersedes the failed step's error."""
     nodes = make_optimize_nodes(llm)
     emit_progress(run, "suggest", "started")
     found = await nodes["suggest"](values)
@@ -255,8 +252,7 @@ async def _suggest_again(
 
 
 async def _check_edit(llm: StructuredLLM, values: dict, row: dict, after: str) -> dict:
-    """The state update for one edited suggestion: guards first, then a new verification, then the
-    corroboration gate."""
+    """The state update for one edited suggestion: guards, verification, corroboration gate."""
     cv = ParsedCV.model_validate(values["cv"])
     job = JobPosting.model_validate(values["job"])
     edited = Suggestion.model_validate(row).model_copy(
@@ -272,10 +268,10 @@ async def _check_edit(llm: StructuredLLM, values: dict, row: dict, after: str) -
 
 
 def _corroborate(values: dict, update: dict) -> dict:
-    """Runs the corroboration gate on the suggestions of an update, as the graph does after the
-    verifier: the backed, recency and barrier passes. A verified suggestion that fails a pass is
-    refused. Only the suggestions of the update get passes, so none is checked twice. The refusals
-    of the suggestions are rebuilt; the refusals of requirements do not depend on a suggestion."""
+    """Runs the corroboration gate (backed, recency and barrier passes) on the suggestions of an
+    update, as the graph does after the verifier. Only the update's suggestions get passes, so
+    none is checked twice. Suggestion refusals are rebuilt; requirement refusals do not depend on
+    a suggestion and are kept."""
     cv = ParsedCV.model_validate(values["cv"])
     today = today_of(values)
     last_used = line_last_used(cv, today)

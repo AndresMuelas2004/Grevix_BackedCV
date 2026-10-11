@@ -134,8 +134,7 @@ def _number(token: str) -> int:
 
 
 def _tied_to_graduation(folded: str, start: int, end: int) -> bool:
-    """True when a graduation or degree word shares the window's clause: the text between the
-    nearest commas or semicolons on each side."""
+    """True when a graduation or degree word shares the window's clause."""
     left, right = start, end
     while left > 0 and folded[left - 1] not in _CLAUSE_BREAKS:
         left -= 1

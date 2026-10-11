@@ -1,8 +1,8 @@
-"""Challenge Card 1: hidden screening risks, recency of evidence and the corroboration gate.
+"""Hidden screening risks, recency of evidence and the corroboration gate.
 
 A requirement can look met (the keyword is in the CV) and still be silently rejected: the only
 evidence is old and the posting asks for recent experience, or a buried sentence rules the
-candidate out. These models carry those findings, always with the posting's own words.
+candidate out. These models carry those findings with the posting's own words.
 """
 
 import re
@@ -115,9 +115,8 @@ class Refusal(BaseModel):
     suggestion_id: str | None = None  # set when a generated suggestion was refused
 
 
-# Prose shown to the user ---------------------------------------------------------------------
-# Sentences never carry raw IDs (requirements R.., barriers H.., CV lines L.., facts F..): the IDs
-# live in their own fields (requirement_ids, refs). Each sentence is short and plain.
+# Sentences shown to the user never carry raw IDs (requirements R.., barriers H.., CV lines L..,
+# facts F..): the IDs live in their own fields (requirement_ids, refs).
 
 MAX_WORDS = 20  # one sentence of about this many words; a few more are kept whole
 _SLACK_WORDS = 5

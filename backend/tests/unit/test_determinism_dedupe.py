@@ -252,7 +252,7 @@ def test_an_unknown_heading_ends_the_section_before_it():
     )
     assert [(r.label, r.importance) for r in job.requirements] == [
         ("Kafka", "preferred"),  # the "Nice to have" section
-        ("Jira", "required"),  # no section any more: the model's reading stays
+        ("Jira", "required"),  # no section: the model's reading stays
         ("Travel", "required"),  # "requires" in the sentence
     ]
 

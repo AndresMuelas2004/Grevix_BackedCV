@@ -29,7 +29,6 @@ interface ReviewScreenProps {
 
 type Decisions = Partial<Record<string, Decision>>
 
-// Wait this long after the last change to the accepted set before asking for a new preview.
 const PREVIEW_DELAY_MS = 300
 
 export default function ReviewScreen({
@@ -54,7 +53,6 @@ export default function ReviewScreen({
     analysis,
     accepted.length > 0 ? accepted.map((s) => s.id) : verified.map((s) => s.id),
   )
-  // Refused suggestions are not offered here: they are listed in the refused group at the end.
   const groups = groupSuggestions(
     analysis,
     suggestions.filter((suggestion) => !isRefused(suggestion)),
@@ -81,7 +79,6 @@ export default function ReviewScreen({
   for (const fact of analysis.cv?.facts ?? []) citations.set(fact.id, fact.text)
 
   function decide(id: string, decision: Decision) {
-    // Choosing the same decision again clears it.
     setDecisions((previous) => {
       const next = { ...previous }
       if (previous[id] === decision) delete next[id]
@@ -98,7 +95,6 @@ export default function ReviewScreen({
     })
   }
 
-  // Checks an edited text again. The cards show the outcome from the new report.
   async function checkEdit(id: string, text: string) {
     const next = await saving.track(() => verifySuggestion(analysis.analysis_id, id, text))
     onAnalysisChange(next)
@@ -228,12 +224,10 @@ function isVerified(suggestion: Suggestion): boolean {
   return suggestion.verification.status === 'verified'
 }
 
-// Refused by the gate: backed by the CV but not viable. Such a suggestion can never be accepted.
 function isRefused(suggestion: Suggestion): boolean {
   return suggestion.verification.status === 'refused'
 }
 
-// Turns the saved lists back into one decision per suggestion.
 function fromLists(saved: ReviewDecisions | null): Decisions {
   const decisions: Decisions = {}
   for (const id of saved?.accepted ?? []) decisions[id] = 'accepted'
@@ -260,9 +254,8 @@ interface CoverageAnswer {
   state: CoverageState
 }
 
-// The keyword coverage for a set of suggestions, from the backend. It is asked for again when the set
-// or the report changes (an edited text can change the coverage), after a short pause. A reply for a
-// set or a report that has changed since is dropped. A failed call gives 'failed'.
+// Keyword coverage for a set of suggestions, asked again after a short pause when the set or the
+// report changes. A reply for an outdated set or report is dropped.
 function useCoveragePreview(
   analysis: AnalysisReport,
   suggestionIds: readonly string[],
@@ -304,7 +297,6 @@ interface CoverageProps {
   labels: ReadonlyMap<string, string>
 }
 
-// The keyword coverage if the accepted suggestions are built.
 function SelectionCoverage({ preview, labels }: CoverageProps) {
   const gained = preview.gained_requirement_ids
   return (
@@ -330,7 +322,6 @@ function SelectionCoverage({ preview, labels }: CoverageProps) {
   )
 }
 
-// Before anything is accepted: how far the verified suggestions would raise the coverage.
 function PotentialCoverage({ preview, labels }: CoverageProps) {
   const { coverage, coverage_now: now } = preview
   const gained = preview.gained_requirement_ids
@@ -359,7 +350,6 @@ function PotentialCoverage({ preview, labels }: CoverageProps) {
   )
 }
 
-// The labels of the given requirements, in the order given.
 function requirementNames(ids: readonly string[], labels: ReadonlyMap<string, string>): string {
   return ids.map((id) => labels.get(id) ?? id).join(', ')
 }

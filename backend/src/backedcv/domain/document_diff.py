@@ -35,8 +35,7 @@ STANDARD_HEADINGS: dict[SectionType, str] = {
     "other": "Other",
 }
 
-# The section order of a built CV when no agent orders it. A section type that is not listed goes
-# just before "other".
+# The section order of a built CV when the build agent does not set one.
 STANDARD_SECTION_ORDER: tuple[str, ...] = (
     "summary",
     "experience",
@@ -66,12 +65,9 @@ _CONTACT_HEADINGS = frozenset(
 )
 
 
-# Building the document ------------------------------------------------------------------------
-
-
 def document_from_cv(cv: ParsedCV) -> CVDocument:
-    """The parsed CV as an editable document. Every body line appears exactly once. Headings and
-    contact lines are never body lines, so an Other section never holds only those."""
+    """The parsed CV as an editable document. Every body line appears exactly once; headings and
+    contact lines are not body lines."""
     lines = {line.id: line for line in cv.lines}
     placed: set[str] = set()
     sections = [
@@ -98,8 +94,7 @@ def _contact(cv: ParsedCV) -> DocContact:
 
 def _headline_line(cv: ParsedCV) -> CVLine | None:
     """The line under the name: the first line above every content section that is not a contact
-    field or a contact heading. The contact block is not a content section, so a headline inside
-    it still counts. Later loose lines keep their usual place."""
+    field or a contact heading. A headline inside the contact block still counts."""
     position = {line.id: i for i, line in enumerate(cv.lines)}
     content = [section for section in cv.sections if section.type != "contact"]
     starts = [
@@ -186,9 +181,6 @@ def _holds_dates(text: str, entry: CVEntry) -> bool:
     return (parsed.start.iso(), parsed.end_iso()) == (entry.start, entry.end)
 
 
-# Applying suggestions -------------------------------------------------------------------------
-
-
 def apply_suggestions(
     doc: CVDocument,
     cv: ParsedCV,
@@ -242,7 +234,7 @@ def _tailor_summary(doc: CVDocument, s: Suggestion) -> None:
 def _added_section(
     doc: CVDocument, section_id: str, section_type: SectionType, heading: str, at_start: bool
 ) -> DocSection:
-    """The section a suggestion adds. It is reused when it already exists, else created once."""
+    """The section a suggestion adds, reused when it already exists."""
     existing = _find_section(doc, section_id)
     if existing is not None:
         return existing
@@ -254,16 +246,13 @@ def _added_section(
     return section
 
 
-# Validation -----------------------------------------------------------------------------------
-
-
 def validate_document(
     doc: CVDocument,
     cv: ParsedCV,
     suggestions: Sequence[Suggestion],
     accepted_ids: Iterable[str],
 ) -> list[str]:
-    """Reasons the document cannot be trusted. An empty list means the document is valid."""
+    """Reasons the document cannot be trusted; empty when it is valid."""
     accepted = set(accepted_ids)
     usable = {
         s.id: s for s in suggestions if s.id in accepted and s.verification.status == "verified"
@@ -354,9 +343,6 @@ def _is_replaced(
     )
 
 
-# Diff -----------------------------------------------------------------------------------------
-
-
 def diff_document(
     cv: ParsedCV, doc: CVDocument, suggestions: Sequence[Suggestion] = ()
 ) -> list[DiffLine]:
@@ -414,9 +400,6 @@ def _diff_line(
     return DiffLine(section_id=section_id, status="added", after=line.text, origin=line.origin)
 
 
-# Tool operations for the build agent ----------------------------------------------------------
-
-
 def move_section(doc: CVDocument, section_id: str, position: int) -> CVDocument:
     """Move one section so that it sits at `position` (0 is the first section)."""
     result = doc.model_copy(deep=True)
@@ -451,9 +434,6 @@ def reorder_items(doc: CVDocument, section_id: str, ordered_ids: Sequence[str]) 
     return result
 
 
-# Standard order -------------------------------------------------------------------------------
-
-
 def standard_order(doc: CVDocument) -> CVDocument:
     """The document with its sections in STANDARD_SECTION_ORDER. Sections of one type keep their
     relative order, and so do the items inside every section."""
@@ -466,9 +446,6 @@ def _standard_rank(section_type: str) -> float:
     if section_type in STANDARD_SECTION_ORDER:
         return STANDARD_SECTION_ORDER.index(section_type)
     return STANDARD_SECTION_ORDER.index("other") - 0.5  # an unknown type goes just before "other"
-
-
-# Shared helpers -------------------------------------------------------------------------------
 
 
 def _body_ids(cv: ParsedCV) -> list[str]:
@@ -499,8 +476,7 @@ def _contact_origins(cv: ParsedCV) -> list[str]:
 
 def _contact_heading_ids(cv: ParsedCV) -> set[str]:
     """The lines that head the contact block: the contact section's own heading line, and a line
-    that reads as a contact heading ("Contact") outside every content section. The model often
-    leaves the heading out of the contact section, so the text is checked as well."""
+    that reads as a contact heading ("Contact") outside every content section."""
     content = {
         line_id
         for section in cv.sections

@@ -13,7 +13,6 @@ export function lineNumber(id: string): number | null {
   return match ? Number(match[1]) : null
 }
 
-// The short label for a cited CV line or computed fact.
 export function citationLabel(id: string): string {
   if (isFactId(id)) return COMPUTED_FACT_LABEL
   const number = lineNumber(id)
@@ -26,7 +25,6 @@ export type TextPart = { kind: 'text'; text: string } | { kind: 'cite'; id: stri
 // becomes one label, not "Line line 12".
 const CITATION = /(?:\b[Ll]ine\s+)?\b(L\d{3}|F\d{2})\b/g
 
-// Splits a sentence into plain text and the IDs written in it.
 export function splitCitations(text: string): TextPart[] {
   const parts: TextPart[] = []
   let last = 0

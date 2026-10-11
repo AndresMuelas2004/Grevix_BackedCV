@@ -26,8 +26,6 @@ interface VerdictHeroProps {
   onAnotherPosting: () => void
 }
 
-// The top of the report: the verdict, the skills match, the questions to answer first and the
-// main action, in that order.
 export default function VerdictHero({
   analysis,
   view,
@@ -140,8 +138,7 @@ interface QuestionsProps {
   onAnalysisChange: (next: AnalysisReport) => void
 }
 
-// "Answer these first": every yes/no question, answered or not. Each answer is saved on the server,
-// which recomputes the report; the new report comes back through onAnalysisChange.
+// Each answer is saved on the server, which recomputes the report and sends it back.
 function Questions({ analysis, questions, saving, onAnalysisChange }: QuestionsProps) {
   const [savingKey, setSavingKey] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)

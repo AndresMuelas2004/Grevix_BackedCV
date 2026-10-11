@@ -30,7 +30,7 @@ def read_docx(data: bytes) -> list[RawLine]:
     except Exception as exc:
         raise IngestionError("cv_unreadable", "This Word file could not be opened.") from exc
     body = document.element.find(_q("w:body"))
-    if body is None:  # a document.xml without a body has no text to read
+    if body is None:
         raise IngestionError("cv_unreadable", "This Word file is damaged or incomplete.")
 
     rows: list[RawLine] = []

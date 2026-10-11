@@ -96,7 +96,7 @@ def join_fragments(fragments: list[Fragment]) -> list[RawLine]:
 
 
 def _reach(fragments: list[Fragment]) -> float:
-    """The x a line must reach to run on into the next one: close to the block's widest line end."""
+    """The x a line must reach to run on into the next one (near the block's right edge)."""
     if not fragments:
         return 0.0
     right = max(f.x1 for f in fragments)
@@ -104,7 +104,6 @@ def _reach(fragments: list[Fragment]) -> float:
 
 
 def _continues(group: list[Fragment], nxt: Fragment, reach: float) -> bool:
-    """Whether the next physical line goes on with the logical line that `group` is building."""
     first, last = group[0], group[-1]
     if abs(nxt.size - last.size) > _SIZE_TOLERANCE or nxt.top - last.bottom > _MAX_GAP * nxt.size:
         return False

@@ -1,5 +1,4 @@
-/* The live example window on the landing page. All frames sit in one grid cell and cross-fade;
-   a hidden copy of the last frame keeps the window the same height the whole time. */
+/* Frames cross-fade in one grid cell; a hidden copy of the last frame keeps the window height constant. */
 
 .ew {
   display: flex;
@@ -53,7 +52,7 @@
   text-align: center;
 }
 
-/* ---- Frames ---- */
+/* Frames */
 
 .ew-stage {
   display: grid;
@@ -119,7 +118,7 @@
   }
 }
 
-/* ---- Frame 1: the posting and the CV ---- */
+/* Inputs frame */
 
 .ew-inputs {
   align-self: center;
@@ -198,7 +197,7 @@
   animation-delay: calc(var(--i, 0) * 0.2s + 1.05s);
 }
 
-/* ---- Frame 2: the four steps ---- */
+/* Steps frame */
 
 .ew-checking {
   align-self: center;
@@ -312,7 +311,7 @@
   opacity: 1;
 }
 
-/* ---- Frames 3 and 4: the report summary, then one problem opened ---- */
+/* Report frames */
 
 .ew-live,
 .ew-sizer {
@@ -491,7 +490,6 @@
   box-shadow: 0 0 0 3px var(--lp-orange-bg);
 }
 
-/* The quotes of the opened problem slide open below its row. */
 .ew-detail {
   display: grid;
   grid-template-rows: 0fr;
@@ -554,7 +552,7 @@
   animation-delay: calc(var(--i, 0) * 0.18s + 0.45s);
 }
 
-/* ---- Step indicator ---- */
+/* Step indicator */
 
 .ew-progress {
   display: flex;
@@ -604,7 +602,7 @@
   animation-play-state: paused !important;
 }
 
-/* ---- Caption and control ---- */
+/* Caption and control */
 
 .ew-caption {
   display: flex;
@@ -656,7 +654,6 @@
     font-size: 17px;
   }
 
-  /* The score sits on one line, and every tier label goes under its title. */
   .ew-score {
     flex-direction: row;
     align-items: baseline;

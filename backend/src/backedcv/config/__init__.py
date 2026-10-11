@@ -1,4 +1,4 @@
-"""Versioned configuration files (TOML, read with the standard library)."""
+"""Loader for the TOML files in this folder."""
 
 import tomllib
 from functools import lru_cache

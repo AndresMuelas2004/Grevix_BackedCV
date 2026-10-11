@@ -27,14 +27,9 @@ _BLANK_RUN = re.compile("\n{3,}")
 def normalize_text(text: str) -> str:
     """The canonical form of a pasted or extracted text, applied once where it enters the app.
 
-    Two texts that differ only in whitespace, line endings or invisible characters get the same
+    Texts that differ only in whitespace, line endings or invisible characters get the same
     result, so they get the same cache key, the same model input and the same line numbers.
-    Lone surrogates are dropped; CRLF, CR and the other line breaks become LF; tabs and Unicode
-    spaces (NBSP...) become a plain space; format characters (zero-width, BOM, soft hyphen,
-    direction marks) and control characters are dropped; then Unicode NFC. Each line loses its
-    leading and trailing spaces and runs of spaces become one; 3+ line breaks become 2 (at most
-    one blank line); blank lines at both ends are removed. Words, case and punctuation are kept.
-    Idempotent: normalizing twice changes nothing.
+    Words, case and punctuation are kept. Idempotent: normalizing twice changes nothing.
     """
     # A lone surrogate cannot be encoded as UTF-8: drop it; a valid pair becomes one character.
     text = text.encode("utf-16", "surrogatepass").decode("utf-16", "ignore")

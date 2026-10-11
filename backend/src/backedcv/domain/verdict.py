@@ -5,8 +5,7 @@ knockout the CV shows missing (work authorization, clearance, a license to pract
 eligibility barrier or a "no" answer makes the verdict "Likely screened out". A missing language,
 education or experience knockout is a top risk that caps the band at Long shot; minimum years the
 CV's own dates fall short of cap it at Stretch with at least 75% of the years, Long shot below.
-Location and availability are asked, never asserted (see builders). Every reason is one short
-sentence without raw IDs.
+Location and availability are asked, never asserted.
 """
 
 from backedcv.domain.models import (
@@ -187,10 +186,9 @@ def compute_verdict(
 def _soft_reason(
     r: Requirement, assessment: RequirementAssessment, recency: dict[str, RecencyCheck] | None
 ) -> str:
-    """Why a soft knockout counts against the candidate, with numbers when code has them: the
-    recency check's sentence when the posting's window ruled it out, the code's own sentence
-    (levels, years: "The job asks for English at C1; your CV states B2."), else the requirement
-    in plain words."""
+    """Why a soft knockout counts against the candidate: the recency check's sentence when the
+    posting's window ruled it out, else the code's own sentence (levels, years), else the
+    requirement in plain words."""
     check = (recency or {}).get(r.id)
     if check is not None and check.effect == "downgraded" and check.explanation:
         return check.explanation
@@ -212,8 +210,7 @@ def _years_short(assessment: RequirementAssessment | None) -> bool:
 
 
 def _capped(band: str, short: list[RequirementAssessment]) -> str:
-    """A band no higher than each years shortfall allows: Stretch with at least 75% of the asked
-    years, Long shot below that."""
+    """The band, lowered to the cap that each years shortfall allows."""
     for assessment in short:
         share = assessment.years_check.share
         cap = "stretch" if share >= YEARS_STRETCH_SHARE else "long_shot"

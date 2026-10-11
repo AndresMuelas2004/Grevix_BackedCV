@@ -70,7 +70,6 @@
   overflow-wrap: anywhere;
 }
 
-/* A section's heading line: styled like a group title, so it reads as the heading of its section. */
 .cv-heading {
   font-size: 0.8125rem;
   font-weight: 700;
@@ -119,7 +118,6 @@
   color: var(--warn);
 }
 
-/* A small "!" marker on lines that a parse warning points at. */
 .cv-warn-mark {
   display: inline-grid;
   place-items: center;

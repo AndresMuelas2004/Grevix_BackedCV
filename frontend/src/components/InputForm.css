@@ -1,6 +1,4 @@
-/* The form on the landing page ("Try it with your CV"). The landing palette (--lp-*) and the
-   .lp-btn buttons come from landing/Landing.css. The textarea, .field-label and .field-error
-   rules at the end stay global: the review screen's edit form uses them too. */
+/* The landing palette (--lp-*) and the .lp-btn buttons come from landing/Landing.css. */
 
 .input-form {
   display: flex;
@@ -55,7 +53,7 @@
   color: var(--lp-muted);
 }
 
-/* ---- CV source tabs ---- */
+/* CV source tabs */
 
 .input-form .tabs {
   display: flex;
@@ -101,7 +99,7 @@
   display: none;
 }
 
-/* ---- File drop zone ---- */
+/* File drop zone */
 
 .input-form .dropzone {
   display: flex;
@@ -180,7 +178,7 @@
   font-size: 14px;
 }
 
-/* ---- Notices, fields and messages ---- */
+/* Notices, fields and messages */
 
 .input-form .notice {
   padding: 10px 14px;
@@ -241,7 +239,7 @@
   color: var(--lp-red);
 }
 
-/* ---- Actions and privacy ---- */
+/* Actions and privacy */
 
 .form-footer {
   display: flex;
@@ -284,7 +282,7 @@
   }
 }
 
-/* ---- Shared with the review screen's edit form (keep global) ---- */
+/* Shared with the review screen's edit form (keep global) */
 
 textarea {
   width: 100%;

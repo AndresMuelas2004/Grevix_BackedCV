@@ -1,7 +1,7 @@
-"""Run one real analysis on the bundled synthetic sample and print the result.
+"""Run one real analysis on the bundled sample and print the result.
 
 Usage (from backend/): uv run python scripts/smoke_run.py
-Uses the real OpenAI API (a few cents at most) and an in-memory checkpointer.
+Calls the real OpenAI API (a few cents at most).
 """
 
 import json

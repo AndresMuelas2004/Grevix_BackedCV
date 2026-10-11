@@ -20,9 +20,7 @@ const API_BASE = '/api'
 // analysis. Such a request is sent once more after this delay; a second refusal is the error.
 const BUSY_RETRY_MS = 1000
 
-// A failed request: an HTTP error body ({code, title, detail}), a FastAPI validation
-// answer (HTTP 422, code "invalid_request"), or a transport problem (status 0).
-// Codes are the backend's stable codes.
+// A failed request: an HTTP error body, a FastAPI 422, or a transport failure (status 0).
 export class ApiError extends Error {
   readonly status: number
   readonly code: string
@@ -39,7 +37,6 @@ export class ApiError extends Error {
   }
 }
 
-// The CV is either an uploaded file or pasted text, never both.
 export type CvSource = { file: File } | { text: string }
 
 export interface AnalysisInput {
@@ -48,26 +45,22 @@ export interface AnalysisInput {
   facts?: Partial<CandidateFacts>
 }
 
-// What runAnalysis reports while the stream is open.
 export type AnalysisEvent =
   | { type: 'created'; analysisId: string }
   | { type: 'progress'; progress: ProgressEvent }
   | { type: 'report'; report: AnalysisReport }
   | { type: 'error'; error: ErrorBody }
 
-// What runOptimize reports while the stream is open.
 export type OptimizeEvent =
   | { type: 'progress'; progress: ProgressEvent<OptimizeStep> }
   | { type: 'suggestions'; report: AnalysisReport }
   | { type: 'error'; error: ErrorBody }
 
-// What runBuild reports while the stream is open.
 export type BuildEvent =
   | { type: 'progress'; progress: ProgressEvent<BuildStep> }
   | { type: 'built'; report: AnalysisReport }
   | { type: 'error'; error: ErrorBody }
 
-// The formats served by GET /api/analyses/{id}/cv.{format}.
 export type CvDownloadFormat = 'docx' | 'pdf'
 
 export async function getSamples(): Promise<Samples> {
@@ -80,7 +73,7 @@ export async function getSamples(): Promise<Samples> {
   return body
 }
 
-// The Card 1 sample: a posting with hidden barriers, and its CV as pasted text (no file).
+// A posting with hidden barriers, and its CV as pasted text (no file).
 export async function getHiddenRiskSample(): Promise<HiddenRiskSample> {
   const response = await send(`${API_BASE}/samples/hidden-risk`, {})
   if (!response.ok) throw await readError(response)
@@ -94,8 +87,6 @@ export async function getHiddenRiskSample(): Promise<HiddenRiskSample> {
 // The Files made by getSampleCvFile. Kept by identity, so the form can tell them from uploads.
 const sampleFiles = new WeakSet<File>()
 
-// Downloads the sample CV PDF that getSamples describes, as a File ready to upload.
-// Throws when the PDF cannot be fetched.
 export async function getSampleCvFile(samples: Samples): Promise<File> {
   const response = await send(samples.cv_pdf_url, {})
   if (!response.ok) throw await readError(response)
@@ -110,16 +101,13 @@ export function isSampleCvFile(file: File): boolean {
   return sampleFiles.has(file)
 }
 
-// Reads an analysis. Its status is "running" while the server is still working on it.
+// Status is "running" while the server is still working on it.
 export async function getAnalysis(id: string, signal?: AbortSignal): Promise<AnalysisReport> {
   const response = await send(`${API_BASE}/analyses/${encodeURIComponent(id)}`, { signal })
   if (!response.ok) throw await readError(response)
   return (await response.json()) as AnalysisReport
 }
 
-// Starts an analysis. A non-2xx answer is a JSON error and is thrown. A 2xx
-// answer is an SSE stream: each event goes to onEvent, and the promise resolves
-// after the stream ends. The "error" and "report" events both end the run.
 export async function runAnalysis(
   input: AnalysisInput,
   onEvent: (event: AnalysisEvent) => void,
@@ -145,8 +133,7 @@ export async function runAnalysis(
   })
 }
 
-// Sends answers, exclusions or inclusions for a report waiting at its report stage.
-// Returns the recomputed report. Fields left out keep their value (see InputsUpdate).
+// For a report waiting at its report stage. Returns the recomputed report.
 export async function updateInputs(id: string, body: InputsUpdate): Promise<AnalysisReport> {
   return retryWhenBusy(async () => {
     const response = await send(`${API_BASE}/analyses/${encodeURIComponent(id)}/inputs`, {
@@ -159,8 +146,6 @@ export async function updateInputs(id: string, body: InputsUpdate): Promise<Anal
   })
 }
 
-// Asks for suggestions on a report waiting at its report stage. The "suggestions"
-// event (or "error") ends the run.
 export async function runOptimize(
   id: string,
   onEvent: (event: OptimizeEvent) => void,
@@ -181,7 +166,6 @@ export async function runOptimize(
   )
 }
 
-// Checks one suggestion again after the user edited its text. Returns the new report.
 export async function verifySuggestion(
   id: string,
   suggestionId: string,
@@ -201,8 +185,7 @@ export async function verifySuggestion(
   })
 }
 
-// Keyword coverage now, and if the given suggestions were accepted. Asked for each time the
-// accepted set changes during the review. Pass a signal to cancel a request that is no longer wanted.
+// Keyword coverage now and if the given suggestions were accepted. The signal cancels a stale request.
 export async function previewCoverage(
   id: string,
   accepted: string[],
@@ -222,7 +205,6 @@ export async function previewCoverage(
   return body
 }
 
-// Builds the new CV from the user's decisions. The "built" event (or "error") ends the run.
 export async function runBuild(
   id: string,
   decisions: ReviewDecisions,
@@ -248,20 +230,16 @@ export async function runBuild(
   )
 }
 
-// The address of the built CV in one format. Use it as a download link.
 export function cvDownloadUrl(id: string, format: CvDownloadFormat): string {
   return `${API_BASE}/analyses/${encodeURIComponent(id)}/cv.${format}`
 }
 
-// Deletes an analysis and its saved state on the server.
 export async function deleteAnalysis(id: string): Promise<void> {
   const response = await send(`${API_BASE}/analyses/${encodeURIComponent(id)}`, {
     method: 'DELETE',
   })
   if (!response.ok) throw await readError(response)
 }
-
-// ---- helpers ---------------------------------------------------------------
 
 // Used when an "error" event does not carry an ErrorBody.
 const ANALYSIS_FAILED: ErrorBody = {
@@ -280,8 +258,6 @@ const BUILD_FAILED: ErrorBody = {
   detail: '',
 }
 
-// Runs a request that the server may refuse while another run holds the analysis. A refusal with
-// 409 run_in_progress is tried once more after a second. Nothing is sent again for any other error.
 async function retryWhenBusy<T>(attempt: () => Promise<T>, signal?: AbortSignal): Promise<T> {
   try {
     return await attempt()
@@ -325,7 +301,6 @@ async function readError(response: Response): Promise<ApiError> {
       describeValidation(fields.detail),
     )
   }
-  // Anything else is a plain failure.
   const detail = typeof fields.detail === 'string' ? fields.detail : ''
   return new ApiError(
     response.status,
@@ -401,7 +376,7 @@ interface SseMessage {
   data: string
 }
 
-// Everything streamEvents needs. `label` names the work in its error messages.
+// `label` names the work in error messages.
 interface StreamRequest<E> {
   url: string
   init: RequestInit
@@ -412,9 +387,8 @@ interface StreamRequest<E> {
   signal?: AbortSignal
 }
 
-// The one reader for every stream. Sends the request, then reports each parsed event.
-// A non-2xx answer is a JSON error and is thrown. The promise resolves after an event
-// that ends the run; a stream that closes before that throws.
+// The one reader for every stream. A non-2xx answer is a JSON error and is thrown.
+// A stream that closes before an event that ends the run throws.
 async function streamEvents<E>(request: StreamRequest<E>): Promise<void> {
   const { url, init, label, parse, ends, onEvent, signal } = request
   const headers = new Headers(init.headers)
@@ -446,7 +420,6 @@ async function streamEvents<E>(request: StreamRequest<E>): Promise<void> {
   }
 }
 
-// The analysis stream: created, progress, report or error.
 function toAnalysisEvent(message: SseMessage): AnalysisEvent | null {
   const payload = parseJson(message.data)
   switch (message.event) {
@@ -469,7 +442,6 @@ function toAnalysisEvent(message: SseMessage): AnalysisEvent | null {
   }
 }
 
-// The optimize stream: progress, suggestions or error.
 function toOptimizeEvent(message: SseMessage): OptimizeEvent | null {
   const payload = parseJson(message.data)
   switch (message.event) {
@@ -488,7 +460,6 @@ function toOptimizeEvent(message: SseMessage): OptimizeEvent | null {
   }
 }
 
-// The build stream: progress, built or error.
 function toBuildEvent(message: SseMessage): BuildEvent | null {
   const payload = parseJson(message.data)
   switch (message.event) {

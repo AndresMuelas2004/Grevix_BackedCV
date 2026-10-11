@@ -6,7 +6,6 @@ import './ParseReport.css'
 
 interface ParseReportProps {
   warnings: ParseWarning[]
-  // The CV's lines, so the lines a warning points at can be shown with their text.
   lines: CvLine[]
   // Line IDs highlighted in the CV view. Pressing an item with lines sets them.
   highlightedLineIds: string[]

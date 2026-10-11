@@ -1,5 +1,4 @@
-"""Contact details never reach a model: the redaction rules, the prompts the graph sends (analysis,
-suggest and verify), the order agent's outline and the rows the model reads."""
+"""Contact details never reach a model: redaction rules, graph prompts, order agent outline."""
 
 import asyncio
 import uuid

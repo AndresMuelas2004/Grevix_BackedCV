@@ -49,7 +49,7 @@ def _is_flagged(token: str, starts_sentence: bool) -> bool:
     letters = sum(c.isalpha() for c in token)
     if any(c.isdigit() or c in "+#." for c in token) or _CAMEL.search(token):
         return True
-    if token.isupper() and letters >= 2:  # ALLCAPS, e.g. AWS
+    if token.isupper() and letters >= 2:
         return True
     if letters < 2 or not token[0].isupper():
         return False
@@ -193,8 +193,7 @@ def _length(s: Suggestion) -> GuardResult:
 
 
 def _no_placeholders(s: Suggestion) -> GuardResult:
-    """The model sees placeholders for contact details, never the details. It must not write them
-    into the CV either."""
+    """The model only sees placeholders for contact details, so none may reach the CV."""
     found = [p for p in PLACEHOLDERS if p in s.after.lower()]
     if not found:
         return GuardResult(name="no_placeholders", ok=True)
@@ -230,8 +229,6 @@ def _original(s: Suggestion, cv: ParsedCV) -> str | None:
         return s.before
     return " ".join(line.text for line in cv.lines if line.id in summary.line_ids)
 
-
-# Keyword-only rewrites ------------------------------------------------------------------------
 
 # Words that show nothing on their own: function words (English and Spanish), the adjectives and
 # umbrella nouns a rewrite adds to sound closer to a posting, and generic action verbs whose swap
@@ -294,11 +291,9 @@ def keyword_only(s: Suggestion, job: JobPosting) -> str | None:
 
     Padding keeps every word of the original, apart from filler, and adds only posting words or
     filler: "observability" becoming "AI observability". A real change removes or replaces a word,
-    adds a number or any other word, or reorders the line (three or more words, or a number, move).
-    One or two words moved to make room for a posting term ("ETL jobs in Python" becoming "Python
-    data pipelines (ETL jobs)") is still padding. A requirement's name added next to another of its
-    names that the line already has ("K8s" becoming "Kubernetes (K8s)") is not padding. `before`
-    must already hold the original (apply_guards fills it); an added line has none.
+    adds a number or any other word, or reorders the line (three or more words, or a number, move);
+    moving one or two words to make room for a posting term is still padding. `before` must
+    already hold the original (apply_guards fills it).
     """
     if s.kind == "add_skill" or not s.before:
         return None

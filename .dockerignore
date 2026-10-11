@@ -2,7 +2,7 @@
 .gitignore
 .env
 .env.*
-CLAUDE.local.md
+*.local.md
 .scratch
 data
 **/__pycache__

@@ -8,9 +8,7 @@ interface ChangeDiffProps {
   sectionTitle?: string // the section a new line goes into; used only when before is null
 }
 
-// A changed line shows a Before row and an After row. Changed words are struck through in Before
-// and underlined in After, so the change is visible without relying on colour. A new line shows
-// a sentence naming its section, then the new text.
+// Struck through in Before and underlined in After, so the change does not rely on colour alone.
 export default function ChangeDiff({ before, after, sectionTitle }: ChangeDiffProps) {
   if (before === null) {
     return (

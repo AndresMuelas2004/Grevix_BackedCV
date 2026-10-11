@@ -1,7 +1,6 @@
 import type { StepState } from '../lib/progress'
 import './Progress.css'
 
-// One step of a progress list. `detail` is optional text shown under the step.
 export interface ProgressRow {
   label: string
   state: StepState
@@ -11,7 +10,7 @@ export interface ProgressRow {
 interface ProgressProps {
   title: string
   rows?: ProgressRow[] // left out when the steps are not known, e.g. for a run found on reload
-  note?: string // a line under the title
+  note?: string
 }
 
 const STATE_TEXT: Record<StepState, string> = {

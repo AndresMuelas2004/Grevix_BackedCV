@@ -34,8 +34,8 @@ def build_graph(llm: StructuredLLM, checkpointer=None, order_model=None):
     graph.add_node("build_cv", build["build_cv"])
     graph.add_node("final_checks", build["final_checks"])
 
-    # Both branches take one step each, then join. The posting review and the barrier screen
-    # start once the job is extracted and run alongside plan_matching.
+    # The posting review and the barrier screen start once the job is extracted and run
+    # alongside plan_matching.
     graph.add_edge(START, "prepare_cv")
     graph.add_edge(START, "prepare_job")
     graph.add_edge("prepare_job", "review_posting")

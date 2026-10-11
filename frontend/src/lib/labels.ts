@@ -1,4 +1,4 @@
-// Display text for the backend's literal values. Keys are the backend's values.
+// Display text for the backend's literal values.
 import type {
   Badge,
   BarrierKind,
@@ -70,7 +70,7 @@ export const RISK_LEVEL_LABELS: Record<RiskLevel, string> = {
   low: 'Low',
 }
 
-// The kind of a hidden risk in plain words. "composite" is a risk that combines several others.
+// "composite" is a risk that combines several others.
 export const BARRIER_KIND_LABELS: Record<BarrierKind | 'composite', string> = {
   work_authorization: 'Work permit',
   location: 'Location',

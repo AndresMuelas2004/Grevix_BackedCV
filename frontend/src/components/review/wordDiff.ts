@@ -1,13 +1,11 @@
-// Word-level diff between two versions of a CV line, used to show what a suggestion changed.
-
 export interface Piece {
   text: string
   changed: boolean
 }
 
 export interface WordDiff {
-  before: Piece[] // the old text, with the words that were removed marked
-  after: Piece[] // the new text, with the words that were added marked
+  before: Piece[]
+  after: Piece[]
 }
 
 // Above this many word pairs the table gets too big, so the whole text counts as changed.
@@ -23,7 +21,6 @@ function tokenize(text: string): string[] {
   return text.match(/\s*\S+|\s+/g) ?? []
 }
 
-// What a token is matched by: the word without its spaces and its trailing punctuation.
 function matchKey(token: string): string {
   const word = token.trimStart()
   if (word === '') return token
@@ -31,7 +28,6 @@ function matchKey(token: string): string {
   return bare === '' ? word : bare
 }
 
-// Adds a token to the pieces, merging it into the last piece when the mark is the same.
 function push(pieces: Piece[], text: string, changed: boolean): void {
   const last = pieces.at(-1)
   if (last && last.changed === changed) last.text += text
