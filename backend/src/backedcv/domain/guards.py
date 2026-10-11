@@ -1,6 +1,8 @@
 """Deterministic checks on suggested CV rewrites. A hard failure makes one unsupported."""
 
 import re
+from collections import Counter
+from difflib import SequenceMatcher
 
 from backedcv.domain.keywords import contains_term
 from backedcv.domain.models import GuardResult, JobPosting, ParsedCV, Suggestion
@@ -227,6 +229,104 @@ def _original(s: Suggestion, cv: ParsedCV) -> str | None:
     if summary is None:
         return s.before
     return " ".join(line.text for line in cv.lines if line.id in summary.line_ids)
+
+
+# Keyword-only rewrites ------------------------------------------------------------------------
+
+# Words that show nothing on their own: function words (English and Spanish), the adjectives and
+# umbrella nouns a rewrite adds to sound closer to a posting, and generic action verbs whose swap
+# does not change what a line shows. Hyphenated words split, so "cutting-edge" is two words.
+_FILLER = frozenset({
+    "a", "an", "the", "and", "or", "of", "in", "on", "at", "to", "for", "with", "by", "from",
+    "as", "into", "across", "via", "using", "through", "including", "include", "includes",
+    "such", "like", "e.g", "i.e", "etc", "also", "both", "plus", "while", "within", "per", "its",
+    "their", "our", "my", "this", "that", "these", "those", "which", "who", "other", "related",
+    "based", "around", "various", "multiple", "several", "key", "core", "wide", "range",
+    "de", "del", "la", "el", "los", "las", "y", "e", "o", "u", "en", "con", "para", "por", "al",
+    "un", "una", "como", "incluyendo", "entre", "mediante", "su", "sus",
+    "strong", "solid", "proven", "extensive", "deep", "hands", "robust", "scalable", "reliable",
+    "efficient", "effective", "successful", "successfully", "seamless", "seamlessly",
+    "innovative", "cutting", "edge", "modern", "advanced", "comprehensive", "complex", "dynamic",
+    "diverse", "high", "quality", "impactful", "strategic", "best", "leading", "powered",
+    "driven", "native", "enabled", "focused", "oriented", "centric", "critical", "cross",
+    "functional", "end", "large", "scale", "production", "grade", "ready", "enterprise",
+    "solution", "solutions", "system", "systems", "application", "applications", "technology",
+    "technologies", "tool", "tools", "tooling", "capability", "capabilities", "initiative",
+    "initiatives", "platform", "platforms", "soluciones", "solución", "sistemas", "herramientas",
+    "built", "build", "builds", "building", "developed", "develop", "develops", "developing",
+    "created", "create", "creates", "creating", "implemented", "implement", "implements",
+    "implementing", "wrote", "write", "writes", "writing", "written", "made", "make", "makes",
+    "making", "worked", "work", "works", "working", "used", "use", "uses", "leveraged",
+    "leverage", "leverages", "leveraging", "utilized", "utilize", "utilizes", "utilizing", "set",
+    "sets", "setting", "up", "engineered",
+})  # fmt: skip
+
+
+def _words(text: str) -> list[tuple[str, str]]:
+    """The words of a text in order, as (folded, as written) pairs."""
+    return [(fold_lower(m.group()), m.group()) for m in _TOKEN.finditer(text)]
+
+
+def _posting_words(job: JobPosting) -> set[str]:
+    """Every word of the posting's terms, aliases and job title."""
+    names = [name for req in job.requirements for name in (*req.terms, *req.aliases)]
+    return {key for name in [*names, job.title or ""] for key, _ in _words(name)}
+
+
+def _names_what_the_line_has(before: str, after: str, job: JobPosting) -> bool:
+    """True when the rewrite adds a requirement's name next to another of its names that the line
+    already has: "K8s" becoming "Kubernetes (K8s)" names the tool, it does not pad the line."""
+    for req in job.requirements:
+        names = [*req.terms, *req.aliases]
+        if any(contains_term(before, name) for name in names) and any(
+            contains_term(after, name) and not contains_term(before, name) for name in names
+        ):
+            return True
+    return False
+
+
+def _content(words: list[str]) -> Counter[str]:
+    return Counter(word for word in words if word not in _FILLER)
+
+
+def keyword_only(s: Suggestion, job: JobPosting) -> str | None:
+    """Why a rewrite of an existing line or summary only pads it, or None when it changes it.
+
+    Padding keeps every word of the original, apart from filler, and adds only posting words or
+    filler: "observability" becoming "AI observability". A real change removes or replaces a word,
+    adds a number or any other word, or reorders the line (three or more words, or a number, move).
+    One or two words moved to make room for a posting term ("ETL jobs in Python" becoming "Python
+    data pipelines (ETL jobs)") is still padding. A requirement's name added next to another of its
+    names that the line already has ("K8s" becoming "Kubernetes (K8s)") is not padding. `before`
+    must already hold the original (apply_guards fills it); an added line has none.
+    """
+    if s.kind == "add_skill" or not s.before:
+        return None
+    before, after = _words(s.before), _words(s.after)
+    matcher = SequenceMatcher(None, [k for k, _ in before], [k for k, _ in after], autojunk=False)
+    removed: list[str] = []
+    added: list[str] = []
+    spans: list[str] = []  # the added text as written, for the reason
+    for tag, i1, i2, j1, j2 in matcher.get_opcodes():
+        if tag != "equal":
+            removed += [key for key, _ in before[i1:i2]]
+            added += [key for key, _ in after[j1:j2]]
+            spans.append(" ".join(word for _, word in after[j1:j2]))
+    moved = _content(removed) & _content(added)
+    if _content(removed) - moved:
+        return None  # a word of the original is gone or replaced
+    if moved.total() >= 3 or any(extract_numbers(word) for word in moved):
+        return None  # the line is reordered, not padded
+    posting = _posting_words(job)
+    for key in (_content(added) - moved).elements():
+        if extract_numbers(key) or key not in posting:
+            return None
+    if _names_what_the_line_has(s.before, s.after, job):
+        return None
+    shown = ", ".join(dict.fromkeys(span for span in spans if span))
+    if not shown:
+        return "Changes nothing that matters in the line."
+    return f"Only adds the posting's words or filler ({shown}); nothing else changes."
 
 
 def apply_guards(s: Suggestion, cv: ParsedCV, job: JobPosting) -> Suggestion:

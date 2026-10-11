@@ -20,8 +20,8 @@ DRAFTS = [
 
 # (prompt file name, version, tier, data blocks the prompt refers to)
 PROMPTS = [
-    ("suggest", "1", "strong", ["<cv_lines>", "<facts>", "<requirements>"]),
-    ("verify", "2", "strong", ["<cv_lines>", "<facts>", "<suggestions>"]),
+    ("suggest", "2", "strong", ["<cv_lines>", "<facts>", "<requirements>"]),
+    ("verify", "3", "strong", ["<cv_lines>", "<facts>", "<suggestions>"]),
     ("review_posting", "1", "fast", ["<job_meta>", "<requirements>"]),
 ]
 

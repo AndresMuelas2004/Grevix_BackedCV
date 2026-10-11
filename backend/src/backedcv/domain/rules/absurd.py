@@ -30,9 +30,8 @@ def flag_requirements(
                         rule_id="R1",
                         requirement_ids=[req.id],
                         explanation=(
-                            f"An entry-level role asking for {req.min_years:g}+ years. "
-                            "Postings like this often accept less: "
-                            "apply anyway if you meet the rest."
+                            f"An entry-level role asking for {req.min_years:g}+ years often "
+                            "accepts less, so apply if you meet the rest."
                         ),
                     )
                 )
@@ -50,8 +49,8 @@ def flag_requirements(
                         rule_id="R2",
                         requirement_ids=[req.id],
                         explanation=(
-                            f"Asks for {req.min_years:g} years of {tech}, which was first released "
-                            f"in {year} (about {age} years ago). Nobody can meet this literally."
+                            f"Asks for {req.min_years:g} years of {tech}, first released in "
+                            f"{year}, so nobody can meet it literally."
                         ),
                     )
                 )

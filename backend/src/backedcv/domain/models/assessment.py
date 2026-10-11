@@ -14,6 +14,15 @@ class Evidence(BaseModel):
     match_type: MatchType
 
 
+class YearsCheck(BaseModel):
+    """A minimum-years requirement against the months the CV's own job dates add up to."""
+
+    min_years: float
+    cv_months: int  # the shortest total the dates allow (overlaps counted once)
+    reliable: bool  # False when a job date shows only the year or a job has no dates
+    share: float  # cv_months / (min_years * 12), two decimals: 0.75 or more caps at "stretch"
+
+
 class RequirementAssessment(BaseModel):
     requirement_id: str
     status: Status
@@ -22,6 +31,7 @@ class RequirementAssessment(BaseModel):
     keyword_present: bool = False
     source: Literal["cv", "user_answer"] = "cv"
     question: str | None = None  # for unknown knockouts: what the employer is likely to ask
+    years_check: YearsCheck | None = None  # minimum-years requirements, when the CV has dates
 
 
 class CandidateFacts(BaseModel):

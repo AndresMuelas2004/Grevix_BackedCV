@@ -6,11 +6,41 @@ from backedcv.domain.models import (
     Requirement,
     RequirementAssessment,
 )
+from backedcv.domain.models.assessment import YearsCheck
 from backedcv.domain.text import fold_lower
 
 
 def is_knockout(requirement: Requirement) -> bool:
     return requirement.importance == "required" and requirement.knockout_type is not None
+
+
+def asks_min_years(requirement: Requirement) -> bool:
+    """A minimum number of years of experience ("2+ years"), checked against the CV's dates."""
+    return bool(requirement.min_years) and "experience_years" in (
+        requirement.category,
+        requirement.knockout_type,
+    )
+
+
+def duration_text(months: int) -> str:
+    """Months in plain words: "11 months", "1 year", "2 years and 3 months"."""
+    years, rest = divmod(max(months, 0), 12)
+    month_text = f"{rest} month" + ("" if rest == 1 else "s")
+    if years == 0:
+        return month_text
+    year_text = f"{years} year" + ("" if years == 1 else "s")
+    return year_text if rest == 0 else f"{year_text} and {month_text}"
+
+
+def years_sentence(check: YearsCheck) -> str:
+    """One short sentence with the exact numbers of a minimum-years check that falls short."""
+    asked = f"The job asks for {check.min_years:g}+ years"
+    if check.reliable:
+        return f"{asked}; your CV's dates add up to about {duration_text(check.cv_months)}."
+    return (
+        f"{asked}; your CV's dates show at least {duration_text(check.cv_months)}, "
+        "but some are incomplete."
+    )
 
 
 def likely_question(requirement: Requirement, job: JobPosting) -> str:

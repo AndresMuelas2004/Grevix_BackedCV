@@ -9,6 +9,7 @@ from langgraph.types import Send, interrupt
 
 from backedcv.domain.barriers import barriers_from_draft
 from backedcv.domain.builders import build_job, build_parsed_cv
+from backedcv.domain.dedupe import canonical_requirements
 from backedcv.domain.keywords import keyword_hits
 from backedcv.domain.models import CVLine, JobPosting, ParsedCV, PostingBanner
 from backedcv.domain.parse_checks import run_parse_checks
@@ -16,7 +17,7 @@ from backedcv.domain.recruiter_tips import recruiter_tips
 from backedcv.domain.redaction import numbered_rows
 from backedcv.domain.rules.absurd import flag_requirements
 from backedcv.domain.rules.posting import tool_sprawl_banner
-from backedcv.domain.text import fold_lower
+from backedcv.domain.text import fold_lower, normalize_text
 from backedcv.graph.recompute import recompute
 from backedcv.graph.state import AnalysisState, MatchTask
 from backedcv.llm.drafts import CVStructureDraft, JobExtractionDraft, MatchChunkDraft
@@ -132,7 +133,9 @@ def make_nodes(llm: StructuredLLM):
 
     async def prepare_job(state: AnalysisState) -> dict:
         _progress("prepare_job", "started")
-        posting = state["job_text"]
+        # Already canonical when it comes through the API; idempotent for any other caller
+        # (evals, tests), and written back so every later node reads the same text.
+        posting = normalize_text(state["job_text"])
         draft, usage = await llm.run(
             load_prompt("extract_job"),
             f"<job_posting>\n{posting}\n</job_posting>",
@@ -140,10 +143,13 @@ def make_nodes(llm: StructuredLLM):
             node="prepare_job",
         )
         job, notes = build_job(posting, draft)
+        # Units, importance from the posting's wording, duplicates merged, posting order.
+        job = canonical_requirements(job, posting)
         flags = flag_requirements(job)
         sprawl = tool_sprawl_banner(job)
         _progress("prepare_job", "done", requirements=len(job.requirements))
         return {
+            "job_text": posting,
             "job": job.model_dump(),
             "job_notes": notes,
             "flags": [f.model_dump() for f in flags],

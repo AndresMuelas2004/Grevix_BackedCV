@@ -18,6 +18,7 @@ from backedcv.api.projection import project
 from backedcv.api.rate_limit import count_model_run
 from backedcv.api.runs import Run, stream_graph
 from backedcv.domain.models import CandidateFacts
+from backedcv.domain.text import normalize_text
 from backedcv.graph.builder import run_config
 from backedcv.ingestion import read_cv, read_cv_text
 from backedcv.ingestion.reader import MAX_BYTES, ReadResult
@@ -42,8 +43,9 @@ async def analysis_input(
     cv_file: Annotated[UploadFile | None, File()] = None,
     facts: Annotated[str | None, Form()] = None,
 ) -> NewAnalysis:
-    """Runs before the stream opens, so bad input gets a proper 4xx JSON error."""
-    job_text = job_text.strip()
+    """Runs before the stream opens, so bad input gets a proper 4xx JSON error. The posting takes
+    its canonical form here, before anything reads it (the CV does in `ingestion`)."""
+    job_text = normalize_text(job_text)
     if len(job_text) < JOB_MIN_CHARS:
         raise ApiError(422, "job_too_short", "Paste the full job posting.")
     if len(job_text) > JOB_MAX_CHARS:

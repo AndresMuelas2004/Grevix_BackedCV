@@ -4,6 +4,7 @@ from dataclasses import dataclass
 from pathlib import PurePath
 
 from backedcv.domain.models import CVLine
+from backedcv.domain.text import normalize_text
 from backedcv.ingestion.docx_reader import read_docx
 from backedcv.ingestion.errors import IngestionError
 from backedcv.ingestion.lines import RawLine, number_lines
@@ -34,9 +35,10 @@ def read_cv(data: bytes, filename: str | None) -> ReadResult:
 
 
 def read_cv_text(text: str) -> ReadResult:
-    # A lone surrogate cannot be encoded as UTF-8: drop it; a valid pair becomes one character.
-    text = text.encode("utf-16", "surrogatepass").decode("utf-16", "ignore")
-    rows = [RawLine(text=row) for row in text.splitlines()]
+    # The canonical form first (it also drops lone surrogates, which UTF-8 cannot encode): the
+    # same CV pasted with other whitespace or invisible characters gets the same lines and IDs.
+    text = normalize_text(text)
+    rows = [RawLine(text=row) for row in text.split("\n")]
     return ReadResult(_finish(rows), "text", None, len(text.encode()))
 
 
@@ -59,6 +61,9 @@ def _detect_kind(data: bytes, filename: str | None) -> str:
 
 
 def _finish(rows: list[RawLine]) -> list[CVLine]:
+    # Text read from a PDF or DOCX takes the same canonical form as pasted text, row by row.
+    for row in rows:
+        row.text = normalize_text(row.text)
     lines = number_lines(rows)
     if not lines:
         raise IngestionError("cv_empty", "No text was found in this CV.")

@@ -16,7 +16,9 @@ Rewording the CV can raise coverage but not Fit. Coverage only checks that a ter
 
 ## Weights and points
 
-A requirement's weight is its category weight times its importance multiplier. The multiplier is 2 for required and 1 for preferred. Importance comes from the posting's wording, or from its section when the wording is silent.
+A requirement's base weight is its category weight times its importance multiplier. The multiplier is 2 for required and 1 for preferred. Importance comes from the posting's wording, or from its section when the wording is silent (see Same input, same score).
+
+**Units.** Each requirement belongs to the posting bullet or sentence its quote sits in: its unit. A unit weighs as its heaviest counted requirement, and the counted requirements of one unit share that weight equally. "Strong Python and SQL skills." weighs 6 whether it is read as one requirement (6) or as Python and SQL (3 each), so how finely a bullet is split cannot move Fit. A requirement with no unit (its quote is not in the posting, or an analysis made before units) is a unit of its own. Below, "weight" means this shared weight.
 
 | Category | Category weight | Required (x2) | Preferred (x1) | Counts for coverage |
 |---|---|---|---|---|
@@ -46,7 +48,18 @@ Excluded requirements do not count. They leave both the numerator and the denomi
 - Gates (work authorization, location, clearance, availability). They never score. A required gate still acts as a knockout in the verdict.
 - Requirements whose quote is not in the posting. They are dropped, unless the model gave them a knockout type or they are a gate.
 
-Each excluded requirement records why: `not_relevant`, `flagged_R1`, `flagged_R2`, `flagged_R1+R2` (both rules flag it) or `gate`.
+Each excluded requirement records why: `not_relevant`, `flagged_R1`, `flagged_R2`, `flagged_R1+R2` (both rules flag it) or `gate`. An excluded requirement also leaves its unit: the counted requirements left in that unit keep the unit's weight.
+
+## Same input, same score
+
+The same CV and the same posting always get the same requirements, score and verdict:
+- **Canonical text.** Both texts are normalized once, where they enter the app, before anything reads them: Unicode NFC; CRLF and CR become LF; zero-width characters, BOM, soft hyphens and other invisible format characters are dropped; tabs, NBSP and other Unicode spaces become one plain space; runs of spaces collapse; spaces at line ends go; three or more line breaks become two; blank lines at both ends go. Whitespace and invisible characters never change anything after that.
+- **Cache.** Model answers are cached by model, reasoning effort, prompt (ID, version and text), schema and the canonical input, so a re-run of the same pair gets the stored answers.
+- **Posting order and duplicates.** Code ties each requirement to its unit, sorts the requirements by where they sit in the posting and numbers them R01, R02... in that order. Two requirements of the same kind (a skill and the years asked of it count as one kind) with the same label or the same terms are merged into one, keeping the strictest importance and the most years asked.
+- **Importance from the posting.** Wording in the bullet decides first ("must", "required" make it required; "nice to have", "a plus", "bonus", "preferred", "ideally" make it preferred). Otherwise the section heading above it does (Requirements, Must have, Qualifications... make it required; Nice to have, Preferred, Bonus, Plus... make it preferred). A bullet with both kinds of wording, or no clear section, keeps the model's reading.
+- **Units** keep the split of a bullet from moving Fit (see Weights and points).
+
+The model itself cannot be pinned: gpt-6-luna with a reasoning effort accepts no temperature, and the API takes no seed. A fresh extraction can still read a posting differently; the rules above limit what that can change.
 
 ## Evidence rules
 
@@ -212,7 +225,7 @@ Banners are notes about the posting as a whole. They never change the score or t
 
 ## Worked example
 
-Four counted requirements, total weight 20:
+Four counted requirements from four different bullets (so four units), total weight 20:
 
 | Requirement | Type | Weight | Status | Share | Points won | Keyword match |
 |---|---|---|---|---|---|---|

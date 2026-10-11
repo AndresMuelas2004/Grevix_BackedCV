@@ -13,6 +13,7 @@ from pathlib import Path
 
 from pydantic import BaseModel
 
+from backedcv.domain.text import normalize_text
 from backedcv.llm.prompt_loader import Prompt
 
 log = logging.getLogger(__name__)
@@ -20,7 +21,8 @@ log = logging.getLogger(__name__)
 
 def answer_key(model: str, effort: str, prompt: Prompt, schema: type[BaseModel], data: str) -> str:
     """A SHA-256 over the model, the prompt (ID, version and text), the reasoning effort, the
-    schema name and the exact input the model receives."""
+    schema name and the input in its canonical form (`normalize_text`), which is also what the
+    model receives: inputs that differ only in whitespace or invisible characters share a key."""
     fields = {
         "model": model,
         "effort": effort,
@@ -28,7 +30,7 @@ def answer_key(model: str, effort: str, prompt: Prompt, schema: type[BaseModel],
         "prompt_version": prompt.version,
         "prompt_text": prompt.text,
         "schema": schema.__name__,
-        "input": data,
+        "input": normalize_text(data),
     }
     text = json.dumps(fields, sort_keys=True, ensure_ascii=False)
     return hashlib.sha256(text.encode("utf-8")).hexdigest()

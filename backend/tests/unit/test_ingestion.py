@@ -47,7 +47,7 @@ def test_pasted_text_drops_unpaired_surrogates():
     result = read_cv_text("Jane\ud800 Doe 😀\n\udc00\n")
 
     assert [line.text for line in result.lines] == ["Jane Doe \U0001f600"]
-    assert result.size == len("Jane Doe \U0001f600\n\n".encode())
+    assert result.size == len("Jane Doe \U0001f600".encode())  # the size of the canonical text
 
 
 def test_pdf_lines_in_reading_order_with_bold_headings(tmp_path):

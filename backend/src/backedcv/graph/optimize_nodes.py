@@ -1,5 +1,6 @@
 """Optimize-phase nodes: suggest rewrites, verify each one, then pause for the user's review."""
 
+import logging
 from collections.abc import Callable
 from typing import TypedDict
 
@@ -13,7 +14,7 @@ from backedcv.domain.corroboration import (
     recency_pass,
     refusals_from,
 )
-from backedcv.domain.guards import NEW_SKILLS, NEW_SUMMARY, apply_guards
+from backedcv.domain.guards import NEW_SKILLS, NEW_SUMMARY, apply_guards, keyword_only
 from backedcv.domain.models import (
     ClaimCheck,
     JobPosting,
@@ -38,6 +39,8 @@ from backedcv.llm.drafts_optimize import (
 )
 from backedcv.llm.prompt_loader import load_prompt
 from backedcv.llm.structured import StructuredLLM
+
+log = logging.getLogger(__name__)
 
 
 class VerifyTask(TypedDict):
@@ -103,6 +106,20 @@ def _suggest_target(d: SuggestionDraft, cv: ParsedCV) -> str:
             return section.id
     skills = next((s for s in cv.sections if s.type == "skills"), None)
     return skills.id if skills else NEW_SKILLS
+
+
+def _drop_padding(suggestions: list[Suggestion], job: JobPosting) -> list[Suggestion]:
+    """The model's suggestions without the ones that only pad their line with posting words or
+    filler, numbered S01, S02... in their order. Padding is backed by the CV, so it is dropped
+    rather than marked unsupported, and it never costs a verifier call."""
+    kept: list[Suggestion] = []
+    for s in suggestions:
+        reason = keyword_only(s, job)
+        if reason is None:
+            kept.append(s)
+        else:
+            log.info("suggest dropped a %s edit of %s: %s", s.kind, s.target, reason)
+    return [s.model_copy(update={"id": f"S{i:02d}"}) for i, s in enumerate(kept, start=1)]
 
 
 def _section_of(target: str, cv: ParsedCV) -> str:
@@ -182,7 +199,7 @@ def make_optimize_nodes(llm: StructuredLLM) -> dict[str, Callable]:
         except Exception as exc:  # suggestions are optional: the report stands without them
             _progress("suggest", "done", suggestions=0)
             return {"suggestions": [], "errors": [_error("suggest", exc)]}
-        suggestions = [
+        guarded = [
             apply_guards(
                 Suggestion(
                     id=f"S{i:02d}",
@@ -194,9 +211,10 @@ def make_optimize_nodes(llm: StructuredLLM) -> dict[str, Callable]:
                 ),
                 cv,
                 job,
-            ).model_dump()
+            )
             for i, d in enumerate(draft.suggestions, start=1)
         ]
+        suggestions = [s.model_dump() for s in _drop_padding(guarded, job)]
         _progress("suggest", "done", suggestions=len(suggestions))
         return {"suggestions": suggestions, "usage": [usage]}
 

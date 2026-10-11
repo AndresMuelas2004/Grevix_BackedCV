@@ -17,6 +17,7 @@ from backedcv.domain.models import (
     Requirement,
     RequirementAssessment,
 )
+from backedcv.domain.models.screening import clean_prose
 from backedcv.domain.text import fold, fold_lower, locate_quote
 
 RECENT_MAX_YEARS = 3.0
@@ -26,7 +27,13 @@ _Effect = Literal["none", "warning", "downgraded"]
 _CHECKED_STATUSES = frozenset({"met", "partial"})
 # General rules (no requirement named) reach only these required requirements.
 _GENERAL_CATEGORIES = frozenset({"hard_skill", "experience_years"})
+# Recency is about use: only job and project entries date a line. Degrees and certifications do
+# not expire, so requirements of these categories, or shown only by such lines, get no check.
+DATED_KINDS = frozenset({"job", "project"})
+_CREDENTIAL_CATEGORIES = frozenset({"education", "certification_license"})
+_CREDENTIAL_SECTIONS = frozenset({"education", "certifications"})
 _YEAR_MONTH = re.compile(r"\d{4}-(?:0[1-9]|1[0-2])")
+_YEAR_ONLY = re.compile(r"\d{4}")
 _SENTENCE_BREAK = re.compile(r"(?<=[.!?;])\s+|[\r\n•]+")
 _BULLET = re.compile(r"^[\s\-*>]+")
 _NUMBER_WORDS = ["one", "two", "three", "four", "five", "six", "seven", "eight", "nine", "ten"]
@@ -43,10 +50,11 @@ _GRADUATION = re.compile(r"\b(?:graduat\w*|degrees?|diplomas?)\b")
 
 
 def line_last_used(cv: ParsedCV, today: date) -> dict[str, str]:
-    """Line ID -> YYYY-MM of the newest dated entry it belongs to. Undated lines are absent."""
+    """Line ID -> YYYY-MM of the newest dated job or project entry it belongs to. Undated lines
+    and lines of education entries are absent: a degree's year says nothing about recent use."""
     last_used: dict[str, str] = {}
     for entry in cv.entries:
-        month = _entry_month(entry, today)
+        month = _entry_month(entry, today) if entry.kind in DATED_KINDS else None
         if month is None:
             continue
         for line_id in entry.line_ids:
@@ -54,12 +62,22 @@ def line_last_used(cv: ParsedCV, today: date) -> dict[str, str]:
     return last_used
 
 
+def credential_lines(cv: ParsedCV) -> set[str]:
+    """Lines of education entries and of education or certification sections."""
+    lines = {i for e in cv.entries if e.kind == "education" for i in e.line_ids}
+    lines.update(i for s in cv.sections if s.type in _CREDENTIAL_SECTIONS for i in s.line_ids)
+    return lines
+
+
 def _entry_month(entry: CVEntry, today: date) -> str | None:
-    """The entry's date: its end ("present" means today), or its start when it has no end."""
+    """The entry's date: its end ("present" means today), or its start when it has no end. A date
+    that shows only the year counts from its January, the older reading."""
     if entry.end and entry.end.strip().casefold() == "present":
         month = f"{today.year:04d}-{today.month:02d}"
     else:
         month = (entry.end or entry.start or "").strip()
+    if _YEAR_ONLY.fullmatch(month):
+        month = f"{month}-01"
     return month if _YEAR_MONTH.fullmatch(month) else None
 
 
@@ -145,15 +163,21 @@ def check_recency(
     today: date,
 ) -> dict[str, RecencyCheck]:
     """When the CV last shows each met or partial requirement, against the posting's windows.
-    Requirements whose evidence is not a CV line get no check."""
+    Requirements whose evidence is not a CV line get no check, and neither do degrees,
+    certifications and requirements shown only by education or certification lines."""
     last_used = line_last_used(cv, today)
+    credentials = credential_lines(cv)
     requirements = {req.id: req for req in job.requirements}
     checks: dict[str, RecencyCheck] = {}
     for rid, assessment in assessments.items():
-        refs = _line_refs(assessment)
-        if assessment.status not in _CHECKED_STATUSES or not refs:
-            continue
         req = requirements.get(rid)
+        if req is not None and req.category in _CREDENTIAL_CATEGORIES:
+            continue
+        refs = [ref for ref in _line_refs(assessment) if ref not in credentials]
+        # A minimum-years question (incomplete dates) keeps its lines: a window still applies.
+        asked_years = assessment.status == "unknown" and assessment.years_check is not None
+        if not (assessment.status in _CHECKED_STATUSES or asked_years) or not refs:
+            continue
         rule = _strictest_rule(rules, rid, req)
         newest = max((last_used[ref] for ref in refs if ref in last_used), default=None)
         years = None if newest is None else years_since(newest, today)
@@ -167,7 +191,7 @@ def check_recency(
             rule=rule,
             within_rule=None if rule is None or years is None else years <= rule.window_years,
             effect=_effect(rule, years),
-            explanation=_explain(req.label if req else rid, newest, years, rule),
+            explanation=_explain(clean_prose(req.label) if req else "", newest, years, rule),
         )
     return checks
 
@@ -202,15 +226,18 @@ def _effect(rule: RecencyRule | None, years: float | None) -> _Effect:
 
 
 def _explain(label: str, newest: str | None, years: float | None, rule: RecencyRule | None) -> str:
-    """One plain sentence: the requirement, the year of its newest evidence and the window."""
+    """One plain sentence: the requirement, the year of its newest evidence and the window. A
+    requirement without a label is named in words, never by its ID."""
+    evidence = f"Your {label} evidence" if label else "The evidence for this requirement"
     if newest is None or years is None:
         if rule is None:
-            return f"Your {label} evidence has no dates, so its recency cannot be checked."
+            return f"{evidence} has no dates, so its recency cannot be checked."
         return (
-            f"Your {label} evidence has no dates, so it cannot be shown to be within the last "
+            f"{evidence} has no dates, so it cannot be shown to be within the last "
             f"{_years_text(rule.window_years)}."
         )
-    base = f"Your most recent {label} evidence is from {newest[:4]} ({_ago(years)})"
+    recent = f"Your most recent {label} evidence" if label else "The newest evidence for this"
+    base = f"{recent} is from {newest[:4]} ({_ago(years)})"
     if rule is not None:
         return f"{base}; the posting asks for it within the last {_years_text(rule.window_years)}."
     if band_for(years) == "stale":
@@ -235,7 +262,8 @@ def apply_recency(
     for rid, assessment in assessments.items():
         check = checks.get(rid)
         if check is not None and check.effect == "downgraded":
-            update = {"status": "missing", "rationale": check.explanation}
+            # Settled by the posting's window: no question is left to ask.
+            update = {"status": "missing", "rationale": check.explanation, "question": None}
             result[rid] = assessment.model_copy(update=update, deep=True)
         else:
             result[rid] = assessment.model_copy(deep=True)

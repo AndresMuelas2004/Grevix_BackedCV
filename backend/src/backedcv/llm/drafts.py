@@ -130,7 +130,10 @@ class AssessmentDraft(BaseModel):
         "Empty when missing or unknown."
     )
     match_type: Literal["exact", "alias", "semantic", "inferred"] | None
-    rationale: str = Field(description="At most 25 words. Explain semantic matches.")
+    rationale: str = Field(
+        description="One short plain sentence, at most 20 words, no jargon and no IDs. "
+        "Explain semantic matches."
+    )
 
 
 class MatchChunkDraft(BaseModel):

@@ -50,9 +50,8 @@ def _bullets_without_numbers(cv: ParsedCV) -> list[ParseWarning]:
             code="tip_bullets_without_numbers",
             severity="info",
             message=(
-                f"Only {len(numbered)} of your {len(bullets)} experience lines have a number. "
-                "Add figures such as percentages, team sizes or money saved to at least five "
-                "bullets."
+                f"Only {len(numbered)} of your {len(bullets)} experience lines have a number; "
+                "add figures such as percentages, team sizes or money saved."
             ),
             line_ids=missing,
         )
@@ -67,7 +66,7 @@ def _word_count(cv: ParsedCV) -> list[ParseWarning]:
                 code="tip_word_count",
                 severity="info",
                 message=(
-                    f"Your CV has {words} words. Aim for at least {MIN_WORDS} so recruiters "
+                    f"Your CV has {words} words; aim for at least {MIN_WORDS} so recruiters "
                     "see enough of your experience."
                 ),
             )
@@ -78,8 +77,8 @@ def _word_count(cv: ParsedCV) -> list[ParseWarning]:
                 code="tip_word_count",
                 severity="info",
                 message=(
-                    f"Your CV has {words} words for about {cv.total_years:g} years of experience. "
-                    f"Aim for {MAX_WORDS} words or fewer so the key points stand out."
+                    f"Your CV has {words} words for about {cv.total_years:g} years of experience; "
+                    f"aim for {MAX_WORDS} or fewer."
                 ),
             )
         ]
@@ -95,8 +94,8 @@ def _long_lines(cv: ParsedCV) -> list[ParseWarning]:
             code="tip_long_paragraph",
             severity="info",
             message=(
-                f"Some lines run past {LONG_LINE_WORDS} words. Recruiters skim, so split long "
-                "paragraphs into short bullets."
+                f"Some lines run past {LONG_LINE_WORDS} words; split long paragraphs into short "
+                "bullets."
             ),
             line_ids=ids,
         )

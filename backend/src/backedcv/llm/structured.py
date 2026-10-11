@@ -7,6 +7,7 @@ from langchain_openai import ChatOpenAI
 from pydantic import BaseModel, ValidationError
 
 from backedcv.config import load
+from backedcv.domain.text import normalize_text
 from backedcv.llm.cache import LLMCache, answer_key
 from backedcv.llm.prompt_loader import Prompt
 from backedcv.settings import Settings
@@ -54,6 +55,10 @@ class OpenAIStructuredLLM:
         return load("models").get("effort", {}).get(prompt_id, "low")
 
     def _chat(self, tier: str, prompt_id: str) -> ChatOpenAI:
+        # No temperature and no seed on purpose. Checked live on 2026-10-11: gpt-6-luna with a
+        # reasoning effort answers "Unsupported parameter: 'temperature' is not supported with
+        # this model", and the Responses API has no seed parameter. Stability comes from the
+        # canonical input, the answer cache, the extraction rules and the code after the model.
         return ChatOpenAI(
             model=self._model_name(tier),
             use_responses_api=True,
@@ -63,6 +68,9 @@ class OpenAIStructuredLLM:
         )
 
     async def run(self, prompt: Prompt, data: str, schema: type[T], *, node: str) -> tuple[T, dict]:
+        # The model gets the canonical input the cache key is computed on (idempotent: the CV
+        # and the posting are already normalized where they enter the app).
+        data = normalize_text(data)
         if self.cache is None:
             return await self._ask(prompt, data, schema, node=node)
         model = self._model_name(prompt.tier)

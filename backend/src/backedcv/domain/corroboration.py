@@ -20,6 +20,7 @@ from backedcv.domain.models import (
     RiskLevel,
     Suggestion,
 )
+from backedcv.domain.models.screening import join_sentences, short_sentence
 
 STALE_AFTER_YEARS = 6.0  # the "stale" recency band, kept local on purpose
 PASS_ORDER = ("backed", "recent_enough", "not_blocked")  # the order the gate runs the passes in
@@ -211,12 +212,15 @@ def _stale_reason(label: str, check: RecencyCheck) -> str:
 
 
 def _blocked_reason(blocking: list[HiddenRisk]) -> str:
-    """The refusal sentence for a hidden barrier, written from the risks' own words."""
-    why = " ".join(dict.fromkeys(r.explanation for r in blocking if r.explanation))
+    """The refusal for a hidden barrier, written from the first risk's own words: short
+    sentences, no raw IDs, each ending with a full stop."""
+    why = next((short_sentence(r.explanation) for r in blocking if r.explanation.strip()), "")
     advice = "A CV edit cannot fix this."
     if any(r.question and not r.confirmed for r in blocking):
         advice = "A CV edit cannot fix this; answer the question instead."
-    return f"Not viable: {why or 'a hidden barrier in the posting rules this out.'} {advice}"
+    return "Not viable: " + join_sentences(
+        why or "a hidden barrier in the posting rules this out", advice
+    )
 
 
 def _conflict_refs(blocking: list[HiddenRisk], assessment: RequirementAssessment) -> list[str]:

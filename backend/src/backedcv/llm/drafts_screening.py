@@ -32,11 +32,14 @@ class BarrierDraft(BaseModel):
         "or affects. Empty when none."
     )
     explanation: str = Field(
-        description="One plain sentence: why a screener may silently reject the candidate."
+        description="One plain sentence, 20 words at most, no IDs: why a screener may silently "
+        "reject the candidate."
     )
-    action: str = Field(description="One plain sentence: what the candidate can do about it.")
+    action: str = Field(
+        description="One plain sentence, 20 words at most, no IDs: what the candidate can do."
+    )
     question: str | None = Field(
-        description="A yes/no question the candidate can answer, for work_authorization, location, "
+        description="A short yes/no question without IDs, for work_authorization, location, "
         "graduation_window, language, clearance and availability. Null for recency and other."
     )
 

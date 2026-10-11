@@ -23,6 +23,7 @@ from backedcv.domain.models import (
     RiskLevel,
     ScreeningFlag,
 )
+from backedcv.domain.models.screening import clean_prose, short_sentence
 from backedcv.domain.text import fold, fold_lower, locate_quote
 from backedcv.llm.drafts_screening import HiddenBarriersDraft
 
@@ -121,6 +122,7 @@ def barriers_from_draft(
     """Model barriers that hold up: the quote is in the posting (its span is kept), and only
     known requirement IDs stay. At most MAX_ITEMS items are kept."""
     known = {req.id for req in job.requirements}
+    labels = {req.id: req.label for req in job.requirements}
     items: list[BarrierItem] = []
     for row in draft.items:
         quote = locate_quote(_BULLET.sub("", row.quote), job_text)
@@ -140,9 +142,11 @@ def barriers_from_draft(
                     place=_place_in_text(row.place, job_text),
                     window_years=window,
                     requirement_ids=ids,
-                    explanation=row.explanation.strip(),
-                    action=row.action.strip(),
-                    question=_clean(row.question),
+                    # The model's sentences: no IDs (labels replace requirement IDs), one short
+                    # sentence each.
+                    explanation=short_sentence(clean_prose(row.explanation, labels)),
+                    action=short_sentence(clean_prose(row.action, labels)),
+                    question=_clean(short_sentence(clean_prose(row.question, labels))),
                     source="model",
                 )
             )
@@ -207,8 +211,9 @@ def merge_barriers(
     job: JobPosting,
 ) -> list[BarrierItem]:
     """Model items first, then the code rules they do not repeat, then the recency rules. A rule
-    joins an item of its kind whose quote overlaps it. Every item lists each requirement whose quote
-    overlaps its own. IDs run H01... in that order."""
+    joins an item of its kind whose quote overlaps it. An eligibility item that asks the question
+    an earlier one asks joins it too: one question per fact. Every item lists each requirement
+    whose quote overlaps its own. IDs run H01... in that order."""
     merged = [item.model_copy() for item in model_items]
     for rule in rule_items:
         if not any(item.kind == rule.kind and _overlaps(item.quote, rule.quote) for item in merged):
@@ -227,9 +232,20 @@ def merge_barriers(
         else:
             twin.window_years = recency_rule.window_years
             twin.requirement_ids = _union(twin.requirement_ids, recency_rule.requirement_ids)
+    kept: list[BarrierItem] = []
+    asking: dict[str, BarrierItem] = {}  # question key -> the item that asks it
+    for item in merged:
+        key = _question_key(item, job.location)
+        first = asking.setdefault(key, item) if key else item
+        if first is item:
+            kept.append(item)
+        else:
+            first.requirement_ids = _union(
+                first.requirement_ids, item.requirement_ids, _overlapping(item.quote, job)
+            )
     return [
         _linked(item, job).model_copy(update={"id": _barrier_id(index)})
-        for index, item in enumerate(merged)
+        for index, item in enumerate(kept)
     ]
 
 
@@ -248,8 +264,42 @@ def _recency_item(rule: RecencyRule) -> BarrierItem:
 
 
 def _linked(item: BarrierItem, job: JobPosting) -> BarrierItem:
-    overlapping = [req.id for req in job.requirements if _overlaps(item.quote, req.quote)]
-    return item.model_copy(update={"requirement_ids": _union(item.requirement_ids, overlapping)})
+    """The item lists every requirement whose quote overlaps its own, and the gate requirement
+    that asks about the same fact (see _same_fact). Its sentences carry no raw IDs."""
+    ids = _union(item.requirement_ids, _overlapping(item.quote, job))
+    twin = _same_fact(item, ids, job)
+    labels = {req.id: req.label for req in job.requirements}
+    return item.model_copy(
+        update={
+            "requirement_ids": _union(ids, [twin] if twin else []),
+            "explanation": clean_prose(item.explanation, labels),
+            "action": clean_prose(item.action, labels),
+            "question": _clean(clean_prose(item.question, labels)),
+        }
+    )
+
+
+def _overlapping(quote: str, job: JobPosting) -> list[str]:
+    return [req.id for req in job.requirements if _overlaps(quote, req.quote)]
+
+
+def _same_fact(item: BarrierItem, ids: list[str], job: JobPosting) -> str | None:
+    """The gate requirement (one with a knockout type) that asks the same question as an
+    eligibility barrier, so one answer settles both: same kind, and the place the barrier names
+    is in that requirement's words or is the job's location. A barrier without a place matches
+    the only gate requirement of its kind. None when the barrier already lists a gate."""
+    gates = [req for req in job.requirements if req.knockout_type is not None]
+    if item.kind not in ELIGIBILITY_KINDS or any(req.id in ids for req in gates):
+        return None
+    same_kind = [req for req in gates if req.knockout_type == item.kind]
+    if not item.place:
+        return same_kind[0].id if len(same_kind) == 1 else None
+    for req in same_kind:
+        if _covers(item.place, f"{req.label} {req.quote}"):
+            return req.id
+    if len(same_kind) == 1 and job.location and _covers(item.place, job.location):
+        return same_kind[0].id
+    return None
 
 
 # 4. Risks: each barrier against the CV and the answers ------------------------------------
@@ -383,11 +433,9 @@ def _recency_risk(barrier: BarrierItem, recency: dict[str, RecencyCheck]) -> Hid
     worst = [check for check in checks if check.effect == effect]
     why = next((check.explanation for check in worst if check.explanation), "")
     refs = _union(*(check.evidence_refs for check in worst))
+    # One short sentence: the check's own, which names the year and the window.
     return _risk(
-        barrier,
-        EFFECT_LEVEL[effect],
-        explanation=f"{barrier.explanation} {why}".strip(),
-        cv_refs=refs,
+        barrier, EFFECT_LEVEL[effect], explanation=why or barrier.explanation, cv_refs=refs
     )
 
 
@@ -417,13 +465,10 @@ def _composite(risks: list[HiddenRisk], tied: set[str]) -> HiddenRisk | None:
         kind="composite",
         risk="high",
         explanation=(
-            "Several open barriers in this posting may add up to a silent rejection, even if "
-            "none of them rules you out alone."
+            "Several open barriers here may add up to a silent rejection, even if none rules "
+            "you out alone."
         ),
-        action=(
-            "Answer the yes/no questions below. This risk goes away when fewer than two open "
-            "barriers remain."
-        ),
+        action="Answer the yes/no questions; this risk goes away when fewer than two stay open.",
         requirement_ids=_union(*(risk.requirement_ids for risk in open_mediums)),
         component_ids=[risk.id for risk in open_mediums],
     )
@@ -461,6 +506,17 @@ def _question(barrier: BarrierItem, job_location: str | None) -> str | None:
     return barrier.question or _default_question(barrier.kind, barrier.place, job_location)
 
 
+def _question_key(barrier: BarrierItem, job_location: str | None) -> str | None:
+    """What a barrier's question is about: its kind and place when it names one, else the
+    question's own words. Two barriers with the same key ask one question."""
+    question = _question(barrier, job_location)
+    if question is None:
+        return None
+    if barrier.place:
+        return f"{barrier.kind}|{_names_for(barrier.place)[0]}"
+    return f"{barrier.kind}|{' '.join(re.findall(r'\w+', fold_lower(question)))}"
+
+
 # 5. Flags: looks met, but... ---------------------------------------------------------------
 
 
@@ -477,7 +533,7 @@ def screening_flags(
     flags: list[ScreeningFlag] = []
     for req in job.requirements:
         before = original_assessments.get(req.id)
-        if before is None or not (before.status in ("met", "partial") or before.keyword_present):
+        if before is None or not _looks_met(before):
             continue
         reasons: list[str] = []
         levels: list[RiskLevel] = []
@@ -509,6 +565,18 @@ def screening_flags(
                 )
             )
     return flags
+
+
+def _looks_met(assessment: RequirementAssessment) -> bool:
+    """Met or partial, its keyword is in the CV, or CV lines show it while incomplete dates turned
+    its minimum years into a question."""
+    if assessment.status in ("met", "partial") or assessment.keyword_present:
+        return True
+    return (
+        assessment.status == "unknown"
+        and assessment.years_check is not None
+        and any(e.ref.startswith("L") for e in assessment.evidence)
+    )
 
 
 # Shared helpers ----------------------------------------------------------------------------
@@ -582,44 +650,23 @@ def _default_explanation(kind: BarrierKind, place: str | None, window: float | N
     """Why a screener may silently reject the candidate, in plain words."""
     match kind:
         case "work_authorization":
-            where = f"in {_the(place)}" if place else "in this country"
-            return (
-                "A screener may drop you without a reply if you do not already have the right "
-                f"to work {where} without sponsorship."
-            )
+            where = f"in {_the(place)}" if place else "here"
+            return f"You may be dropped without a reply if you lack the right to work {where}."
         case "location":
-            near = f"near {_the(place)}" if place else "near the place this job asks for"
-            return (
-                f"A screener may drop you without a reply if you do not live {near} "
-                "and cannot move there."
-            )
+            near = f"near {_the(place)}" if place else "where this job is"
+            return f"You may be dropped without a reply if you cannot live or work {near}."
         case "recency":
-            span = f"the {window:g}-year window" if window else "the window"
-            return (
-                "A screener may drop you without a reply if your experience is older than "
-                f"{span} this job asks for."
-            )
+            span = f"the last {window:g} years" if window else "the period it asks for"
+            return f"You may be dropped without a reply if your experience is older than {span}."
         case "graduation_window":
-            return (
-                "A screener may drop you without a reply if you graduated outside the period "
-                "this job asks for."
-            )
+            return "You may be dropped without a reply if you graduated outside the asked period."
         case "language":
-            return (
-                "A screener may drop you without a reply if your language level is below the "
-                "one this job asks for."
-            )
+            return "You may be dropped without a reply if your language level is too low."
         case "clearance":
-            return (
-                "A screener may drop you without a reply if you do not hold the clearance or "
-                "background check this job needs."
-            )
+            return "You may be dropped without a reply if you lack the clearance this job needs."
         case "availability":
-            return (
-                "A screener may drop you without a reply if you cannot meet the start date, "
-                "shifts or travel this job needs."
-            )
-    return "A screener may drop you without a reply on this point, even when your CV matches."
+            return "You may be dropped without a reply if you cannot meet its schedule or travel."
+    return "You may be dropped without a reply on this point, even when your CV matches."
 
 
 def _default_question(kind: BarrierKind, place: str | None, job_location: str | None) -> str:
