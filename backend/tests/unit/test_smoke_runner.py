@@ -27,6 +27,7 @@ from evals.run_smoke import (
 LICENSE = "Active, unencumbered state Registered Nurse (RN) license in Ohio."
 SPANISH = "Spanish is preferred: many of our patients and their families speak Spanish at home."
 LANGGRAPH = "5+ years of hands-on experience with LangGraph"
+LANGCHAIN = "Hands-on experience with LangChain."
 AUTHORIZATION = "Must be authorized to work in the United States without visa sponsorship."
 
 
@@ -66,7 +67,9 @@ def _report(
     return project("analysis-test", snapshot)
 
 
-def _curated(*, r1=True, r2=True, banner=True, warning=True, question=True) -> dict:
+def _curated(
+    *, r1=True, r2=True, banner=True, warning=True, question=True, tools="partial"
+) -> dict:
     flags = []
     if r1:
         flags.append(RequirementFlag(rule_id="R1", requirement_ids=["R01"], explanation="Entry."))
@@ -84,8 +87,9 @@ def _curated(*, r1=True, r2=True, banner=True, warning=True, question=True) -> d
                 category="work_authorization",
                 knockout_type="work_authorization",
             ),
+            _req("R03", LANGCHAIN, LANGCHAIN, category="hard_skill"),
         ],
-        assessments=[_assessment("R01"), auth],
+        assessments=[_assessment("R01", tools), auth, _assessment("R03", tools)],
         flags=flags,
         banners=[PostingBanner(rule_id="R3", explanation="Many hard skills.")] if banner else [],
         warnings=[ParseWarning(code="multi_column", severity="warning", message="Two columns.")]
@@ -159,6 +163,22 @@ def test_a_failed_flag_names_the_flags_it_did_find():
     assert failed.reason == "no R2 flag (flags: R1)"
 
 
+@pytest.mark.parametrize("tools", ["partial", "met"])
+def test_langchain_and_langgraph_pass_when_partial_or_met(tools):
+    checks = check_expectations(_expect("curated-two-column"), _curated(tools=tools))
+
+    assert _failed(checks) == []
+
+
+def test_langchain_and_langgraph_fail_when_the_cv_shows_them_missing():
+    checks = check_expectations(_expect("curated-two-column"), _curated(tools="missing"))
+
+    assert _failed(checks) == [
+        "requirement contains=LangChain, status=partial or met",
+        "requirement contains=LangGraph, status=partial or met",
+    ]
+
+
 def test_simple_sample_needs_the_r1_flag_on_langgraph():
     requirements = [_req("R01", "Strong Python", "Strong Python skills.", category="hard_skill")]
     flags = [RequirementFlag(rule_id="R1", requirement_ids=["R01"], explanation="Entry.")]
@@ -207,6 +227,8 @@ def test_an_analysis_that_has_not_paused_fails_first():
         {"flagz": []},
         {"requirements": [{"containz": "license"}]},
         {"requirements": [{"status": "maybe"}]},
+        {"requirements": [{"status": ["partial", "maybe"]}]},
+        {"requirements": [{"status": []}]},
         {"requirements": [{"screening_question": "yes"}]},
         {"flags": [{"rule": "R9"}]},
         {"banners": ["R1"]},

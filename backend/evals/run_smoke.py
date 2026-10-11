@@ -106,6 +106,16 @@ def load_pairs(path: Path = PAIRS_PATH) -> list[Pair]:
     return pairs
 
 
+def _options(want) -> list:
+    """One value, or a list: the requirement may match any of them."""
+    return want if isinstance(want, list) else [want]
+
+
+def _valid_options(want, allowed: tuple) -> bool:
+    options = _options(want)
+    return bool(options) and all(option in allowed for option in options)
+
+
 def validate_expect(expect: dict[str, Any]) -> None:
     """Rejects a misspelled key or value up front, so it cannot quietly check nothing."""
     unknown = set(expect) - EXPECT_KEYS
@@ -115,8 +125,10 @@ def validate_expect(expect: dict[str, Any]) -> None:
         if not selector or set(selector) - SELECTOR_KEYS:
             raise ValueError(f"bad requirement {selector}: use keys from {sorted(SELECTOR_KEYS)}")
         for key, allowed in SELECTOR_VALUES.items():
-            if key in selector and selector[key] not in allowed:
-                raise ValueError(f"{key} must be one of {allowed}, got {selector[key]!r}")
+            if key in selector and not _valid_options(selector[key], allowed):
+                raise ValueError(
+                    f"{key} must be one of {allowed} (or a list of them), got {selector[key]!r}"
+                )
         if "screening_question" in selector and not isinstance(
             selector["screening_question"], bool
         ):
@@ -214,8 +226,13 @@ def _brief(req: dict, assessment: dict | None) -> str:
 
 
 def _describe(selector: dict) -> str:
-    shown = {k: str(v).lower() if isinstance(v, bool) else v for k, v in selector.items()}
-    return ", ".join(f"{k}={v}" for k, v in shown.items())
+    return ", ".join(f"{key}={_shown(want)}" for key, want in selector.items())
+
+
+def _shown(want) -> str:
+    if isinstance(want, list):
+        return " or ".join(want)
+    return str(want).lower() if isinstance(want, bool) else str(want)
 
 
 def _matches(selector: dict, req: dict, assessment: dict | None) -> bool:
@@ -223,9 +240,9 @@ def _matches(selector: dict, req: dict, assessment: dict | None) -> bool:
     asked = bool(assessment and assessment.get("question"))
     tests = {
         "contains": lambda want: fold_lower(want) in _text(req),
-        "importance": lambda want: req.get("importance") == want,
-        "knockout_type": lambda want: req.get("knockout_type") == want,
-        "status": lambda want: status == want,
+        "importance": lambda want: req.get("importance") in _options(want),
+        "knockout_type": lambda want: req.get("knockout_type") in _options(want),
+        "status": lambda want: status in _options(want),
         "screening_question": lambda want: asked == want,
     }
     return all(tests[key](want) for key, want in selector.items())

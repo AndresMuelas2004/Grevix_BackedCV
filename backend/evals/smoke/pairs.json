@@ -5,7 +5,11 @@
     "cv": "samples/curated/cv.pdf",
     "job": "samples/curated/job.txt",
     "expect": {
-      "requirements": [{"knockout_type": "work_authorization", "screening_question": true}],
+      "requirements": [
+        {"knockout_type": "work_authorization", "screening_question": true},
+        {"contains": "LangChain", "status": ["partial", "met"]},
+        {"contains": "LangGraph", "status": ["partial", "met"]}
+      ],
       "flags": [{"rule": "R1"}, {"rule": "R2"}],
       "banners": ["R3"],
       "parse_warnings": ["multi_column"]
