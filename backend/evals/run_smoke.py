@@ -505,7 +505,7 @@ def main(argv: list[str] | None = None) -> int:
     asyncio.run(run_all(runs, graph))
     args.results_dir.mkdir(parents=True, exist_ok=True)
     report = args.results_dir / f"smoke-{started:%Y%m%d-%H%M}.md"
-    report.write_text(render_report(runs, started), encoding="utf-8")
+    report.write_text(render_report(runs, started), encoding="utf-8", newline="\n")
     print("\n".join(summary_lines(runs, report)))
     if args.langsmith:
         _record_in_langsmith(runs)

@@ -454,7 +454,7 @@ def main(argv: list[str] | None = None) -> int:
     run = run_checks(cases, load_cv(), load_job(), live=args.live)
     args.results_dir.mkdir(parents=True, exist_ok=True)
     report = args.results_dir / f"fabrication-{run.mode}-{started:%Y%m%d-%H%M}.md"
-    report.write_text(render_report(run, started), encoding="utf-8")
+    report.write_text(render_report(run, started), encoding="utf-8", newline="\n")
     print("\n".join(summary_lines(run, report)))
     if args.langsmith:
         _record_in_langsmith(run)
