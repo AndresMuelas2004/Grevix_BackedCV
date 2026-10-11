@@ -15,6 +15,15 @@ from backedcv.domain.models.cv import (
     ParsedCV,
     ParseWarning,
 )
+from backedcv.domain.models.document import (
+    BuildReport,
+    CVDocument,
+    DiffLine,
+    DocContact,
+    DocItem,
+    DocLine,
+    DocSection,
+)
 from backedcv.domain.models.job import (
     Category,
     Importance,
@@ -25,8 +34,29 @@ from backedcv.domain.models.job import (
     RequirementFlag,
 )
 from backedcv.domain.models.score import Contribution, ScoreBreakdown, Verdict, VerdictReason
+from backedcv.domain.models.suggestion import (
+    ClaimCheck,
+    GuardResult,
+    ReviewDecisions,
+    Suggestion,
+    SuggestionKind,
+    Verification,
+)
 
 __all__ = [
+    "BuildReport",
+    "CVDocument",
+    "ClaimCheck",
+    "DiffLine",
+    "DocContact",
+    "DocItem",
+    "DocLine",
+    "DocSection",
+    "GuardResult",
+    "ReviewDecisions",
+    "Suggestion",
+    "SuggestionKind",
+    "Verification",
     "CVEntry",
     "CVLine",
     "CVSection",
