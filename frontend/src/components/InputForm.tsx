@@ -343,10 +343,17 @@ export default function InputForm({ draft, onChange, onSubmit }: InputFormProps)
         )}
       </section>
 
-      <div className="form-actions">
-        <button type="submit" className="btn btn-primary">
-          Check this job
-        </button>
+      <div className="form-footer">
+        <p className="privacy-note">
+          Privacy: contact details (email, phone, links) are replaced before any AI call, uploaded
+          files are not stored, and analyses are deleted after 24 hours. In this public demo, please
+          use the samples or a CV with fictional details.
+        </p>
+        <div className="form-actions">
+          <button type="submit" className="btn btn-primary">
+            Check this job
+          </button>
+        </div>
       </div>
     </form>
   )
