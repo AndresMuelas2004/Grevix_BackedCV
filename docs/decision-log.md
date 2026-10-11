@@ -54,3 +54,15 @@ What I decided, what I rejected and why. Times are Madrid time (CEST). The Chall
 - **For ordinary requirements, "unknown" becomes "missing".** In the first real run the model answered "unknown" for skills the CV never mentions. The CV is the only evidence a recruiter sees, so silence means missing. Knockouts are the exception: they stay "unknown" until the user answers the question.
 - **The cheapest model for every call while building**, to keep the whole event inside a small API budget. One full analysis costs a fraction of a cent.
 - **Contracts first:** I defined the suggestion and document models before writing the guards, the document assembly and the renderers, so those pieces share one contract.
+- **Every knockout question can be answered yes or no.** Some knockout types (degree, clearance, availability) had no way to be resolved, so the verdict could stay "answer the questions first" forever. A per-requirement answer fixes that; CV evidence still wins over an answer.
+- **R2 can flag a requirement that R1 already flags.** "5+ years of LangGraph" in a junior role is both too senior for the level and older than the technology; showing both reasons is more useful than hiding one.
+- **The posting review runs beside the matching, not before it.** The R4 review needs the extracted requirements but not the matching, so it runs in parallel and adds no waiting time.
+
+## 2026-10-11, testing the full flow with real runs (night)
+
+- **I read PDFs as logical lines, not physical ones.** A real run on a two-column CV showed wrapped bullets turning into fragments, and a rewrite of the first fragment left the rest behind as a duplicate bullet. Bullets and paragraphs are now rebuilt before anything else sees them; short list items stay separate.
+- **I measured the no-invention promise and fixed what the measurement found.** On 40 synthetic cases the verifier sometimes let through a rewrite that attached the total years of experience to one role. A language model is not reliable at that arithmetic, so I added a deterministic guard: a computed total can only be used as a total. Latest run: 20 of 20 fabricated rewrites blocked, 19 of 20 faithful ones accepted. The verifier is not deterministic, so I keep every run's report.
+- **Identical model calls are replayed from a local cache.** Re-running the sample gives the same numbers at no cost, which matters for a demo and for anyone trying the repository.
+- **Limits before launch:** per-IP and daily caps on model-using requests, and production traces hide inputs and outputs.
+- **Every verdict explains itself:** the Fit against the band's threshold and the top missing required items, in whole numbers that match the screen.
+- **Compound requirements are split** ("PostgreSQL and Snowflake" becomes two), so one matching word cannot inflate keyword coverage.
