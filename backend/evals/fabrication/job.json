@@ -1,0 +1,16 @@
+{
+  "title": "Junior LLM Application Engineer",
+  "company": "Vantarix Labs",
+  "requirements": [
+    {"id": "R01", "label": "Python", "terms": ["Python"]},
+    {"id": "R02", "label": "SQL and PostgreSQL", "terms": ["SQL", "PostgreSQL", "relational database"]},
+    {"id": "R03", "label": "LLM application development", "terms": ["LLM", "LLM application", "large language model", "LLM-powered"]},
+    {"id": "R04", "label": "Agent frameworks", "terms": ["LangGraph", "LangChain", "agent framework", "agents"]},
+    {"id": "R05", "label": "Model APIs", "terms": ["OpenAI API", "Anthropic API", "model API"]},
+    {"id": "R06", "label": "Data pipelines and ETL", "terms": ["data pipeline", "ETL", "data ingestion"]},
+    {"id": "R07", "label": "Docker and containers", "terms": ["Docker", "containers", "containerization"]},
+    {"id": "R08", "label": "LLM evaluation and tracing", "terms": ["LLM evaluation", "LangSmith", "Langfuse", "tracing"]},
+    {"id": "R09", "label": "Communication with non-technical stakeholders", "terms": ["stakeholders", "communication", "cross-functional"]},
+    {"id": "R10", "label": "Degree in computer science or a related field", "terms": ["computer science", "bachelor", "degree"]}
+  ]
+}

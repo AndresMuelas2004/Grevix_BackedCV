@@ -1,0 +1,50 @@
+{
+  "lines": [
+    {"id": "L001", "text": "Elena Varga"},
+    {"id": "L002", "text": "Valencia, Spain | elena.varga@example.com | +1 555 0187"},
+    {"id": "L003", "text": "SUMMARY"},
+    {"id": "L004", "text": "Data engineer who builds data pipelines and small LLM-powered tools for retail and logistics teams."},
+    {"id": "L005", "text": "Strongest in Python and SQL, and in turning messy data into reports people trust."},
+    {"id": "L006", "text": "EXPERIENCE"},
+    {"id": "L007", "text": "Data Engineer, Pellmark Retail Group, Valencia"},
+    {"id": "L008", "text": "Mar 2025 - Present"},
+    {"id": "L009", "text": "Built and maintain Python ETL jobs that load 2 million rows a day into PostgreSQL."},
+    {"id": "L010", "text": "Cut the nightly sales report from 4 hours to 50 minutes by rewriting slow SQL queries."},
+    {"id": "L011", "text": "Added data quality checks that flag missing store IDs and cut duplicate stock records by 25%."},
+    {"id": "L012", "text": "Presented monthly stock findings to store managers and the operations lead."},
+    {"id": "L013", "text": "Containerized three internal services with Docker and wrote the deploy notes for the team."},
+    {"id": "L014", "text": "Data Analyst Intern, Torvane Logistics, Valencia"},
+    {"id": "L015", "text": "Jul 2024 - Feb 2025"},
+    {"id": "L016", "text": "Built an automated SQL report that saved the operations team 6 hours a week of manual work."},
+    {"id": "L017", "text": "Cleaned and joined shipment data from three legacy systems with pandas."},
+    {"id": "L018", "text": "Helped a team of 5 planners test a delivery-delay forecast on 18 months of history."},
+    {"id": "L019", "text": "Software Developer Intern, Ferrowick Works, Valencia"},
+    {"id": "L020", "text": "Jun 2023 - Jun 2024"},
+    {"id": "L021", "text": "Helped maintain a Django and PostgreSQL booking app used by about 300 customers."},
+    {"id": "L022", "text": "Fixed around 40 bugs from the support backlog."},
+    {"id": "L023", "text": "Wrote pytest unit tests for the booking flow, raising coverage from 35% to 70%."},
+    {"id": "L024", "text": "PROJECTS"},
+    {"id": "L025", "text": "Support triage assistant: a LangGraph agent that drafts replies to customer emails with the OpenAI API."},
+    {"id": "L026", "text": "Bike-share demand model: a pandas and scikit-learn notebook that forecasts hourly rentals."},
+    {"id": "L027", "text": "EDUCATION"},
+    {"id": "L028", "text": "BSc Computer Science, Example University, Valencia, 2023"},
+    {"id": "L029", "text": "Final-year project: benchmarking PostgreSQL indexes on retail sales data."},
+    {"id": "L030", "text": "SKILLS"},
+    {"id": "L031", "text": "Python, SQL, PostgreSQL, pandas, Django, Git, pytest"},
+    {"id": "L032", "text": "ETL design, data quality checks, reporting automation"},
+    {"id": "L033", "text": "LANGUAGES"},
+    {"id": "L034", "text": "Spanish (native), English (C1)"}
+  ],
+  "facts": [
+    {"id": "F01", "text": "Total professional experience: 3.2 years (computed from the dates of 3 jobs)", "derived_from": ["L008", "L015", "L020"]}
+  ],
+  "sections": [
+    {"id": "S1", "type": "contact", "heading_line_id": null, "line_ids": ["L001", "L002"]},
+    {"id": "S2", "type": "summary", "heading_line_id": "L003", "line_ids": ["L004", "L005"]},
+    {"id": "S3", "type": "experience", "heading_line_id": "L006", "line_ids": ["L007", "L008", "L009", "L010", "L011", "L012", "L013", "L014", "L015", "L016", "L017", "L018", "L019", "L020", "L021", "L022", "L023"]},
+    {"id": "S4", "type": "projects", "heading_line_id": "L024", "line_ids": ["L025", "L026"]},
+    {"id": "S5", "type": "education", "heading_line_id": "L027", "line_ids": ["L028", "L029"]},
+    {"id": "S6", "type": "skills", "heading_line_id": "L030", "line_ids": ["L031", "L032"]},
+    {"id": "S7", "type": "languages", "heading_line_id": "L033", "line_ids": ["L034"]}
+  ]
+}

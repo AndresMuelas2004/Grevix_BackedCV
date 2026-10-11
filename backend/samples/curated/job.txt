@@ -1,0 +1,35 @@
+Junior AI Engineer (entry-level) at Lanternfield Analytics
+Location: New York, NY (on-site, five days a week)
+
+About the role
+Lanternfield Analytics builds reporting tools for retail teams. We are hiring an entry-level AI engineer to ship LLM-powered assistants for our analytics group. You will work with data engineers and product managers, from prototype to production, and you will own the evaluation sets for your features. The team is small, so you will pair with senior engineers every day.
+
+What you will do
+- Build and test assistants that answer analytics questions in plain English.
+- Design evaluation sets and report answer accuracy every sprint.
+- Ship the data pipelines that feed the assistants, with monitoring and alerts.
+- Explain decisions and demos to non-technical stakeholders.
+
+Requirements
+- Bachelor's degree in Computer Science or a related field.
+- At least 3 years of professional experience building production software.
+- Strong Python and SQL skills.
+- Experience building data pipelines.
+- Hands-on experience with LangChain.
+- 5+ years of hands-on experience with LangGraph.
+- Experience with Kubernetes in production.
+- Excellent communication skills.
+- Fluent English (C1 or higher).
+- Must be authorized to work in the United States without visa sponsorship.
+- Able to work on-site in our New York office five days a week.
+
+Nice to have
+- Experience with AWS.
+- Familiarity with vector databases.
+- Working knowledge of Docker and FastAPI.
+- Working knowledge of PostgreSQL and Snowflake.
+- Familiarity with Spark, Airflow, dbt and Kafka.
+- Familiarity with Terraform and Tableau.
+
+What we offer
+A learning budget, health insurance and a friendly team.

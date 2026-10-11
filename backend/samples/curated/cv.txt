@@ -1,0 +1,39 @@
+Nuria Calvo Ruiz
+Software engineer moving into AI engineering
+CONTACT
+Valencia, Spain
+nuria.calvo@example.com
++34 600 000 142
+github.com/nuria-calvo-example
+linkedin.com/in/nuria-calvo-example
+SUMMARY
+Software engineer with three years of data and backend work, now moving into AI engineering. I build LLM features with agent frameworks and tool calling, measure them on labeled test sets, and serve them through FastAPI.
+EXPERIENCE
+AI-focused Software Engineer, Harbor Data Co., Valencia
+Feb 2025 - Present
+- Built a customer-support assistant with agent frameworks, tool calling and the OpenAI API. First-response time fell by 30%.
+- Compared 6 prompt versions on 300 labeled support tickets and raised answer accuracy from 71% to 84%.
+- Wrote ETL jobs in Python that load 2 million rows a day into PostgreSQL.
+- Rewrote nightly batch joins and added indexes, cutting run time from 5 hours to 80 minutes.
+- Containerized three internal services with Docker and exposed them through FastAPI.
+Junior Data Engineer, Tidewater Sales Ops, Valencia
+Sep 2023 - Jan 2025
+- Maintained SQL transformations for a sales warehouse used by 25 analysts.
+- Added data quality checks in Python that caught 14 broken loads in the first quarter.
+- Ran the weekly data refresh with a cron-based scheduler.
+Data Analyst Intern, Kestrel Solar Labs, Valencia
+Jun 2023 - Aug 2023
+- Built a dashboard of plant output in SQL and Python.
+- Presented weekly findings to 12 plant managers.
+PROJECTS
+Policy Search Prototype (personal project)
+- Retrieval prototype over 12,000 policy documents, using embeddings stored in pgvector. Every answer cites its source passage.
+- Evaluation set of 50 questions: 46 answered with the right source passage.
+EDUCATION
+BSc Computer Science, Universidad Example, Valencia
+Sep 2019 - Jun 2023
+- Teaching assistant for the databases course: weekly SQL labs for 40 students.
+SKILLS
+Python, SQL, PostgreSQL, Pandas, FastAPI, Docker, Git, OpenAI API, pgvector, prompt evaluation
+LANGUAGES
+Spanish (native), English (C1)
