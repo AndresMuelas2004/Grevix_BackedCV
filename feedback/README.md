@@ -17,7 +17,7 @@ All on 2026-10-11 (Madrid time), with the live demo at [backedcv.onrender.com](h
 
 Reddit's automatic filters removed both Reddit posts within minutes, because the account is new. I asked the moderators to review them. The r/hackathon moderator approved the post at 17:15; my own edit to tidy its wording triggered the filter again, and I asked for a second review.
 
-Before asking for feedback, I gave it: I tried seven other participants' projects (as a user and by reading their code) and left honest notes on four LinkedIn posts, two GitHub issues ([ClariBite](https://github.com/tanishkaai92-design/Grevix_ClariBite/issues/1), [TRACE](https://github.com/NebulaScript-codeX/Grevix_Trace-system/issues/1)) and one feedback form. Security problems I noticed were kept out of public comments.
+I gave feedback too. Before asking for it, I tried five other participants' projects (as a user and by reading their code) and left honest notes on two LinkedIn posts, two GitHub issues ([ClariBite](https://github.com/tanishkaai92-design/Grevix_ClariBite/issues/1), [TRACE](https://github.com/NebulaScript-codeX/Grevix_Trace-system/issues/1)) and one feedback form. Later I tried three more: two LinkedIn comments, and a WhatsApp message to the participant behind feedback A, who asked me to review their project. Security problems I noticed were kept out of public comments.
 
 ## What people said
 
