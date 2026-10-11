@@ -1,0 +1,37 @@
+name: Feedback
+description: Tell me what you think of BackedCV. Critical feedback is the most useful.
+title: "Feedback: "
+labels: ["feedback"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for taking a look at BackedCV, built during the GREVIX AfterCode hackathon.
+        This page is public: please do not paste a real CV, contact details or other personal data.
+  - type: dropdown
+    id: seen
+    attributes:
+      label: How did you look at BackedCV?
+      options:
+        - I watched the demo video or looked at the screenshots
+        - I read the README
+        - I ran it myself (Docker or the dev setup)
+    validations:
+      required: true
+  - type: textarea
+    id: trust
+    attributes:
+      label: Would you trust its verdict and score? What would you need to see first?
+  - type: textarea
+    id: useful
+    attributes:
+      label: Which part helps most, and which part is noise?
+      description: The verdict, the screening questions, the hidden screening risks, the suggested CV edits, the score.
+  - type: textarea
+    id: blocker
+    attributes:
+      label: What would stop you from using it on a real application?
+  - type: textarea
+    id: other
+    attributes:
+      label: Anything else?
