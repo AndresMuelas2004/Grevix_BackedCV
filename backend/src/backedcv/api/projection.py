@@ -24,6 +24,10 @@ def waiting_at_report(snapshot: Any) -> bool:
     return _stage(snapshot) == REPORT_STAGE
 
 
+def waiting_at_review(snapshot: Any) -> bool:
+    return _stage(snapshot) == REVIEW_STAGE
+
+
 def usage_total(usage: list[dict]) -> dict:
     return {
         "calls": len(usage),

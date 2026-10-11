@@ -11,7 +11,7 @@ from fastapi import APIRouter, Depends, File, Form, Request, UploadFile
 from fastapi.sse import EventSourceResponse, ServerSentEvent
 from pydantic import ValidationError
 
-from backedcv.api.errors import ApiError
+from backedcv.api.errors import ApiError, stream_error
 from backedcv.api.projection import project
 from backedcv.domain.models import CandidateFacts
 from backedcv.graph.builder import run_config
@@ -66,12 +66,14 @@ async def create_analysis(
     request: Request, new: Annotated[NewAnalysis, Depends(analysis_input)]
 ) -> AsyncIterable[ServerSentEvent]:
     graph, locks = request.app.state.graph, request.app.state.locks
+    ledger = request.app.state.ledger
     analysis_id = str(uuid.uuid4())
     config = run_config(analysis_id)
     locks.acquire(analysis_id)
+    created = datetime.now(UTC)
     initial = {
         "analysis_id": analysis_id,
-        "created_at": datetime.now(UTC).isoformat(),
+        "created_at": created.isoformat(),
         "cv_meta": {
             "kind": new.cv.kind,
             "filename": new.cv.filename,
@@ -89,20 +91,14 @@ async def create_analysis(
     yield ServerSentEvent(event="created", data={"analysis_id": analysis_id})
     async with locks.held(analysis_id):
         try:
+            ledger.add(analysis_id, created)
             async for mode, chunk in graph.astream(
                 initial, config, stream_mode=["custom", "updates"]
             ):
                 if mode == "custom":
                     yield ServerSentEvent(event="progress", data=chunk)
         except Exception as exc:
-            yield ServerSentEvent(
-                event="error",
-                data={
-                    "code": "analysis_failed",
-                    "title": "The analysis could not finish.",
-                    "detail": type(exc).__name__,
-                },
-            )
+            yield stream_error("analysis_failed", "The analysis could not finish.", exc)
             return
     snapshot = await graph.aget_state(config)
     yield ServerSentEvent(event="report", data=project(analysis_id, snapshot))

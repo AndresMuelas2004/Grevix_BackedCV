@@ -47,15 +47,24 @@ def _merge(state: dict, update: InputsUpdate) -> dict:
         raise ApiError(
             422, "inputs_invalid", "Some requirements are not in this posting.", ", ".join(unknown)
         )
-    answers = update.facts.model_dump(exclude_unset=True) if update.facts is not None else {}
-    facts = CandidateFacts.model_validate({**(state.get("facts") or {}), **answers})
     return {
-        "facts": facts.model_dump(),
+        "facts": _merge_facts(state.get("facts"), update.facts).model_dump(),
         "excluded_ids": _sent_or_current(update.excluded_ids, state.get("excluded_ids")),
         "included_flagged_ids": _sent_or_current(
             update.included_flagged_ids, state.get("included_flagged_ids")
         ),
     }
+
+
+def _merge_facts(current: dict | None, sent: CandidateFacts | None) -> CandidateFacts:
+    """Answers that are sent are added to the ones already given, so one answer keeps the rest.
+    Any other field that is sent replaces its old value."""
+    old = CandidateFacts.model_validate(current or {})
+    if sent is None:
+        return old
+    changes = sent.model_dump(exclude_unset=True)
+    answers = {**old.answers, **changes.pop("answers", {})}
+    return CandidateFacts.model_validate({**old.model_dump(), **changes, "answers": answers})
 
 
 def _sent_or_current(sent: list[str] | None, current: list[str] | None) -> list[str]:

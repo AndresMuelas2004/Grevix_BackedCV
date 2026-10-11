@@ -104,6 +104,22 @@ def test_including_a_flagged_requirement_counts_it_again(client):
     assert updated["score"]["fit"] != report["score"]["fit"]
 
 
+def test_one_answer_keeps_the_other_answers_and_the_other_facts(client):
+    report = _analysis(client)
+    analysis_id = report["analysis_id"]
+    work_auth = _contribution(report, "US work authorization")["requirement_id"]
+    kubernetes = _contribution(report, "5+ years of Kubernetes")["requirement_id"]
+    _patch(client, analysis_id, {"facts": {"answers": {work_auth: True}}})
+
+    response = _patch(client, analysis_id, {"facts": {"answers": {kubernetes: False}}})
+
+    assert response.status_code == 200
+    assert response.json()["facts"]["answers"] == {work_auth: True, kubernetes: False}
+    kept = _patch(client, analysis_id, {"facts": {"needs_sponsorship": True}}).json()
+    assert kept["facts"]["answers"] == {work_auth: True, kubernetes: False}
+    assert kept["facts"]["needs_sponsorship"] is True
+
+
 def test_unknown_requirement_id_is_422_and_changes_nothing(client):
     report = _analysis(client)
     analysis_id = report["analysis_id"]
