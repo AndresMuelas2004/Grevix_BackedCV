@@ -28,6 +28,7 @@ class Settings(BaseSettings):
 
     data_dir: Path = REPO_ROOT / "data"
     frontend_dist: Path = REPO_ROOT / "frontend" / "dist"
+    samples_dir: Path = REPO_ROOT / "backend" / "samples"
 
 
 @lru_cache
