@@ -1,5 +1,5 @@
 """Abuse and budget limits for the routes that call the model: a rolling hour per client address,
-and a daily total shared by everyone. Both are checked before any stream starts."""
+and a daily total shared by everyone. A request is counted only when it is accepted to run."""
 
 import math
 from collections import deque
@@ -62,9 +62,9 @@ def _wait(delta: timedelta) -> str:
     return f"{minutes} minute" if minutes == 1 else f"{minutes} minutes"
 
 
-async def limit_model_run(request: Request) -> None:
-    """A FastAPI dependency for the routes that call the model. It runs before the stream starts,
-    so a refused request gets a plain JSON 429. It has no await, so the check and the count
-    cannot interleave with another request."""
+def count_model_run(request: Request) -> None:
+    """Counts one model run for the client, or raises the 429. Call it only after the request has
+    passed its validation and its stage checks, so a refused request uses no quota. It has no
+    await, so the check and the count cannot interleave with another request."""
     client = request.client.host if request.client else "unknown"
     request.app.state.limiter.check(client)

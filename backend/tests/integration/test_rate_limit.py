@@ -68,23 +68,23 @@ def test_the_daily_cap_refuses_runs_once_it_is_reached(monkeypatch):
     assert "midnight UTC" in response.json()["detail"]
 
 
-def test_optimize_build_and_verify_are_limited_before_their_own_checks(monkeypatch):
-    # The analysis is at the report stage, so without the limit optimize would be accepted and
-    # build and verify would get a 409. Each one must get the 429 instead.
+def test_a_wrong_stage_is_refused_before_a_run_is_counted(monkeypatch):
+    # The analysis is at the report stage. Build and verify fail that check, so they use no quota
+    # and get a 409. Optimize passes its check, is counted, and gets the 429.
     with _client(monkeypatch, per_hour=1) as client:
         analysis_id = _analysis_id(_create(client))
 
-        refused = [
-            client.post(f"/api/analyses/{analysis_id}/optimize"),
-            client.post(
-                f"/api/analyses/{analysis_id}/build", json={"accepted": [], "rejected": []}
-            ),
-            client.post(f"/api/analyses/{analysis_id}/suggestions/S01/verify", json={"after": "x"}),
-        ]
+        build = client.post(
+            f"/api/analyses/{analysis_id}/build", json={"accepted": [], "rejected": []}
+        )
+        verify = client.post(
+            f"/api/analyses/{analysis_id}/suggestions/S01/verify", json={"after": "x"}
+        )
+        optimize = client.post(f"/api/analyses/{analysis_id}/optimize")
 
-    for response in refused:
-        assert response.status_code == 429
-        assert response.json()["code"] == "rate_limited"
+    assert (build.status_code, build.json()["code"]) == (409, "wrong_stage")
+    assert (verify.status_code, verify.json()["code"]) == (409, "wrong_stage")
+    assert (optimize.status_code, optimize.json()["code"]) == (429, "rate_limited")
 
 
 def test_a_refused_optimize_does_not_leave_the_analysis_running(monkeypatch):

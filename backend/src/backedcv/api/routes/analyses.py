@@ -1,8 +1,10 @@
-"""Create an analysis (streamed with server-sent events) and read it back."""
+"""Create an analysis (streamed with server-sent events) and read it back. The run starts before the
+stream opens and keeps going if the client leaves: the stream only listens to it (api/runs.py)."""
 
 import json
 import uuid
 from collections.abc import AsyncIterable
+from contextlib import aclosing
 from dataclasses import dataclass
 from datetime import UTC, datetime
 from typing import Annotated
@@ -11,9 +13,10 @@ from fastapi import APIRouter, Depends, File, Form, Request, UploadFile
 from fastapi.sse import EventSourceResponse, ServerSentEvent
 from pydantic import ValidationError
 
-from backedcv.api.errors import ApiError, stream_error
+from backedcv.api.errors import ApiError
 from backedcv.api.projection import project
-from backedcv.api.rate_limit import limit_model_run
+from backedcv.api.rate_limit import count_model_run
+from backedcv.api.runs import Run, stream_graph
 from backedcv.domain.models import CandidateFacts
 from backedcv.graph.builder import run_config
 from backedcv.ingestion import read_cv, read_cv_text
@@ -23,6 +26,7 @@ router = APIRouter(tags=["analyses"])
 
 JOB_MIN_CHARS = 150
 JOB_MAX_CHARS = 20_000
+ANALYSIS_FAILED = ("analysis_failed", "The analysis could not finish.")
 
 
 @dataclass
@@ -62,17 +66,14 @@ async def analysis_input(
     return NewAnalysis(cv, job_text, parsed_facts or CandidateFacts())
 
 
-@router.post(
-    "/analyses", response_class=EventSourceResponse, dependencies=[Depends(limit_model_run)]
-)
-async def create_analysis(
+async def start_analysis(
     request: Request, new: Annotated[NewAnalysis, Depends(analysis_input)]
-) -> AsyncIterable[ServerSentEvent]:
-    graph, locks = request.app.state.graph, request.app.state.locks
-    ledger = request.app.state.ledger
+) -> Run:
+    """Counts the run and starts it before the stream opens, so a refusal is a JSON error."""
+    count_model_run(request)
+    graph, ledger = request.app.state.graph, request.app.state.ledger
     analysis_id = str(uuid.uuid4())
     config = run_config(analysis_id)
-    locks.acquire(analysis_id)
     created = datetime.now(UTC)
     initial = {
         "analysis_id": analysis_id,
@@ -91,26 +92,33 @@ async def create_analysis(
         "included_flagged_ids": [],
     }
 
-    yield ServerSentEvent(event="created", data={"analysis_id": analysis_id})
-    async with locks.held(analysis_id):
-        try:
-            ledger.add(analysis_id, created)
-            async for mode, chunk in graph.astream(
-                initial, config, stream_mode=["custom", "updates"]
-            ):
-                if mode == "custom":
-                    yield ServerSentEvent(event="progress", data=chunk)
-        except Exception as exc:
-            yield stream_error("analysis_failed", "The analysis could not finish.", exc)
-            return
-    snapshot = await graph.aget_state(config)
-    yield ServerSentEvent(event="report", data=project(analysis_id, snapshot))
+    async def work(run: Run) -> dict:
+        run.emit(ServerSentEvent(event="created", data={"analysis_id": analysis_id}))
+        ledger.add(analysis_id, created)
+        await stream_graph(graph, initial, config, run)
+        return project(analysis_id, await graph.aget_state(config))
+
+    request.app.state.locks.acquire(analysis_id)
+    return request.app.state.runs.launch(analysis_id, work, done="report", failed=ANALYSIS_FAILED)
+
+
+@router.post("/analyses", response_class=EventSourceResponse)
+async def create_analysis(
+    run: Annotated[Run, Depends(start_analysis)],
+) -> AsyncIterable[ServerSentEvent]:
+    """Streams `created`, the `progress` steps, then `report` (or `error`)."""
+    async with aclosing(run.listen()) as events:
+        async for event in events:
+            yield event
 
 
 @router.get("/analyses/{analysis_id}")
 async def get_analysis(request: Request, analysis_id: str) -> dict:
-    graph, locks = request.app.state.graph, request.app.state.locks
+    graph, runs = request.app.state.graph, request.app.state.runs
+    running = runs.is_running(analysis_id)
     snapshot = await graph.aget_state(run_config(analysis_id))
-    if not snapshot.values:
+    # A run can start or end during the read, so the flag is checked on both sides of it.
+    running = running or runs.is_running(analysis_id)
+    if not snapshot.values and not running:
         raise ApiError(404, "not_found", "This analysis does not exist or has expired.")
-    return project(analysis_id, snapshot, running=locks.is_running(analysis_id))
+    return project(analysis_id, snapshot, running=running, error=runs.failure(analysis_id))

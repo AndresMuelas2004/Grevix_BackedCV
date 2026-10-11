@@ -25,6 +25,7 @@ from backedcv.api.routes import (
     preview,
     samples,
 )
+from backedcv.api.runs import RunManager
 from backedcv.graph.builder import build_graph
 from backedcv.llm.cache import LLMCache
 from backedcv.llm.structured import OpenAIStructuredLLM, StructuredLLM
@@ -49,6 +50,7 @@ def create_app(llm: StructuredLLM | None = None, checkpointer=None) -> FastAPI:
         )
         app.state.llm = model
         app.state.locks = RunLocks()
+        app.state.runs = RunManager(app.state.locks)
         async with AsyncExitStack() as stack:
             if checkpointer is None:
                 settings.data_dir.mkdir(parents=True, exist_ok=True)
@@ -69,6 +71,8 @@ def create_app(llm: StructuredLLM | None = None, checkpointer=None) -> FastAPI:
                 )
             )
             stack.push_async_callback(_stop, app.state.purge_task)
+            # Pushed last, so it runs first: the runs end before the checkpointer is closed.
+            stack.push_async_callback(app.state.runs.shutdown)
             yield
 
     app = FastAPI(title="BackedCV", version=__version__, lifespan=lifespan)

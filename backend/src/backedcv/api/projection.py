@@ -8,11 +8,15 @@ REVIEW_NODE = "await_review"  # the node that pauses for the user's decisions on
 REVIEW_STAGE = "review_ready"
 BUILT_STAGE = "built"  # the run reached its end
 _PAUSE_STAGES = {REPORT_NODE: REPORT_STAGE, REVIEW_NODE: REVIEW_STAGE}
+OPTIMIZE_STEP = frozenset({"suggest", "verify_batch"})  # the nodes an optimize can stop in
+BUILD_STEP = frozenset({"build_cv", "final_checks"})  # the nodes a build can stop in
 
 
-def status_of(snapshot: Any, running: bool) -> str:
+def status_of(snapshot: Any, running: bool, failed: bool = False) -> str:
     if running:
         return "running"
+    if failed:  # the last run failed: its error is in the projection
+        return "stalled"
     if not snapshot.next:
         return "done"
     if getattr(snapshot, "interrupts", None) or _stage(snapshot):
@@ -28,6 +32,12 @@ def waiting_at_review(snapshot: Any) -> bool:
     return _stage(snapshot) == REVIEW_STAGE
 
 
+def stalled_in(snapshot: Any, step: frozenset[str]) -> bool:
+    """True when a run stopped inside `step` (it failed there), so the step can run again."""
+    pending = set(snapshot.next or ())
+    return bool(pending) and pending <= step
+
+
 def usage_total(usage: list[dict]) -> dict:
     return {
         "calls": len(usage),
@@ -39,11 +49,13 @@ def usage_total(usage: list[dict]) -> dict:
     }
 
 
-def project(analysis_id: str, snapshot: Any, running: bool = False) -> dict:
+def project(
+    analysis_id: str, snapshot: Any, running: bool = False, error: dict | None = None
+) -> dict:
     values = snapshot.values or {}
-    return {
+    projection = {
         "analysis_id": analysis_id,
-        "status": status_of(snapshot, running),
+        "status": status_of(snapshot, running, failed=error is not None),
         "stage": _stage(snapshot),
         "cv_meta": values.get("cv_meta"),
         "cv": values.get("cv"),
@@ -65,6 +77,9 @@ def project(analysis_id: str, snapshot: Any, running: bool = False) -> dict:
         "errors": values.get("errors", []),
         "usage": usage_total(values.get("usage", [])),
     }
+    if error is not None:  # the same body as the `error` event of the run that failed
+        projection["error"] = error
+    return projection
 
 
 def _stage(snapshot: Any) -> str | None:
