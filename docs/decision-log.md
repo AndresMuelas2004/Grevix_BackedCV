@@ -66,3 +66,6 @@ What I decided, what I rejected and why. Times are Madrid time (CEST). The Chall
 - **Limits before launch:** per-IP and daily caps on model-using requests, and production traces hide inputs and outputs.
 - **Every verdict explains itself:** the Fit against the band's threshold and the top missing required items, in whole numbers that match the screen.
 - **Compound requirements are split** ("PostgreSQL and Snowflake" becomes two), so one matching word cannot inflate keyword coverage.
+- **A broader category counts as partial evidence, never as missing.** "Agent frameworks" in a CV is real evidence for LangChain, but not proof of it, so it scores partial. End-to-end checks on three CV and posting pairs (one of them a nursing job) now cover this.
+- **Runs live on the server, not in the browser tab.** A code review showed that closing or reloading the tab mid-analysis left it stuck. Each step now runs as a server task; a reload picks it up again and a failed step can be retried.
+- **When the ordering agent is unavailable, the new CV uses a standard section order.** Keeping the original order would put a two-column CV's sidebar (education, skills) before the summary.
