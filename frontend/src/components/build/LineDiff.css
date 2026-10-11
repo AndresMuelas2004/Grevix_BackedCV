@@ -1,15 +1,20 @@
 .line-diff {
   display: grid;
   gap: 1.25rem;
+  margin-top: 0.5rem;
 }
 
 .line-diff-section {
   display: grid;
-  gap: 0.5rem;
+  gap: 0.25rem;
 }
 
+/* Browsers give h4 a large top and bottom margin by default. The other headings reset it, so this
+   one does too; otherwise each heading sits far above its own lines. */
 .line-diff-section > h4 {
+  margin: 0;
   font-size: 1rem;
+  line-height: 1.25;
 }
 
 .line-diff-items {
@@ -54,7 +59,7 @@
 
 .line-diff-folded summary {
   cursor: pointer;
-  padding: 0.3rem 0;
+  padding: 0.15rem 0;
   font-size: 0.9375rem;
   color: var(--muted);
 }
