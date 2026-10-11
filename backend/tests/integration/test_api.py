@@ -38,7 +38,7 @@ def test_create_streams_progress_then_the_report(client):
     assert report["status"] == "paused"
     assert report["stage"] == "report_ready"
     assert report["verdict"]["label"] == "answer_questions"
-    assert report["usage"]["calls"] == 3
+    assert report["usage"]["calls"] == 4  # CV, posting, one matching chunk, posting review
 
     again = client.get(f"/api/analyses/{report['analysis_id']}")
     assert again.status_code == 200

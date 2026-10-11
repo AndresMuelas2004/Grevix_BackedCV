@@ -9,11 +9,18 @@ def merge_by_id(left: dict | None, right: dict | None) -> dict:
     return {**(left or {}), **(right or {})}
 
 
+def merge_items_by_id(left: list[dict] | None, right: list[dict] | None) -> list[dict]:
+    """List of records with an `id` (suggestions): a later record replaces the earlier one."""
+    merged = {item["id"]: item for item in left or []}
+    merged.update({item["id"]: item for item in right or []})
+    return list(merged.values())
+
+
 class AnalysisState(TypedDict, total=False):
     # Inputs
     analysis_id: str
     created_at: str
-    cv_meta: dict  # kind, filename, size: never the bytes
+    cv_meta: dict  # kind, filename, size, lines, multi_column: never the bytes
     cv_lines: list[dict]
     job_text: str
     facts: dict
@@ -26,10 +33,19 @@ class AnalysisState(TypedDict, total=False):
     job_notes: list[str]
     flags: list[dict]
     banners: list[dict]
+    review_banners: list[dict]
+    parse_warnings: list[dict]
     assessment_drafts: Annotated[dict, merge_by_id]
     assessments: dict
     score: dict
     verdict: dict
+
+    # Optimize and build
+    suggestions: Annotated[list[dict], merge_items_by_id]
+    decisions: dict | None
+    document: dict | None
+    built_by: str | None
+    build_report: dict | None
 
     # Bookkeeping
     errors: Annotated[list, operator.add]

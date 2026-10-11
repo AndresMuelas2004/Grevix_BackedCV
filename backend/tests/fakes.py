@@ -9,6 +9,7 @@ from backedcv.llm.drafts import (
     RequirementDraft,
     SectionDraft,
 )
+from backedcv.llm.drafts_optimize import ContradictionDraft, PostingReviewDraft
 
 CV_TEXT = """Jane Doe
 Madrid, Spain · jane@example.com · +34 600 123 456
@@ -180,6 +181,22 @@ def match_draft(requirement_ids: list[str]) -> MatchChunkDraft:
     return MatchChunkDraft(assessments=[canned[r] for r in requirement_ids if r in canned])
 
 
+def review_draft() -> PostingReviewDraft:
+    """One contradiction (the example from the prompt), so the posting_red_flags badge shows."""
+    return PostingReviewDraft(
+        contradictions=[
+            ContradictionDraft(
+                explanation="Fully remote work and five on-site days a week do not seem to fit.",
+                quotes=[
+                    "Work fully remote from anywhere",
+                    "Work on-site in our Madrid office five days a week",
+                ],
+            )
+        ],
+        doubtful_credentials=[],
+    )
+
+
 class FakeLLM:
     def __init__(self):
         self.calls: list[str] = []
@@ -205,4 +222,6 @@ class FakeLLM:
                 .splitlines()
             ]
             return match_draft(ids), usage
+        if schema is PostingReviewDraft:
+            return review_draft(), usage
         raise AssertionError(f"unexpected schema {schema}")

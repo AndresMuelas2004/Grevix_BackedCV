@@ -9,16 +9,30 @@ from langgraph.types import Send, interrupt
 
 from backedcv.domain.builders import build_job, build_parsed_cv
 from backedcv.domain.keywords import keyword_hits
-from backedcv.domain.models import CVLine, JobPosting, ParsedCV
+from backedcv.domain.models import CVLine, JobPosting, ParsedCV, PostingBanner
+from backedcv.domain.parse_checks import run_parse_checks
+from backedcv.domain.recruiter_tips import recruiter_tips
 from backedcv.domain.rules.absurd import flag_requirements
+from backedcv.domain.rules.posting import tool_sprawl_banner
+from backedcv.domain.text import fold_lower
 from backedcv.graph.recompute import recompute
 from backedcv.graph.state import AnalysisState, MatchTask
 from backedcv.llm.drafts import CVStructureDraft, JobExtractionDraft, MatchChunkDraft
+from backedcv.llm.drafts_optimize import PostingReviewDraft
 from backedcv.llm.prompt_loader import load_prompt
 from backedcv.llm.structured import StructuredLLM
 
 log = logging.getLogger(__name__)
 CHUNK_SIZE = 8
+META_FIELDS = (
+    "title",
+    "company",
+    "seniority",
+    "seniority_quote",
+    "location",
+    "remote_policy",
+    "employment_type",
+)
 
 
 def _progress(step: str, status: str, **extra) -> None:
@@ -30,6 +44,49 @@ def _progress(step: str, status: str, **extra) -> None:
 def _error(node: str, exc: Exception) -> dict:
     log.warning("node %s failed: %s", node, exc)
     return {"node": node, "error": type(exc).__name__, "detail": str(exc)[:300]}
+
+
+def _review_data(job: JobPosting) -> str:
+    """The posting as the review prompt reads it: one `field: value` line each, then the rows."""
+    meta = "\n".join(f"{field}: {getattr(job, field) or 'none'}" for field in META_FIELDS)
+    rows = "\n".join(f"{req.id} | {req.quote}" for req in job.requirements)
+    return f"<job_meta>\n{meta}\n</job_meta>\n\n<requirements>\n{rows}\n</requirements>"
+
+
+def _review_banners(draft: PostingReviewDraft, job: JobPosting) -> list[PostingBanner]:
+    """R4 banners. Findings without a quote or a credential name are dropped."""
+    banners: list[PostingBanner] = []
+    for item in draft.contradictions:
+        quotes = [q.strip() for q in item.quotes if q.strip()]
+        if not quotes or not item.explanation.strip():
+            continue
+        shown = " / ".join(f'"{q}"' for q in quotes)
+        banners.append(
+            PostingBanner(
+                rule_id="R4",
+                requirement_ids=_requirements_quoting(job, quotes),
+                severity="info",
+                explanation=f"{item.explanation.strip()} Posting text: {shown}",
+            )
+        )
+    for item in draft.doubtful_credentials:
+        name = item.credential.strip()
+        if not name or not item.explanation.strip():
+            continue
+        banners.append(
+            PostingBanner(
+                rule_id="R4",
+                requirement_ids=_requirements_quoting(job, [name]),
+                severity="info",
+                explanation=f'"{name}": {item.explanation.strip()}',
+            )
+        )
+    return banners
+
+
+def _requirements_quoting(job: JobPosting, texts: list[str]) -> list[str]:
+    folded = [fold_lower(text) for text in texts]
+    return [req.id for req in job.requirements if any(t in fold_lower(req.quote) for t in folded)]
 
 
 def make_nodes(llm: StructuredLLM):
@@ -50,8 +107,19 @@ def make_nodes(llm: StructuredLLM):
             draft = None
             update["errors"] = [_error("prepare_cv", exc)]
         cv = build_parsed_cv(lines, draft, today=date.today())
+        meta = state.get("cv_meta") or {}
+        parse_warnings = [
+            *run_parse_checks(
+                cv, multi_column=bool(meta.get("multi_column")), file_size=meta.get("size")
+            ),
+            *recruiter_tips(cv),
+        ]
         _progress("prepare_cv", "done")
-        return {**update, "cv": cv.model_dump()}
+        return {
+            **update,
+            "cv": cv.model_dump(),
+            "parse_warnings": [w.model_dump() for w in parse_warnings],
+        }
 
     async def prepare_job(state: AnalysisState) -> dict:
         _progress("prepare_job", "started")
@@ -64,14 +132,31 @@ def make_nodes(llm: StructuredLLM):
         )
         job, notes = build_job(posting, draft)
         flags = flag_requirements(job)
+        sprawl = tool_sprawl_banner(job)
         _progress("prepare_job", "done", requirements=len(job.requirements))
         return {
             "job": job.model_dump(),
             "job_notes": notes,
             "flags": [f.model_dump() for f in flags],
-            "banners": [],
+            "banners": [sprawl.model_dump()] if sprawl else [],
             "usage": [usage],
         }
+
+    async def review_posting(state: AnalysisState) -> dict:
+        # Same superstep as plan_matching, so score_and_verdict always reads its banners.
+        # No progress event: the frontend shows a fixed list of steps.
+        job = JobPosting.model_validate(state["job"])
+        try:
+            draft, usage = await llm.run(
+                load_prompt("review_posting"),
+                _review_data(job),
+                PostingReviewDraft,
+                node="review_posting",
+            )
+        except Exception as exc:  # the review is optional: the report stands without it
+            return {"review_banners": [], "errors": [_error("review_posting", exc)]}
+        banners = _review_banners(draft, job)
+        return {"review_banners": [b.model_dump() for b in banners], "usage": [usage]}
 
     async def plan_matching(state: AnalysisState) -> dict:
         _progress("match", "started")
@@ -140,6 +225,7 @@ def make_nodes(llm: StructuredLLM):
     return {
         "prepare_cv": prepare_cv,
         "prepare_job": prepare_job,
+        "review_posting": review_posting,
         "plan_matching": plan_matching,
         "route_matching": route_matching,
         "match_chunk": match_chunk,

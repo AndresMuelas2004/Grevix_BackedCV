@@ -24,7 +24,10 @@ def recompute(state: dict) -> dict:
     }
     facts = CandidateFacts.model_validate(state.get("facts") or {})
     flags = [RequirementFlag.model_validate(f) for f in state.get("flags") or []]
-    banners = [PostingBanner.model_validate(b) for b in state.get("banners") or []]
+    banners = [
+        PostingBanner.model_validate(b)
+        for b in [*(state.get("banners") or []), *(state.get("review_banners") or [])]
+    ]
     flagged = flags_by_requirement(flags)
     excluded = set(state.get("excluded_ids") or [])
     included = set(state.get("included_flagged_ids") or [])

@@ -20,8 +20,8 @@ from backedcv.ingestion.reader import MAX_BYTES, ReadResult
 
 router = APIRouter(tags=["analyses"])
 
-MIN_JOB_CHARS = 150
-MAX_JOB_CHARS = 20_000
+JOB_MIN_CHARS = 150
+JOB_MAX_CHARS = 20_000
 
 
 @dataclass
@@ -39,11 +39,11 @@ async def analysis_input(
 ) -> NewAnalysis:
     """Runs before the stream opens, so bad input gets a proper 4xx JSON error."""
     job_text = job_text.strip()
-    if len(job_text) < MIN_JOB_CHARS:
+    if len(job_text) < JOB_MIN_CHARS:
         raise ApiError(422, "job_too_short", "Paste the full job posting.")
-    if len(job_text) > MAX_JOB_CHARS:
+    if len(job_text) > JOB_MAX_CHARS:
         raise ApiError(
-            422, "job_too_long", f"Job postings are limited to {MAX_JOB_CHARS:,} characters."
+            422, "job_too_long", f"Job postings are limited to {JOB_MAX_CHARS:,} characters."
         )
 
     if cv_file is not None and cv_file.filename:
@@ -77,6 +77,7 @@ async def create_analysis(
             "filename": new.cv.filename,
             "size": new.cv.size,
             "lines": len(new.cv.lines),
+            "multi_column": new.cv.multi_column,
         },
         "cv_lines": [line.model_dump() for line in new.cv.lines],
         "job_text": new.job_text,
