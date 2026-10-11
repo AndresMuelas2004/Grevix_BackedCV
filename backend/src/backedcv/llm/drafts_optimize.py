@@ -1,0 +1,131 @@
+"""LLM-facing output schemas for the optimize step: suggestions, verification, posting review.
+
+Same rules as drafts.py: strict mode, every field required, optional values nullable, no dict
+fields. Field descriptions carry per-field instructions. Domain models are built from these
+drafts in code, never trusted as-is.
+"""
+
+from typing import Literal
+
+from pydantic import BaseModel, Field
+
+SuggestionKind = Literal["align_wording", "add_skill", "tailor_summary"]
+TermVerdict = Literal["faithful_name", "adds_claim"]
+
+
+# 1. Suggestions ----------------------------------------------------------------------------
+
+
+class SuggestionDraft(BaseModel):
+    kind: SuggestionKind = Field(
+        description="align_wording: reword one CV line toward the posting's term. "
+        "add_skill: add one posting term to the Skills section. "
+        "tailor_summary: write the summary."
+    )
+    target: str = Field(
+        description="A CV line ID (e.g. 'L012'): the line to reword for align_wording, the "
+        "Skills heading for add_skill, the Summary heading (or the first CV line) for "
+        "tailor_summary."
+    )
+    after: str = Field(
+        description="The new text, in the CV's language. For add_skill, only the skill name. "
+        "Every number, title, employer, degree and certificate must be in the cited lines."
+    )
+    cited_refs: list[str] = Field(
+        description="IDs of the CV lines (L...) and facts (F...) that show everything in "
+        "`after`. At least one."
+    )
+    requirement_ids: list[str] = Field(
+        description="IDs of the requirements (R...) this change addresses. At least one."
+    )
+    rationale: str = Field(
+        description="At most 25 words, in English, citing IDs: why the cited refs back the change."
+    )
+
+
+class SuggestionsDraft(BaseModel):
+    suggestions: list[SuggestionDraft] = Field(
+        description="At most 8, strongest first. Empty when nothing can be improved without "
+        "inventing."
+    )
+
+
+# 2. Verification ---------------------------------------------------------------------------
+
+
+class ClaimDraft(BaseModel):
+    text: str = Field(
+        description="One atomic claim from `after`: a single skill, role, number, date, scope "
+        "or outcome, as a short span of `after`."
+    )
+    supported_by: list[str] = Field(
+        description="IDs (L... or F...) that prove the whole claim as written. Empty when "
+        "unsupported."
+    )
+    unsupported_reason: str | None = Field(
+        description="Null when supported. Otherwise one short sentence: what the CV does not show."
+    )
+
+
+class TermJudgementDraft(BaseModel):
+    term: str = Field(
+        description="A new name from `after` that the CV does not contain, copied as written."
+    )
+    verdict: TermVerdict = Field(
+        description="faithful_name: a fair name for what a CV line describes, adding no detail. "
+        "adds_claim: adds a skill, tool, level, scope or experience the CV does not show."
+    )
+    line_id: str | None = Field(
+        description="For faithful_name, the L... line it names. Null for adds_claim."
+    )
+
+
+class VerificationDraft(BaseModel):
+    suggestion_id: str = Field(description="The suggestion's ID exactly as given, e.g. 'S01'.")
+    claims: list[ClaimDraft] = Field(
+        description="Every atomic claim of `after`, in order. Never empty."
+    )
+    term_judgements: list[TermJudgementDraft] = Field(
+        description="One per introduced term, plus any other new name in `after`. Empty when "
+        "there are none."
+    )
+    uncertain: bool = Field(
+        description="True whenever you are in doubt about any claim or term. False only when "
+        "every claim is clearly supported and every term clearly faithful."
+    )
+
+
+class VerificationBatchDraft(BaseModel):
+    verifications: list[VerificationDraft] = Field(
+        description="One verification per suggestion given, in the same order."
+    )
+
+
+# 3. Posting review (banner only, never scored) ---------------------------------------------
+
+
+class ContradictionDraft(BaseModel):
+    explanation: str = Field(
+        description="One short sentence on what clashes. Low confidence: use 'seems' or 'may'."
+    )
+    quotes: list[str] = Field(
+        description="The clashing sentences or values, copied verbatim from the posting data."
+    )
+
+
+class DoubtfulCredentialDraft(BaseModel):
+    credential: str = Field(
+        description="The certificate, license or degree name, copied verbatim from the posting."
+    )
+    explanation: str = Field(
+        description="One short sentence on why the name seems not to exist as written."
+    )
+
+
+class PostingReviewDraft(BaseModel):
+    contradictions: list[ContradictionDraft] = Field(
+        description="Clear clashes inside the posting. Empty when nothing is clearly wrong."
+    )
+    doubtful_credentials: list[DoubtfulCredentialDraft] = Field(
+        description="Credentials that seem not to exist as named. Empty when none."
+    )
