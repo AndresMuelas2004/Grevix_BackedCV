@@ -69,6 +69,7 @@ Share the project on LinkedIn or Reddit mentioning GREVIX (or in community group
 |---|---|---|
 | New | Posts on LinkedIn (mentioning GREVIX) and r/SideProject, and a message for community groups, all ending with the same three questions | Answers that point at something specific to change |
 | New | A public feedback form in the repository (GitHub issue form) | A timestamped, checkable record; it asks people not to paste personal data |
+| New | A temporary live demo, [backedcv.onrender.com](https://backedcv.onrender.com) (Render free plan, cheap model, hourly and daily limits, privacy note on the first screen) | People can try it instead of only watching a video |
 | New | [feedback/](../feedback/README.md): where it was shared, what people said (screenshots, names blurred unless agreed), what changed and what did not | The card's proof, kept honest |
 | Changes | Only what a specific comment points at, each change linked to its comment | Feedback drives the change, not the other way round |
 | Stays | Everything from the build and Card 1 | Nothing in the card asks to remove anything |
