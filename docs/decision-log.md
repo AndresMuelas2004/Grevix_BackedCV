@@ -46,3 +46,11 @@ What I decided, what I rejected and why. Times are Madrid time (CEST). The Chall
 ### Delivery
 
 - **No cloud deployment during the event.** The rules accept a working demo instead of a live link, so I deliver a demo recording and this repository, runnable with Docker Compose. AWS Lightsail stays as plan B. I rejected ECS Express Mode as too expensive for a provisional demo.
+
+## 2026-10-11, building the first version (night)
+
+- **Frontend build: Vite with plain CSS.** The interface is a handful of components, so I rejected Tailwind and component libraries: fewer dependencies and nothing to learn for a reviewer.
+- **The technology-age rule (R2) uses a short list** of 20 technologies whose release years I checked on official sources. I rejected a long list I could not verify one by one.
+- **For ordinary requirements, "unknown" becomes "missing".** In the first real run the model answered "unknown" for skills the CV never mentions. The CV is the only evidence a recruiter sees, so silence means missing. Knockouts are the exception: they stay "unknown" until the user answers the question.
+- **The cheapest model for every call while building**, to keep the whole event inside a small API budget. One full analysis costs a fraction of a cent.
+- **Contracts first:** I defined the suggestion and document models before writing the guards, the document assembly and the renderers, so those pieces share one contract.

@@ -1,15 +1,21 @@
 import type {
   AnalysisReport,
+  BuildStep,
   CandidateFacts,
   ErrorBody,
+  InputsUpdate,
+  OptimizeStep,
   ProgressEvent,
+  ProgressStep,
+  ReviewDecisions,
   Samples,
 } from './types'
 
 const API_BASE = '/api'
 
-// A failed request: either an HTTP error body ({code, title, detail}) or a
-// transport problem (status 0). Codes are the backend's stable codes.
+// A failed request: an HTTP error body ({code, title, detail}), a FastAPI validation
+// answer (HTTP 422, code "invalid_request"), or a transport problem (status 0).
+// Codes are the backend's stable codes.
 export class ApiError extends Error {
   readonly status: number
   readonly code: string
@@ -41,6 +47,21 @@ export type AnalysisEvent =
   | { type: 'progress'; progress: ProgressEvent }
   | { type: 'report'; report: AnalysisReport }
   | { type: 'error'; error: ErrorBody }
+
+// What runOptimize reports while the stream is open.
+export type OptimizeEvent =
+  | { type: 'progress'; progress: ProgressEvent<OptimizeStep> }
+  | { type: 'suggestions'; report: AnalysisReport }
+  | { type: 'error'; error: ErrorBody }
+
+// What runBuild reports while the stream is open.
+export type BuildEvent =
+  | { type: 'progress'; progress: ProgressEvent<BuildStep> }
+  | { type: 'built'; report: AnalysisReport }
+  | { type: 'error'; error: ErrorBody }
+
+// The formats served by GET /api/analyses/{id}/cv.{format}.
+export type CvDownloadFormat = 'docx' | 'pdf'
 
 export async function getSamples(): Promise<Samples> {
   const response = await send(`${API_BASE}/samples`, {})
@@ -75,39 +96,118 @@ export async function runAnalysis(
   form.append('job_text', input.jobText)
   if (input.facts) form.append('facts', JSON.stringify(input.facts))
 
-  const response = await send(`${API_BASE}/analyses`, {
-    method: 'POST',
-    body: form,
-    headers: { Accept: 'text/event-stream' },
+  await streamEvents({
+    url: `${API_BASE}/analyses`,
+    init: { method: 'POST', body: form },
+    label: 'analysis',
+    parse: toAnalysisEvent,
+    ends: (event) => event.type === 'report' || event.type === 'error',
+    onEvent,
     signal,
   })
-  if (!response.ok) throw await readError(response)
-  if (!response.body) {
-    throw new ApiError(response.status, 'stream_missing', 'The analysis did not start.')
-  }
+}
 
-  let finished = false
-  try {
-    await readSse(response.body, (message) => {
-      const event = toAnalysisEvent(message)
-      if (!event) return
-      if (event.type === 'report' || event.type === 'error') finished = true
-      onEvent(event)
-    })
-  } catch (error) {
-    if (signal?.aborted) throw error
-    throw new ApiError(response.status, 'stream_failed', 'The connection to the server was lost.')
-  }
-  if (!finished) {
-    throw new ApiError(
-      response.status,
-      'stream_incomplete',
-      'The connection closed before the analysis finished.',
-    )
-  }
+// Sends answers, exclusions or inclusions for a report waiting at its report stage.
+// Returns the recomputed report. Fields left out keep their value (see InputsUpdate).
+export async function updateInputs(id: string, body: InputsUpdate): Promise<AnalysisReport> {
+  const response = await send(`${API_BASE}/analyses/${encodeURIComponent(id)}/inputs`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+  })
+  if (!response.ok) throw await readError(response)
+  return (await response.json()) as AnalysisReport
+}
+
+// Asks for suggestions on a report waiting at its report stage. The "suggestions"
+// event (or "error") ends the run.
+export async function runOptimize(
+  id: string,
+  onEvent: (event: OptimizeEvent) => void,
+  signal?: AbortSignal,
+): Promise<void> {
+  await streamEvents({
+    url: `${API_BASE}/analyses/${encodeURIComponent(id)}/optimize`,
+    init: { method: 'POST' },
+    label: 'optimization',
+    parse: toOptimizeEvent,
+    ends: (event) => event.type === 'suggestions' || event.type === 'error',
+    onEvent,
+    signal,
+  })
+}
+
+// Checks one suggestion again after the user edited its text. Returns the new report.
+export async function verifySuggestion(
+  id: string,
+  suggestionId: string,
+  after: string,
+): Promise<AnalysisReport> {
+  const url =
+    `${API_BASE}/analyses/${encodeURIComponent(id)}` +
+    `/suggestions/${encodeURIComponent(suggestionId)}/verify`
+  const response = await send(url, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ after }),
+  })
+  if (!response.ok) throw await readError(response)
+  return (await response.json()) as AnalysisReport
+}
+
+// Builds the new CV from the user's decisions. The "built" event (or "error") ends the run.
+export async function runBuild(
+  id: string,
+  decisions: ReviewDecisions,
+  onEvent: (event: BuildEvent) => void,
+  signal?: AbortSignal,
+): Promise<void> {
+  await streamEvents({
+    url: `${API_BASE}/analyses/${encodeURIComponent(id)}/build`,
+    init: {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ accepted: decisions.accepted, rejected: decisions.rejected }),
+    },
+    label: 'CV build',
+    parse: toBuildEvent,
+    ends: (event) => event.type === 'built' || event.type === 'error',
+    onEvent,
+    signal,
+  })
+}
+
+// The address of the built CV in one format. Use it as a download link.
+export function cvDownloadUrl(id: string, format: CvDownloadFormat): string {
+  return `${API_BASE}/analyses/${encodeURIComponent(id)}/cv.${format}`
+}
+
+// Deletes an analysis and its saved state on the server.
+export async function deleteAnalysis(id: string): Promise<void> {
+  const response = await send(`${API_BASE}/analyses/${encodeURIComponent(id)}`, {
+    method: 'DELETE',
+  })
+  if (!response.ok) throw await readError(response)
 }
 
 // ---- helpers ---------------------------------------------------------------
+
+// Used when an "error" event does not carry an ErrorBody.
+const ANALYSIS_FAILED: ErrorBody = {
+  code: 'analysis_failed',
+  title: 'The analysis could not finish.',
+  detail: '',
+}
+const OPTIMIZE_FAILED: ErrorBody = {
+  code: 'optimize_failed',
+  title: 'The suggestions could not be generated.',
+  detail: '',
+}
+const BUILD_FAILED: ErrorBody = {
+  code: 'build_failed',
+  title: 'The CV could not be built.',
+  detail: '',
+}
 
 async function send(url: string, init: RequestInit): Promise<Response> {
   try {
@@ -128,8 +228,18 @@ async function readError(response: Response): Promise<ApiError> {
   if (isErrorBody(body)) {
     return new ApiError(response.status, body.code, body.title, body.detail)
   }
-  // FastAPI's own validation errors look like {detail: [...]}; anything else is a plain failure.
-  const detail = isRecord(body) && typeof body.detail === 'string' ? body.detail : ''
+  const fields: Record<string, unknown> = isRecord(body) ? body : {}
+  // FastAPI's own validation errors (HTTP 422) look like {detail: [{loc, msg, type}, ...]}.
+  if (response.status === 422 && isList(fields.detail)) {
+    return new ApiError(
+      422,
+      'invalid_request',
+      'The request data is not valid.',
+      describeValidation(fields.detail),
+    )
+  }
+  // Anything else is a plain failure.
+  const detail = typeof fields.detail === 'string' ? fields.detail : ''
   return new ApiError(
     response.status,
     'http_error',
@@ -138,8 +248,27 @@ async function readError(response: Response): Promise<ApiError> {
   )
 }
 
+// Turns FastAPI's list of problems into one line, e.g. "after: Field required".
+function describeValidation(problems: unknown[]): string {
+  const lines: string[] = []
+  for (const problem of problems) {
+    if (!isRecord(problem)) continue
+    const msg = problem.msg
+    if (typeof msg !== 'string') continue
+    // loc starts with where the value came from ("body", "query"...), then the field path.
+    const loc = problem.loc
+    const path = isList(loc) ? loc.slice(1).map(String).join('.') : ''
+    lines.push(path ? `${path}: ${msg}` : msg)
+  }
+  return lines.join('; ')
+}
+
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null
+}
+
+function isList(value: unknown): value is unknown[] {
+  return Array.isArray(value)
 }
 
 function isErrorBody(value: unknown): value is ErrorBody {
@@ -156,6 +285,52 @@ interface SseMessage {
   data: string
 }
 
+// Everything streamEvents needs. `label` names the work in its error messages.
+interface StreamRequest<E> {
+  url: string
+  init: RequestInit
+  label: string
+  parse: (message: SseMessage) => E | null
+  ends: (event: E) => boolean // true for the event that finishes the run
+  onEvent: (event: E) => void
+  signal?: AbortSignal
+}
+
+// The one reader for every stream. Sends the request, then reports each parsed event.
+// A non-2xx answer is a JSON error and is thrown. The promise resolves after an event
+// that ends the run; a stream that closes before that throws.
+async function streamEvents<E>(request: StreamRequest<E>): Promise<void> {
+  const { url, init, label, parse, ends, onEvent, signal } = request
+  const headers = new Headers(init.headers)
+  headers.set('Accept', 'text/event-stream')
+  const response = await send(url, { ...init, headers, signal })
+  if (!response.ok) throw await readError(response)
+  if (!response.body) {
+    throw new ApiError(response.status, 'stream_missing', `The ${label} did not start.`)
+  }
+
+  let finished = false
+  try {
+    await readSse(response.body, (message) => {
+      const event = parse(message)
+      if (!event) return
+      if (ends(event)) finished = true
+      onEvent(event)
+    })
+  } catch (error) {
+    if (signal?.aborted) throw error
+    throw new ApiError(response.status, 'stream_failed', 'The connection to the server was lost.')
+  }
+  if (!finished) {
+    throw new ApiError(
+      response.status,
+      'stream_incomplete',
+      `The connection closed before the ${label} finished.`,
+    )
+  }
+}
+
+// The analysis stream: created, progress, report or error.
 function toAnalysisEvent(message: SseMessage): AnalysisEvent | null {
   const payload = parseJson(message.data)
   switch (message.event) {
@@ -163,25 +338,68 @@ function toAnalysisEvent(message: SseMessage): AnalysisEvent | null {
       return isRecord(payload) && typeof payload.analysis_id === 'string'
         ? { type: 'created', analysisId: payload.analysis_id }
         : null
-    case 'progress':
-      // Shape is checked shallowly; the backend is trusted for the rest.
-      return isRecord(payload) && typeof payload.step === 'string'
-        ? { type: 'progress', progress: payload as unknown as ProgressEvent }
-        : null
+    case 'progress': {
+      const progress = toProgress<ProgressStep>(payload)
+      return progress ? { type: 'progress', progress } : null
+    }
     case 'report':
       return isRecord(payload)
         ? { type: 'report', report: payload as unknown as AnalysisReport }
         : null
     case 'error':
-      return {
-        type: 'error',
-        error: isErrorBody(payload)
-          ? payload
-          : { code: 'analysis_failed', title: 'The analysis could not finish.', detail: '' },
-      }
+      return { type: 'error', error: errorFrom(payload, ANALYSIS_FAILED) }
     default:
       return null
   }
+}
+
+// The optimize stream: progress, suggestions or error.
+function toOptimizeEvent(message: SseMessage): OptimizeEvent | null {
+  const payload = parseJson(message.data)
+  switch (message.event) {
+    case 'progress': {
+      const progress = toProgress<OptimizeStep>(payload)
+      return progress ? { type: 'progress', progress } : null
+    }
+    case 'suggestions':
+      return isRecord(payload)
+        ? { type: 'suggestions', report: payload as unknown as AnalysisReport }
+        : null
+    case 'error':
+      return { type: 'error', error: errorFrom(payload, OPTIMIZE_FAILED) }
+    default:
+      return null
+  }
+}
+
+// The build stream: progress, built or error.
+function toBuildEvent(message: SseMessage): BuildEvent | null {
+  const payload = parseJson(message.data)
+  switch (message.event) {
+    case 'progress': {
+      const progress = toProgress<BuildStep>(payload)
+      return progress ? { type: 'progress', progress } : null
+    }
+    case 'built':
+      return isRecord(payload)
+        ? { type: 'built', report: payload as unknown as AnalysisReport }
+        : null
+    case 'error':
+      return { type: 'error', error: errorFrom(payload, BUILD_FAILED) }
+    default:
+      return null
+  }
+}
+
+// Shape is checked shallowly; the backend is trusted for the rest.
+function toProgress<Step extends string>(payload: unknown): ProgressEvent<Step> | null {
+  return isRecord(payload) && typeof payload.step === 'string'
+    ? (payload as unknown as ProgressEvent<Step>)
+    : null
+}
+
+function errorFrom(payload: unknown, fallback: ErrorBody): ErrorBody {
+  return isErrorBody(payload) ? payload : fallback
 }
 
 function parseJson(text: string): unknown {

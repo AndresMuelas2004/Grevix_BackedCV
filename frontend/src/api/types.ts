@@ -76,6 +76,14 @@ export interface ParsedCv {
   total_years: number | null
 }
 
+// A problem found while reading the CV (backend ParseWarning).
+export interface ParseWarning {
+  code: string
+  severity: 'info' | 'warning' | 'error'
+  message: string
+  line_ids: string[]
+}
+
 // ---- Job posting -----------------------------------------------------------
 
 export type Category =
@@ -167,6 +175,7 @@ export interface RequirementAssessment {
 }
 
 export interface CandidateFacts {
+  answers: Record<string, boolean> // requirement ID -> yes (true) or no (false)
   work_authorization: string[] | null
   needs_sponsorship: boolean | null
   location: string | null
@@ -175,7 +184,8 @@ export interface CandidateFacts {
   licenses: string[] | null
 }
 
-export type ExcludedReason = 'not_relevant' | 'flagged_R1' | 'flagged_R2' | 'gate'
+// A plain string, because rule IDs can be joined: e.g. "not_relevant", "gate", "flagged_R1+R2".
+export type ExcludedReason = string
 
 export interface Contribution {
   requirement_id: string
@@ -222,6 +232,115 @@ export interface Verdict {
   provisional: boolean
 }
 
+// ---- Suggestions and review -------------------------------------------------
+
+export type SuggestionKind = 'align_wording' | 'add_skill' | 'tailor_summary'
+
+export type VerificationStatus = 'pending' | 'verified' | 'unsupported'
+
+// One atomic claim of a suggestion, and the CV references (L and F IDs) backing it.
+export interface ClaimCheck {
+  text: string
+  supported_by: string[]
+  ok: boolean
+  reason: string | null
+}
+
+// A check run in code. A failed hard guard makes the suggestion unsupported.
+export interface GuardResult {
+  name: string
+  ok: boolean
+  hard: boolean
+  detail: string | null
+}
+
+export interface Verification {
+  status: VerificationStatus
+  claims: ClaimCheck[]
+  guards: GuardResult[]
+  reason: string | null // the first failing reason, shown to the user
+}
+
+// A proposed CV change. `target` is a line ID (align_wording) or a section ID (add_skill,
+// tailor_summary). `before` is null when a line is added.
+export interface Suggestion {
+  id: string // S01, S02, ...
+  kind: SuggestionKind
+  target: string
+  before: string | null
+  after: string
+  requirement_ids: string[]
+  cited_refs: string[]
+  introduced_terms: string[]
+  covers_requirement_ids: string[]
+  edited_by_user: boolean
+  verification: Verification
+}
+
+// The user's choices on the suggestions, sent to the build.
+export interface ReviewDecisions {
+  accepted: string[]
+  rejected: string[]
+}
+
+// ---- Rebuilt CV ------------------------------------------------------------
+
+export type DocLineKind = 'text' | 'bullet'
+
+// `origin` is the original line ID (L012) or the accepted suggestion ID (S03) of the text.
+export interface DocLine {
+  text: string
+  origin: string
+  kind: DocLineKind
+}
+
+// One block inside a section: a job, a degree, a project, or loose lines.
+export interface DocItem {
+  id: string // the entry ID, or "<section_id>-i<n>" for loose lines
+  lines: DocLine[]
+}
+
+export interface DocSection {
+  id: string // the CV section ID, or "added-<type>" for a section a suggestion created
+  type: SectionType
+  heading: string
+  heading_origin: string | null // the heading's line ID; null for a standard heading
+  items: DocItem[]
+}
+
+export interface DocContact {
+  name: string | null
+  details: string[] // email, phone, location, links
+  origins: string[] // line IDs the contact came from
+}
+
+export interface CVDocument {
+  contact: DocContact
+  sections: DocSection[]
+}
+
+export type DiffStatus = 'unchanged' | 'changed' | 'added' | 'removed'
+
+export interface DiffLine {
+  section_id: string
+  status: DiffStatus
+  before: string | null
+  after: string | null
+  origin: string | null
+}
+
+// What the build changed, and how the new CV was checked.
+export interface BuildReport {
+  diff: DiffLine[]
+  coverage_before: number | null
+  coverage_after: number | null
+  fit: number | null
+  roundtrip_ok: boolean | null
+  roundtrip_issues: string[]
+  built_by: 'agent' | 'fallback'
+  validation_errors: string[]
+}
+
 // ---- Report projection (GET /api/analyses/{id} and the "report" event) ----
 
 export type CvKind = 'pdf' | 'docx' | 'text'
@@ -247,14 +366,18 @@ export interface UsageTotal {
   models: string[]
 }
 
-export type AnalysisStatus = 'running' | 'done' | 'paused' | 'stalled'
+export type AnalysisStatus = 'running' | 'paused' | 'done' | 'stalled'
+
+// Where the run is: waiting for optimize, waiting for the review, or built.
+export type AnalysisStage = 'report_ready' | 'review_ready' | 'built'
 
 export interface AnalysisReport {
   analysis_id: string
   status: AnalysisStatus
-  stage: string | null
+  stage: AnalysisStage | null
   cv_meta: CvMeta | null
   cv: ParsedCv | null
+  parse_warnings: ParseWarning[]
   job: JobPosting | null
   job_notes: string[]
   flags: RequirementFlag[]
@@ -262,6 +385,10 @@ export interface AnalysisReport {
   assessments: Record<string, RequirementAssessment>
   score: ScoreBreakdown | null
   verdict: Verdict | null
+  suggestions: Suggestion[]
+  decisions: ReviewDecisions | null
+  document: CVDocument | null
+  build_report: BuildReport | null
   facts: Partial<CandidateFacts>
   excluded_ids: string[]
   included_flagged_ids: string[]
@@ -273,14 +400,22 @@ export interface AnalysisReport {
 
 export type ProgressStep = 'prepare_cv' | 'prepare_job' | 'match' | 'score'
 
+// Steps of the optimize stream and of the build stream (the analysis has its own list).
+export type OptimizeStep = 'suggest' | 'verify'
+export type BuildStep = 'build' | 'checks'
+
 export type ProgressStatus = 'started' | 'done' | 'chunk_done'
 
-// Data of the "progress" SSE event (see graph/nodes.py `_progress`).
-export interface ProgressEvent {
+// Data of a "progress" SSE event (see graph/nodes.py `_progress`). Its step names the stream it
+// came from: ProgressStep for the analysis, OptimizeStep or BuildStep for the other two.
+export interface ProgressEvent<Step extends string = ProgressStep> {
   type: 'progress'
-  step: ProgressStep
+  step: Step
   status: ProgressStatus
   requirements?: number
+  suggestions?: number
+  built_by?: 'agent' | 'fallback'
+  roundtrip_ok?: boolean | null
 }
 
 // Body of every JSON error, and of the "error" SSE event.
@@ -294,4 +429,13 @@ export interface ErrorBody {
 export interface Samples {
   cv_text: string
   job_text: string
+}
+
+// Body of PATCH /api/analyses/{id}/inputs. A field left out keeps its value, and a list that
+// is sent replaces the old one. Sending `facts.answers` replaces the whole answers map, so
+// send every answer each time.
+export interface InputsUpdate {
+  facts?: Partial<CandidateFacts>
+  excluded_ids?: string[]
+  included_flagged_ids?: string[]
 }
