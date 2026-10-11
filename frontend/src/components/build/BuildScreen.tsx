@@ -1,5 +1,6 @@
 import { cvDownloadUrl } from '../../api/client'
 import type { AnalysisReport, BuildReport, DiffLine } from '../../api/types'
+import { CitedText } from '../CitationTag'
 import HowComputed from '../HowComputed'
 import ScoreValue from '../review/ScoreValue'
 import LineDiff from './LineDiff'
@@ -85,7 +86,9 @@ export default function BuildScreen({ analysis, onStartOver }: BuildScreenProps)
               {report.roundtrip_issues.length > 0 && (
                 <ul className="issue-list">
                   {report.roundtrip_issues.map((issue, index) => (
-                    <li key={index}>{issue}</li>
+                    <li key={index}>
+                      <CitedText text={issue} />
+                    </li>
                   ))}
                 </ul>
               )}
@@ -97,7 +100,9 @@ export default function BuildScreen({ analysis, onStartOver }: BuildScreenProps)
               <p>Some checks failed:</p>
               <ul className="issue-list">
                 {report.validation_errors.map((error, index) => (
-                  <li key={index}>{error}</li>
+                  <li key={index}>
+                    <CitedText text={error} />
+                  </li>
                 ))}
               </ul>
             </div>
@@ -135,7 +140,7 @@ export default function BuildScreen({ analysis, onStartOver }: BuildScreenProps)
 // How the section order was chosen, in plain words.
 function orderNote(builtBy: BuildReport['built_by']): string {
   return builtBy === 'agent'
-    ? 'Section order chosen by an AI agent with guarded tools (your text is unchanged)'
+    ? 'An AI agent chose the section order; it can only move sections, so your text is unchanged'
     : 'Original section order kept'
 }
 

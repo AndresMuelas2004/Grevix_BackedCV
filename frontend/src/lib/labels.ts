@@ -68,7 +68,7 @@ export const SECTION_LABELS: Record<SectionType, string> = {
 
 export const MATCH_LABELS: Record<MatchType, string> = {
   exact: 'exact match',
-  alias: 'alias match',
+  alias: 'matched by another name',
   semantic: 'matched by meaning',
   inferred: 'inferred',
   user_answer: 'your answer',

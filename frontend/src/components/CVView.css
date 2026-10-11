@@ -49,7 +49,7 @@
 
 .cv-line {
   display: grid;
-  grid-template-columns: 3.25rem minmax(0, 1fr) auto;
+  grid-template-columns: 4rem minmax(0, 1fr) auto;
   align-items: start;
   gap: 0.5rem;
   padding: 0.3rem 0.5rem;
@@ -59,10 +59,11 @@
 }
 
 .cv-id {
-  font-family: ui-monospace, Consolas, monospace;
-  font-size: 0.8125rem;
+  font-size: 0.75rem;
+  font-weight: 600;
   color: var(--muted);
-  padding-top: 0.1rem;
+  padding-top: 0.2rem;
+  white-space: nowrap;
 }
 
 .cv-text {
@@ -126,7 +127,7 @@
 /* On small screens the tags go under the line text, so the text keeps its width. */
 @media (max-width: 480px) {
   .cv-line {
-    grid-template-columns: 3.25rem minmax(0, 1fr);
+    grid-template-columns: 4rem minmax(0, 1fr);
   }
 
   .cv-tags {

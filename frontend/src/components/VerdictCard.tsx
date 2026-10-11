@@ -114,22 +114,32 @@ interface RequirementChipProps {
   onSelect?: (requirementId: string) => void
 }
 
-// A requirement ID as a small chip. With a handler, the chip is a button that selects the requirement.
+// A requirement as a small chip showing its label, cut short with an ellipsis when long. The ID is
+// in the tooltip and the accessible name. With a handler, the chip is a button that selects it.
 function RequirementChip({ requirementId, label, onSelect }: RequirementChipProps) {
-  const name = (
+  const named = label !== requirementId
+  const title = named ? `${label} (${requirementId})` : requirementId
+  const content = (
     <>
-      {requirementId}
-      {label !== requirementId && <span className="visually-hidden">: {label}</span>}
+      {label}
+      {named && <span className="visually-hidden"> ({requirementId})</span>}
     </>
   )
-  if (!onSelect) return <span className="req-chip">{name}</span>
+  if (!onSelect) {
+    return (
+      <span className="req-chip" title={title}>
+        {content}
+      </span>
+    )
+  }
   return (
     <button
       type="button"
       className="req-chip req-chip-action"
+      title={title}
       onClick={() => onSelect(requirementId)}
     >
-      {name}
+      {content}
     </button>
   )
 }

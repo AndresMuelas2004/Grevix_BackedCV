@@ -1,5 +1,6 @@
 import { useEffect } from 'react'
 import type { CvLine, CvMeta, CvSection, ParsedCv } from '../api/types'
+import { citationLabel, COMPUTED_FACT_LABEL } from '../lib/citations'
 import { SECTION_LABELS } from '../lib/labels'
 import './CVView.css'
 
@@ -75,6 +76,7 @@ export default function CvView({
                   <LineItem
                     key={line.id}
                     id={line.id}
+                    label={citationLabel(line.id)}
                     text={line.text}
                     evidence={highlighted.has(line.id)}
                     noted={noted.has(line.id)}
@@ -87,12 +89,13 @@ export default function CvView({
 
           {cv.facts.length > 0 && (
             <div className="cv-group">
-              <h3 className="cv-group-title">Computed facts</h3>
+              <h3 className="cv-group-title">{COMPUTED_FACT_LABEL}</h3>
               <ul className="cv-lines">
                 {cv.facts.map((fact) => (
                   <LineItem
                     key={fact.id}
                     id={fact.id}
+                    label=""
                     text={fact.text}
                     evidence={highlighted.has(fact.id)}
                     noted={noted.has(fact.id)}
@@ -110,26 +113,27 @@ export default function CvView({
 
 interface LineItemProps {
   id: string
+  label: string // shown before the text: "line 39", or nothing for a computed fact
   text: string
   evidence: boolean
   noted: boolean
   warned: boolean
 }
 
-function LineItem({ id, text, evidence, noted, warned }: LineItemProps) {
+function LineItem({ id, label, text, evidence, noted, warned }: LineItemProps) {
   let className = 'cv-line'
   if (evidence) className += ' is-evidence'
   if (noted) className += ' is-noted'
 
   return (
     <li id={`cv-${id}`} className={className}>
-      <span className="cv-id">{id}</span>
+      <span className="cv-id">{label}</span>
       <span className="cv-text">{text}</span>
       <span className="cv-tags">
         {warned && (
           <span className="cv-warn-mark">
             <span aria-hidden="true">!</span>
-            <span className="visually-hidden">Parse warning</span>
+            <span className="visually-hidden">Problem reading this line</span>
           </span>
         )}
         {evidence && <span className="cv-tag">Evidence</span>}

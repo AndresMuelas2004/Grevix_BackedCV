@@ -68,21 +68,24 @@
   color: var(--muted);
 }
 
-/* Requirement IDs in the reasons. A button when it can select the requirement. */
+/* Requirements named in the reasons. A button when it can select the requirement. A long label is
+   cut short with an ellipsis; the full name is in the tooltip. */
 .req-chip {
-  display: inline-flex;
-  align-items: center;
+  display: inline-block;
+  max-width: min(100%, 18rem);
   margin: 0.1rem 0 0.1rem 0.35rem;
   padding: 0 0.45rem;
   border: 1px solid var(--border-strong);
   border-radius: 999px;
   background: var(--surface);
   color: var(--muted);
-  font-family: ui-monospace, Consolas, monospace;
+  font-family: inherit;
   font-size: 0.8125rem;
   font-weight: 600;
   line-height: 1.6;
   vertical-align: middle;
+  overflow: hidden;
+  text-overflow: ellipsis;
   white-space: nowrap;
 }
 

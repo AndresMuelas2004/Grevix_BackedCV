@@ -1,10 +1,13 @@
-import type { ParseWarning } from '../../api/types'
+import type { CvLine, ParseWarning } from '../../api/types'
 import { SEVERITY_LABELS } from '../../lib/labels'
 import { splitParseWarnings } from '../../lib/parseWarnings'
+import CitationTag, { CitedText } from '../CitationTag'
 import './ParseReport.css'
 
 interface ParseReportProps {
   warnings: ParseWarning[]
+  // The CV's lines, so the lines a warning points at can be shown with their text.
+  lines: CvLine[]
   // Line IDs highlighted in the CV view. Pressing an item with lines sets them.
   highlightedLineIds: string[]
   onHighlight: (lineIds: string[]) => void
@@ -16,9 +19,15 @@ const SEVERITY_CHIP: Record<ParseWarning['severity'], string> = {
   info: 'chip-neutral',
 }
 
-export default function ParseReport({ warnings, highlightedLineIds, onHighlight }: ParseReportProps) {
+export default function ParseReport({
+  warnings,
+  lines,
+  highlightedLineIds,
+  onHighlight,
+}: ParseReportProps) {
   const { problems, tips } = splitParseWarnings(warnings)
   const empty = problems.length === 0 && tips.length === 0
+  const lineTexts = new Map<string, string>(lines.map((line): [string, string] => [line.id, line.text]))
 
   return (
     <section className="parse-report card" aria-labelledby="parse-title">
@@ -30,7 +39,7 @@ export default function ParseReport({ warnings, highlightedLineIds, onHighlight 
         <>
           {problems.length > 0 && (
             <div className="parse-group">
-              <h3>Parse warnings</h3>
+              <h3>Problems found</h3>
               <ul className="parse-list">
                 {problems.map((item, index) => (
                   <ParseItem
@@ -38,6 +47,7 @@ export default function ParseReport({ warnings, highlightedLineIds, onHighlight 
                     item={item}
                     label={SEVERITY_LABELS[item.severity]}
                     chipClass={SEVERITY_CHIP[item.severity]}
+                    lineTexts={lineTexts}
                     highlighted={sameIds(item.line_ids, highlightedLineIds)}
                     onHighlight={onHighlight}
                   />
@@ -56,6 +66,7 @@ export default function ParseReport({ warnings, highlightedLineIds, onHighlight 
                     item={item}
                     label="Tip"
                     chipClass="chip-neutral"
+                    lineTexts={lineTexts}
                     highlighted={sameIds(item.line_ids, highlightedLineIds)}
                     onHighlight={onHighlight}
                   />
@@ -73,17 +84,20 @@ interface ParseItemProps {
   item: ParseWarning
   label: string
   chipClass: string
+  lineTexts: ReadonlyMap<string, string> // CV line ID to its text
   highlighted: boolean
   onHighlight: (lineIds: string[]) => void
 }
 
-function ParseItem({ item, label, chipClass, highlighted, onHighlight }: ParseItemProps) {
+function ParseItem({ item, label, chipClass, lineTexts, highlighted, onHighlight }: ParseItemProps) {
   const hasLines = item.line_ids.length > 0
 
   return (
     <li className="parse-item">
       <span className={`chip ${chipClass}`}>{label}</span>
-      <p className="parse-message">{item.message}</p>
+      <p className="parse-message">
+        <CitedText text={item.message} />
+      </p>
 
       {hasLines && (
         <div className="parse-lines">
@@ -95,14 +109,14 @@ function ParseItem({ item, label, chipClass, highlighted, onHighlight }: ParseIt
           >
             Show in CV
           </button>
-          <span className="parse-ids">
-            Lines:{' '}
+          <ul className="parse-cited">
             {item.line_ids.map((id) => (
-              <code key={id} className="parse-id">
-                {id}
-              </code>
+              <li key={id}>
+                <CitationTag id={id} />
+                <span>{lineTexts.get(id) ?? 'Not found in your CV.'}</span>
+              </li>
             ))}
-          </span>
+          </ul>
         </div>
       )}
     </li>

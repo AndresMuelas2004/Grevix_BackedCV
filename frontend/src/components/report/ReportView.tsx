@@ -73,6 +73,7 @@ export default function ReportView({ analysis, onAnalysisChange, actions }: Repo
         <KnockoutQuestions analysis={analysis} onAnalysisChange={onAnalysisChange} />
         <ParseReport
           warnings={analysis.parse_warnings}
+          lines={analysis.cv?.lines ?? []}
           highlightedLineIds={highlightedLineIds}
           onHighlight={highlightLines}
         />

@@ -8,6 +8,7 @@ import type {
   ReviewDecisions,
   Suggestion,
 } from '../../api/types'
+import { formatScore } from '../../lib/format'
 import { SECTION_LABELS } from '../../lib/labels'
 import HowComputed from '../HowComputed'
 import ScoreValue from './ScoreValue'
@@ -41,8 +42,12 @@ export default function ReviewScreen({
   const unsupported = suggestions.filter((s) => s.verification.status === 'unsupported')
   const accepted = suggestions.filter((s) => effectiveDecision(s, decisions) === 'accepted')
   const rejected = suggestions.filter((s) => effectiveDecision(s, decisions) === 'rejected')
-  const acceptedKey = accepted.map((s) => s.id).join('|')
-  const coverage = useCoveragePreview(analysis.analysis_id, acceptedKey)
+  // Until something is accepted, the preview asks about every verified suggestion: it shows what
+  // accepting them would gain. Once something is accepted, it covers only the accepted ones.
+  const coverage = useCoveragePreview(
+    analysis,
+    accepted.length > 0 ? accepted.map((s) => s.id) : verified.map((s) => s.id),
+  )
   const groups = groupSuggestions(analysis)
 
   const requirementLabels = new Map<string, string>(
@@ -105,28 +110,14 @@ export default function ReviewScreen({
         </ul>
 
         {/* A failed preview shows nothing: the estimate is optional, so the error stays quiet. */}
-        {coverage.status !== 'failed' && (
+        {coverage.status !== 'failed' && coverage.status !== 'idle' && (
           <section className="review-coverage" aria-live="polite">
             {coverage.status === 'loading' ? (
               <p className="screen-note">Checking keyword coverage...</p>
+            ) : accepted.length > 0 ? (
+              <SelectionCoverage preview={coverage.preview} labels={requirementLabels} />
             ) : (
-              <>
-                <p className="coverage-line">
-                  Keyword coverage now{' '}
-                  <strong>
-                    <ScoreValue value={coverage.preview.coverage_now} />
-                  </strong>{' '}
-                  <span aria-hidden="true">→</span>
-                  <span className="visually-hidden"> to </span>{' '}
-                  <strong>
-                    <ScoreValue value={coverage.preview.coverage} />
-                  </strong>{' '}
-                  if you build with these changes.
-                </p>
-                <p className="screen-note">
-                  {gainedSentence(coverage.preview.gained_requirement_ids, requirementLabels)}
-                </p>
-              </>
+              <PotentialCoverage preview={coverage.preview} labels={requirementLabels} />
             )}
           </section>
         )}
@@ -203,29 +194,41 @@ function effectiveDecision(suggestion: Suggestion, decisions: Decisions): Decisi
 }
 
 type CoverageState =
+  | { status: 'idle' } // no suggestion to ask about
   | { status: 'loading' }
   | { status: 'ready'; preview: CoveragePreview }
   | { status: 'failed' }
 
-// The keyword coverage for the accepted suggestions, from the backend. It is asked for again when
-// the accepted set changes, after a short pause. A reply for a set that has changed since is
-// dropped. A failed call gives 'failed'.
-function useCoveragePreview(analysisId: string, acceptedKey: string): CoverageState {
-  const [answer, setAnswer] = useState<{ key: string; state: CoverageState } | null>(null)
+interface CoverageAnswer {
+  report: AnalysisReport
+  key: string
+  state: CoverageState
+}
+
+// The keyword coverage for a set of suggestions, from the backend. It is asked for again when the set
+// or the report changes (an edited text can change the coverage), after a short pause. A reply for a
+// set or a report that has changed since is dropped. A failed call gives 'failed'.
+function useCoveragePreview(
+  analysis: AnalysisReport,
+  suggestionIds: readonly string[],
+): CoverageState {
+  const idKey = suggestionIds.join('|')
+  const [answer, setAnswer] = useState<CoverageAnswer | null>(null)
 
   useEffect(() => {
-    const ids = acceptedKey === '' ? [] : acceptedKey.split('|')
+    if (idKey === '') return
+    const ids = idKey.split('|')
     const controller = new AbortController()
     const timer = window.setTimeout(() => {
-      void previewCoverage(analysisId, ids, controller.signal)
+      void previewCoverage(analysis.analysis_id, ids, controller.signal)
         .then((preview) => {
           if (!controller.signal.aborted) {
-            setAnswer({ key: acceptedKey, state: { status: 'ready', preview } })
+            setAnswer({ report: analysis, key: idKey, state: { status: 'ready', preview } })
           }
         })
         .catch(() => {
           if (!controller.signal.aborted) {
-            setAnswer({ key: acceptedKey, state: { status: 'failed' } })
+            setAnswer({ report: analysis, key: idKey, state: { status: 'failed' } })
           }
         })
     }, PREVIEW_DELAY_MS)
@@ -233,16 +236,77 @@ function useCoveragePreview(analysisId: string, acceptedKey: string): CoverageSt
       window.clearTimeout(timer)
       controller.abort()
     }
-  }, [analysisId, acceptedKey])
+  }, [analysis, idKey])
 
-  return answer !== null && answer.key === acceptedKey ? answer.state : { status: 'loading' }
+  if (idKey === '') return { status: 'idle' }
+  return answer !== null && answer.report === analysis && answer.key === idKey
+    ? answer.state
+    : { status: 'loading' }
 }
 
-// Names the requirements that the accepted changes newly cover.
-function gainedSentence(ids: readonly string[], labels: ReadonlyMap<string, string>): string {
-  if (ids.length === 0) return 'These changes cover no new requirement.'
-  const names = ids.map((id) => labels.get(id) ?? id)
-  return `Requirements that become covered: ${names.join(', ')}.`
+interface CoverageProps {
+  preview: CoveragePreview
+  labels: ReadonlyMap<string, string>
+}
+
+// The keyword coverage if the accepted suggestions are built.
+function SelectionCoverage({ preview, labels }: CoverageProps) {
+  const gained = preview.gained_requirement_ids
+  return (
+    <>
+      <p className="coverage-line">
+        Keyword coverage now{' '}
+        <strong>
+          <ScoreValue value={preview.coverage_now} />
+        </strong>{' '}
+        <span aria-hidden="true">→</span>
+        <span className="visually-hidden"> to </span>{' '}
+        <strong>
+          <ScoreValue value={preview.coverage} />
+        </strong>{' '}
+        if you build with these changes.
+      </p>
+      <p className="screen-note">
+        {gained.length === 0
+          ? 'These changes cover no new requirement.'
+          : `Requirements that become covered: ${requirementNames(gained, labels)}.`}
+      </p>
+    </>
+  )
+}
+
+// Before anything is accepted: how far the verified suggestions would raise the coverage.
+function PotentialCoverage({ preview, labels }: CoverageProps) {
+  const { coverage, coverage_now: now } = preview
+  const gained = preview.gained_requirement_ids
+  if (coverage === null || now === null) return null
+  return (
+    <>
+      {formatScore(coverage) === formatScore(now) ? (
+        <p className="coverage-line">The verified suggestions do not raise keyword coverage.</p>
+      ) : (
+        <p className="coverage-line">
+          Accept the verified suggestions to raise keyword coverage from{' '}
+          <strong>
+            <ScoreValue value={now} />
+          </strong>{' '}
+          to{' '}
+          <strong>
+            <ScoreValue value={coverage} />
+          </strong>
+          .
+        </p>
+      )}
+      {gained.length > 0 && (
+        <p className="screen-note">Requirements they would cover: {requirementNames(gained, labels)}.</p>
+      )}
+    </>
+  )
+}
+
+// The labels of the given requirements, in the order given.
+function requirementNames(ids: readonly string[], labels: ReadonlyMap<string, string>): string {
+  return ids.map((id) => labels.get(id) ?? id).join(', ')
 }
 
 interface SuggestionGroup {

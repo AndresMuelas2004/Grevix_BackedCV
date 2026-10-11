@@ -1,6 +1,7 @@
 import { useRef, useState, type FormEvent } from 'react'
 import type { Suggestion, SuggestionKind, VerificationStatus } from '../../api/types'
 import { describeError } from '../../lib/errors'
+import CitationTag, { CitedText } from '../CitationTag'
 import ChangeDiff from './ChangeDiff'
 import './SuggestionCard.css'
 
@@ -113,7 +114,7 @@ export default function SuggestionCard({
           <ul className="cited-list">
             {suggestion.cited_refs.map((ref) => (
               <li key={ref}>
-                <code className="cite-id">{ref}</code>
+                <CitationTag id={ref} />
                 <span>{citations.get(ref) ?? 'Not found in your CV.'}</span>
               </li>
             ))}
@@ -125,14 +126,23 @@ export default function SuggestionCard({
         <div className="reason-box">
           <p>
             <strong>{status === 'pending' ? 'Not checked yet.' : 'Not supported by your CV.'}</strong>
-            {status !== 'pending' && ` ${verification.reason ?? 'The check did not pass.'}`}
+            {status !== 'pending' && (
+              <>
+                {' '}
+                <CitedText text={verification.reason ?? 'The check did not pass.'} />
+              </>
+            )}
           </p>
           {failedClaims.length > 0 && (
             <ul>
               {failedClaims.map((claim, index) => (
                 <li key={index}>
                   {claim.text}
-                  {claim.reason && `: ${claim.reason}`}
+                  {claim.reason && (
+                    <>
+                      : <CitedText text={claim.reason} />
+                    </>
+                  )}
                 </li>
               ))}
             </ul>

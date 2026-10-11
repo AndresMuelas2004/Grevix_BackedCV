@@ -22,6 +22,7 @@ import {
   MATCH_LABELS,
   STATUS_LABELS,
 } from '../lib/labels'
+import CitationTag, { CitedText } from './CitationTag'
 import './RequirementList.css'
 
 // What the row toggles need: the report's current lists, and where the saved report goes.
@@ -201,7 +202,7 @@ function RequirementRow({
           <span className="chip chip-neutral">{CATEGORY_LABELS[requirement.category]}</span>
           {requirement.knockout_type && (
             <span className="chip chip-knockout">
-              Knockout: {KNOCKOUT_LABELS[requirement.knockout_type]}
+              Deal-breaker: {KNOCKOUT_LABELS[requirement.knockout_type]}
             </span>
           )}
         </div>
@@ -244,7 +245,11 @@ function RequirementRow({
           </div>
         ))}
 
-        {assessment?.rationale && <p className="req-rationale">{assessment.rationale}</p>}
+        {assessment?.rationale && (
+          <p className="req-rationale">
+            <CitedText text={assessment.rationale} />
+          </p>
+        )}
 
         <details className="req-quote">
           <summary>Posting quote</summary>
@@ -260,7 +265,7 @@ function RequirementRow({
             <ul>
               {evidence.map((item) => (
                 <li key={`${item.ref}|${item.quote}`}>
-                  <code className="line-id">{item.ref}</code> <q>{item.quote}</q>{' '}
+                  <CitationTag id={item.ref} /> <q>{item.quote}</q>{' '}
                   <span className="match-type">({MATCH_LABELS[item.match_type]})</span>
                 </li>
               ))}

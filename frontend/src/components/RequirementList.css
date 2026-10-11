@@ -134,15 +134,6 @@
   font-size: 0.9375rem;
 }
 
-.line-id {
-  padding: 0.05rem 0.35rem;
-  border: 1px solid var(--border);
-  border-radius: 4px;
-  background: var(--bg);
-  font-family: ui-monospace, Consolas, monospace;
-  font-size: 0.8125rem;
-}
-
 .match-type {
   color: var(--muted);
   font-size: 0.8125rem;

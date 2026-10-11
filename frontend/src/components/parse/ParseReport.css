@@ -45,10 +45,22 @@
 }
 
 .parse-lines {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 0.5rem 0.75rem;
+  display: grid;
+  justify-items: start;
+  gap: 0.5rem;
+}
+
+.parse-cited {
+  display: grid;
+  gap: 0.35rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font-size: 0.9375rem;
+}
+
+.parse-cited li {
+  overflow-wrap: anywhere;
 }
 
 /* Pressed while its lines are highlighted in the CV. The check mark shows it, not color alone. */
@@ -83,17 +95,3 @@
   font-weight: 800;
 }
 
-.parse-ids {
-  font-size: 0.875rem;
-  color: var(--muted);
-}
-
-.parse-id {
-  padding: 0.05rem 0.35rem;
-  border: 1px solid var(--border);
-  border-radius: 4px;
-  background: var(--bg);
-  color: var(--text);
-  font-family: ui-monospace, Consolas, monospace;
-  font-size: 0.8125rem;
-}

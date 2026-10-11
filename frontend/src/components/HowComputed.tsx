@@ -27,13 +27,13 @@ export default function HowComputed({ usage }: HowComputedProps) {
             <dt>Model calls</dt>
             <dd>
               {formatNumber(usage.calls)} {usage.calls === 1 ? 'call' : 'calls'},{' '}
-              {formatNumber(usage.cached_calls)} replayed from cache
+              {formatNumber(usage.cached_calls)} reused from an earlier run
             </dd>
           </div>
           <div>
-            <dt>Tokens</dt>
+            <dt>Text sent and received</dt>
             <dd>
-              {formatNumber(usage.input_tokens)} in, {formatNumber(usage.output_tokens)} out
+              {formatNumber(usage.input_tokens)} sent, {formatNumber(usage.output_tokens)} received
             </dd>
           </div>
           <div>
@@ -47,8 +47,7 @@ export default function HowComputed({ usage }: HowComputedProps) {
           <a href={SCORING_URL}>Read the scoring rules</a>.
         </p>
         <p>
-          Every suggestion passes deterministic checks and an independent AI verifier before you can
-          accept it.
+          Every suggestion passes automatic checks and a second AI check before you can accept it.
         </p>
         <p>The files you upload are not stored. Analyses are deleted after 24 hours.</p>
         <p>
