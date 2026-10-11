@@ -184,6 +184,17 @@ textarea[aria-invalid='true'] {
   font-weight: 600;
 }
 
+.form-footer {
+  display: grid;
+  gap: 0.75rem;
+}
+
+/* Same muted colour as the other hints on this form; it wraps like any paragraph. */
+.privacy-note {
+  font-size: 0.9375rem;
+  color: var(--muted);
+}
+
 .form-actions {
   display: flex;
   justify-content: flex-end;
