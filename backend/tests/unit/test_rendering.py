@@ -4,10 +4,13 @@ import docx
 from docx.shared import Inches, Pt
 
 from backedcv.domain.models import CVDocument, DocContact, DocItem, DocLine, DocSection
+from backedcv.ingestion import read_cv
 from backedcv.rendering import render_docx, render_pdf, roundtrip_check
 
+HEADLINE = "Software engineer moving into AI engineering"
 EXPECTED_LINES = [
     "José Muñoz",
+    HEADLINE,
     "jose.munoz@example.com | +34 600 123 456 | Málaga, Spain",
     "Summary",
     "R&D engineer with C++ and C#",
@@ -32,6 +35,8 @@ def _cv() -> CVDocument:
             name="José Muñoz",
             details=["jose.munoz@example.com", "+34 600 123 456", "Málaga, Spain"],
             origins=["L001", "L002"],
+            headline=HEADLINE,
+            headline_origin="L003",
         ),
         sections=[
             DocSection(
@@ -99,6 +104,23 @@ def test_pdf_reads_back_with_every_line():
 
     assert pdf.startswith(b"%PDF")
     ok, issues = roundtrip_check(pdf, _cv())
+    assert ok, issues
+
+
+def test_pdf_shows_the_headline_under_the_name():
+    texts = [line.text for line in read_cv(render_pdf(_cv()), "cv.pdf").lines]
+
+    assert texts[:2] == ["José Muñoz", HEADLINE]
+
+
+def test_roundtrip_accepts_a_long_link_that_wraps_at_its_hyphens():
+    link = "https://github.com/" + "-".join(["nuria-calvo"] * 12)
+    doc = _cv()
+    doc.sections[0].items[0].lines.append(_line(link))
+    pdf = render_pdf(doc)
+
+    assert link not in [line.text for line in read_cv(pdf, "cv.pdf").lines]
+    ok, issues = roundtrip_check(pdf, doc)
     assert ok, issues
 
 

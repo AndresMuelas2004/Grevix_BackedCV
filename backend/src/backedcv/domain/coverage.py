@@ -37,8 +37,8 @@ def coverage_after(
 
 
 def _shown_lines(doc: CVDocument) -> list[CVLine]:
-    """Every line the new CV shows: contact details, headings and body lines."""
-    contact = [doc.contact.name, *doc.contact.details]
+    """Every line the new CV shows: contact details, the headline, headings and body lines."""
+    contact = [doc.contact.name, doc.contact.headline, *doc.contact.details]
     lines = [CVLine(id="contact", text=text) for text in contact if text]
     for section in doc.sections:
         lines.append(CVLine(id=section.heading_origin or section.id, text=section.heading))

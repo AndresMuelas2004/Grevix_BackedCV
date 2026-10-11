@@ -312,6 +312,9 @@ export interface DocContact {
   name: string | null
   details: string[] // email, phone, location, links
   origins: string[] // line IDs the contact came from
+  // Optional: documents saved before the headline existed do not have these keys.
+  headline?: string | null // the line under the name, as written or as its accepted rewrite
+  headline_origin?: string | null // the headline's line ID, or the suggestion ID that rewrote it
 }
 
 export interface CVDocument {

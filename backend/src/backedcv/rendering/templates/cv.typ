@@ -16,6 +16,10 @@
   #block(below: 0.3em)[#text(size: 14pt, weight: "bold")[#name]]
 ]
 
+#if cv.contact.headline != none [
+  #par[#cv.contact.headline]
+]
+
 #if cv.contact.details.len() > 0 [
   #par[#cv.contact.details.join(" | ")]
 ]

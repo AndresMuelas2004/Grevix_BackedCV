@@ -55,11 +55,33 @@ def document_from_cv(cv: ParsedCV) -> CVDocument:
 def _contact(cv: ParsedCV) -> DocContact:
     contact = cv.contact
     fields = [contact.email, contact.phone, contact.location, *contact.links]
+    headline = _headline_line(cv)
     return DocContact(
         name=contact.name.value if contact.name is not None else None,
         details=[field.value for field in fields if field is not None],
         origins=_contact_origins(cv),
+        headline=headline.text if headline is not None else None,
+        headline_origin=headline.id if headline is not None else None,
     )
+
+
+def _headline_line(cv: ParsedCV) -> CVLine | None:
+    """The line under the name: the first line above every content section that is not a contact
+    field. The contact block is not a content section, so a headline inside it still counts.
+    Later loose lines keep their usual place."""
+    position = {line.id: i for i, line in enumerate(cv.lines)}
+    content = [section for section in cv.sections if section.type != "contact"]
+    starts = [
+        position[line_id]
+        for section in content
+        for line_id in [section.heading_line_id, *section.line_ids]
+        if line_id in position
+    ]
+    contact = set(_contact_origins(cv))
+    for line in cv.lines[: min(starts, default=len(cv.lines))]:
+        if line.id not in contact:
+            return line
+    return None
 
 
 def _section(
@@ -158,7 +180,11 @@ def apply_suggestions(
 
 
 def _align_wording(doc: CVDocument, s: Suggestion) -> None:
-    """Swap the target line's text, keeping its place and kind. A missing target is skipped."""
+    """Swap the target line's text, keeping its place and kind. The headline is outside the body
+    lines, so a suggestion aimed at it replaces the headline. A missing target is skipped."""
+    if s.target == doc.contact.headline_origin:
+        doc.contact.headline, doc.contact.headline_origin = s.after, s.id
+        return
     for line in _all_lines(doc):
         if line.origin == s.target:
             line.text, line.origin = s.after, s.id
@@ -215,11 +241,17 @@ def validate_document(
     lines = _all_lines(doc)
     present = {line.origin for line in lines}
     headings = [s.heading_origin for s in doc.sections if s.heading_origin is not None]
+    headline_origin = doc.contact.headline_origin
     counts = Counter([*doc.contact.origins, *headings, *(line.origin for line in lines)])
+    if headline_origin is not None:
+        counts[headline_origin] += 1
     section_counts = Counter(section.id for section in doc.sections)
 
     errors = [f"Origin {origin} appears {n} times" for origin, n in counts.items() if n > 1]
     errors += [f"Section ID {sid} appears {n} times" for sid, n in section_counts.items() if n > 1]
+    error = _headline_error(doc.contact, cv, original, usable)
+    if error is not None:
+        errors.append(error)
     for section in doc.sections:
         origin = section.heading_origin
         if origin is not None and original.get(origin) != section.heading:
@@ -251,6 +283,32 @@ def _line_error(
     return f"Line origin {line.origin} is neither a CV line nor an accepted, verified suggestion"
 
 
+def _headline_error(
+    contact: DocContact, cv: ParsedCV, original: dict[str, str], usable: dict[str, Suggestion]
+) -> str | None:
+    """The headline is its CV line as written, or the accepted wording of the align_wording
+    suggestion that targets that line."""
+    origin = contact.headline_origin
+    if origin is None:
+        return None
+    if origin in original:
+        if contact.headline == original[origin]:
+            return None
+        return "Headline does not match its CV line"
+    suggestion = usable.get(origin)
+    headline_line = _headline_line(cv)
+    if (
+        suggestion is None
+        or suggestion.kind != "align_wording"
+        or headline_line is None
+        or suggestion.target != headline_line.id
+    ):
+        return f"Headline origin {origin} is neither a CV line nor an accepted, verified rewrite"
+    if contact.headline == suggestion.after:
+        return None
+    return f"Suggestion {origin} does not match its accepted wording"
+
+
 def _is_replaced(
     line_id: str, section_id: str | None, usable: dict[str, Suggestion], present: set[str]
 ) -> bool:
@@ -279,6 +337,10 @@ def diff_document(
     present = {line.origin for line in _all_lines(doc)}
     cv_sections = {section.id: section for section in cv.sections}
     diff: list[DiffLine] = []
+    headline_origin = doc.contact.headline_origin
+    if headline_origin is not None and doc.contact.headline is not None:
+        headline = DocLine(text=doc.contact.headline, origin=headline_origin)
+        diff.append(_diff_line("contact", headline, original, by_id))
     for section in doc.sections:
         summary_replaced = any(
             s.kind == "tailor_summary" and s.target == section.id and s.id in present
@@ -368,9 +430,10 @@ def _body_ids(cv: ParsedCV) -> list[str]:
 
 
 def _non_body_ids(cv: ParsedCV) -> set[str]:
-    """Lines that never become document lines: section headings and contact details."""
+    """Lines that never become body lines: section headings, contact details and the headline."""
     headings = {s.heading_line_id for s in cv.sections if s.heading_line_id is not None}
-    return headings | set(_contact_origins(cv))
+    headline = _headline_line(cv)
+    return headings | set(_contact_origins(cv)) | ({headline.id} if headline is not None else set())
 
 
 def _contact_origins(cv: ParsedCV) -> list[str]:

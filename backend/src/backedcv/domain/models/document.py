@@ -34,6 +34,8 @@ class DocContact(BaseModel):
     name: str | None = None
     details: list[str] = Field(default_factory=list)  # email, phone, location, links
     origins: list[str] = Field(default_factory=list)  # line IDs the contact came from
+    headline: str | None = None  # the line under the name, kept as written
+    headline_origin: str | None = None  # the headline's line ID, None when the CV has none
 
 
 class CVDocument(BaseModel):

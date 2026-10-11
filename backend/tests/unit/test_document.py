@@ -21,6 +21,8 @@ from backedcv.domain.models import (
     Verification,
 )
 
+HEADLINE = "Software engineer moving into AI engineering"
+REWRITTEN_HEADLINE = "Machine learning engineer moving into AI"
 TEXTS = [
     ("L001", "Jane Doe"),
     ("L002", "jane@example.com | +34 600 123 456"),
@@ -136,6 +138,7 @@ def test_contact_comes_from_the_cv_and_the_contact_section_is_skipped():
         "linkedin.com/in/janedoe",
     ]
     assert doc.contact.origins == ["L001", "L002", "L003", "L004"]
+    assert doc.contact.headline is None
     assert [section.id for section in doc.sections] == ["S01", "S02", "S03"]
 
 
@@ -201,6 +204,128 @@ def test_missing_heading_gets_a_standard_one_and_lines_outside_sections_are_kept
     ]
     assert _origins(doc) == ["L002", "L003", "L004"]
     assert validate_document(doc, cv, [], []) == []
+
+
+def _headline_cv() -> ParsedCV:
+    """A name, a headline under it, one loose line before the first heading, then a summary."""
+    return ParsedCV(
+        lines=[
+            CVLine(id="L001", text="Ana Ruiz"),
+            CVLine(id="L002", text=HEADLINE),
+            CVLine(id="L003", text="Open to remote work"),
+            CVLine(id="L004", text="Summary"),
+            CVLine(id="L005", text="Backend engineer with 5 years of Python APIs."),
+        ],
+        contact=Contact(name=ContactField(value="Ana Ruiz", line_id="L001")),
+        sections=[
+            CVSection(id="S01", heading_line_id="L004", type="summary", line_ids=["L004", "L005"])
+        ],
+    )
+
+
+def test_headline_under_the_name_is_kept_out_of_other():
+    cv = _headline_cv()
+
+    doc = document_from_cv(cv)
+
+    assert (doc.contact.headline, doc.contact.headline_origin) == (HEADLINE, "L002")
+    assert [(s.id, s.type) for s in doc.sections] == [("S01", "summary"), ("other", "other")]
+    assert _origins(doc) == ["L005", "L003"]
+    assert validate_document(doc, cv, [], []) == []
+
+
+def test_headline_inside_the_contact_block_is_still_found():
+    cv = ParsedCV(
+        lines=[
+            CVLine(id="L001", text="Ana Ruiz"),
+            CVLine(id="L002", text=HEADLINE),
+            CVLine(id="L003", text="ana@example.com"),
+            CVLine(id="L004", text="Summary"),
+            CVLine(id="L005", text="Backend engineer with 5 years of Python APIs."),
+        ],
+        contact=Contact(
+            name=ContactField(value="Ana Ruiz", line_id="L001"),
+            email=ContactField(value="ana@example.com", line_id="L003"),
+        ),
+        sections=[
+            CVSection(
+                id="S00", heading_line_id=None, type="contact", line_ids=["L001", "L002", "L003"]
+            ),
+            CVSection(id="S01", heading_line_id="L004", type="summary", line_ids=["L004", "L005"]),
+        ],
+    )
+
+    doc = document_from_cv(cv)
+
+    assert doc.contact.headline_origin == "L002"
+    assert [section.id for section in doc.sections] == ["S01"]
+    assert validate_document(doc, cv, [], []) == []
+
+
+def test_validator_catches_a_changed_or_repeated_headline():
+    cv = _headline_cv()
+    changed = document_from_cv(cv).model_copy(deep=True)
+    changed.contact.headline = "Senior engineer"
+    repeated = document_from_cv(cv).model_copy(deep=True)
+    repeated.sections[0].items[0].lines.append(DocLine(text=HEADLINE, origin="L002"))
+
+    assert validate_document(changed, cv, [], []) == ["Headline does not match its CV line"]
+    assert validate_document(repeated, cv, [], []) == ["Origin L002 appears 2 times"]
+
+
+def test_diff_lists_the_headline_first_as_an_unchanged_contact_line():
+    cv = _headline_cv()
+
+    diff = diff_document(cv, document_from_cv(cv))
+
+    assert [entry.origin for entry in diff] == ["L002", "L005", "L003"]
+    assert (diff[0].section_id, diff[0].status, diff[0].after) == ("contact", "unchanged", HEADLINE)
+
+
+def test_accepted_verified_suggestion_rewrites_the_headline():
+    cv = _headline_cv()
+    doc = document_from_cv(cv)
+    rewrite = _suggestion("S01", "align_wording", "L002", REWRITTEN_HEADLINE, before=HEADLINE)
+
+    applied = apply_suggestions(doc, cv, [rewrite], ["S01"])
+
+    assert applied.contact.headline == REWRITTEN_HEADLINE
+    assert applied.contact.headline_origin == "S01"
+    assert _origins(applied) == _origins(doc)
+    assert validate_document(applied, cv, [rewrite], ["S01"]) == []
+    headline = diff_document(cv, applied, [rewrite])[0]
+    assert (headline.section_id, headline.status, headline.origin) == ("contact", "changed", "S01")
+    assert (headline.before, headline.after) == (HEADLINE, REWRITTEN_HEADLINE)
+
+
+def test_unverified_or_unaccepted_headline_rewrite_is_ignored():
+    cv = _headline_cv()
+    doc = document_from_cv(cv)
+    unsupported = _suggestion(
+        "S01", "align_wording", "L002", REWRITTEN_HEADLINE, "unsupported", before=HEADLINE
+    )
+    not_accepted = _suggestion("S02", "align_wording", "L002", "Senior engineer", before=HEADLINE)
+
+    applied = apply_suggestions(doc, cv, [unsupported, not_accepted], ["S01"])
+
+    assert applied == doc
+    assert validate_document(applied, cv, [unsupported, not_accepted], ["S01"]) == []
+
+
+def test_validator_rejects_a_headline_that_is_not_its_accepted_rewrite():
+    cv = _headline_cv()
+    rewrite = _suggestion("S01", "align_wording", "L002", REWRITTEN_HEADLINE, before=HEADLINE)
+    applied = apply_suggestions(document_from_cv(cv), cv, [rewrite], ["S01"])
+    tampered = applied.model_copy(deep=True)
+    tampered.contact.headline = "Senior engineer"
+    elsewhere = rewrite.model_copy(update={"target": "L005"})
+    not_the_headline = "Headline origin S01 is neither a CV line nor an accepted, verified rewrite"
+
+    assert validate_document(tampered, cv, [rewrite], ["S01"]) == [
+        "Suggestion S01 does not match its accepted wording"
+    ]
+    assert validate_document(applied, cv, [rewrite], []) == [not_the_headline]
+    assert validate_document(applied, cv, [elsewhere], ["S01"]) == [not_the_headline]
 
 
 def test_apply_each_kind_of_suggestion():

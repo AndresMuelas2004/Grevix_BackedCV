@@ -23,6 +23,8 @@ def render_docx(doc: CVDocument) -> bytes:
 
     if doc.contact.name:
         _name(document, doc.contact.name)
+    if doc.contact.headline:
+        document.add_paragraph(doc.contact.headline)
     if doc.contact.details:
         document.add_paragraph(CONTACT_SEPARATOR.join(doc.contact.details))
     for section in doc.sections:

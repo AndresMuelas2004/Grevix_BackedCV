@@ -150,6 +150,58 @@ def test_final_checks_on_the_built_cv_round_trip_and_raise_coverage():
     assert changed == [("added", "S01")]
 
 
+def _headline_state() -> dict:
+    """A CV whose only mention of the posting's keyword is the headline under the name."""
+    cv = ParsedCV(
+        lines=[
+            CVLine(id="L001", text="Jane Doe"),
+            CVLine(id="L002", text="Machine learning engineer"),
+            CVLine(id="L003", text="Summary"),
+            CVLine(id="L004", text="Built billing APIs in Python"),
+        ],
+        contact=Contact(name=ContactField(value="Jane Doe", line_id="L001")),
+        sections=[
+            CVSection(id="S00", heading_line_id=None, type="contact", line_ids=["L001"]),
+            CVSection(id="S01", heading_line_id="L003", type="summary", line_ids=["L003", "L004"]),
+        ],
+    )
+    job = JobPosting(
+        title="Machine Learning Engineer",
+        requirements=[
+            Requirement(
+                id="R01",
+                label="Machine learning",
+                quote="Machine learning",
+                terms=["Machine learning"],
+                category="hard_skill",
+                importance="required",
+            )
+        ],
+    )
+    assessments = build_assessments(job, cv, {})
+    return {
+        "cv": cv.model_dump(),
+        "job": job.model_dump(),
+        "assessments": {rid: a.model_dump() for rid, a in assessments.items()},
+        "score": compute_score(job.requirements, assessments).model_dump(),
+        "suggestions": [],
+        "decisions": {"accepted": [], "rejected": []},
+        "flags": [],
+        "excluded_ids": [],
+        "included_flagged_ids": [],
+    }
+
+
+def test_coverage_after_counts_the_headline_the_new_cv_shows():
+    state = _headline_state()
+    assert state["score"]["coverage"] == 100.0
+    state = {**state, **_built(state)}
+
+    report = _checked(state)
+
+    assert (report.coverage_before, report.coverage_after) == (100.0, 100.0)
+
+
 def test_a_render_failure_is_reported_in_the_build_report(monkeypatch):
     def broken_render(doc):
         raise RuntimeError("typst crashed")

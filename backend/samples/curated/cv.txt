@@ -5,7 +5,7 @@ Valencia, Spain
 nuria.calvo@example.com
 +34 600 000 142
 github.com/nuria-calvo-example
-linkedin.com/in/nuria-calvo-example
+linkedin.com/in/nuriacalvo
 SUMMARY
 Software engineer with three years of data and backend work, now moving into AI engineering. I build LLM features with agent frameworks and tool calling, measure them on labeled test sets, and serve them through FastAPI.
 EXPERIENCE
