@@ -1,17 +1,25 @@
 """PDF CVs: words with positions and fonts, grouped into lines in reading order."""
 
 import io
+from dataclasses import dataclass
 from statistics import median
 
 import pdfplumber
 
+from backedcv.ingestion.columns import page_order
 from backedcv.ingestion.errors import IngestionError
 from backedcv.ingestion.lines import RawLine
 
 _BOLD_HINTS = ("bold", "black", "heavy", "semibold", "demi")
 
 
-def read_pdf(data: bytes, max_pages: int) -> list[RawLine]:
+@dataclass
+class PdfRead:
+    rows: list[RawLine]
+    multi_column: bool  # at least one page was read as two columns
+
+
+def read_pdf(data: bytes, max_pages: int) -> PdfRead:
     try:
         pdf = pdfplumber.open(io.BytesIO(data))
     except Exception as exc:  # pdfminer raises several unrelated types
@@ -24,11 +32,15 @@ def read_pdf(data: bytes, max_pages: int) -> list[RawLine]:
                 f"This CV has {len(pdf.pages)} pages; the limit is {max_pages}.",
             )
         rows: list[RawLine] = []
+        multi_column = False
         for page_number, page in enumerate(pdf.pages, start=1):
             words = page.extract_words(
                 keep_blank_chars=False, use_text_flow=False, extra_attrs=["fontname", "size"]
             )
-            rows.extend(_group_lines(words, page_number))
+            order = page_order(words, float(page.width))
+            multi_column = multi_column or order.multi_column
+            for block in order.blocks:
+                rows.extend(_group_lines(block, page_number))
 
     if not rows:
         raise IngestionError(
@@ -36,7 +48,7 @@ def read_pdf(data: bytes, max_pages: int) -> list[RawLine]:
             "No text could be read from this PDF.",
             "It looks like a scanned image. Paste the CV text instead.",
         )
-    return rows
+    return PdfRead(rows=rows, multi_column=multi_column)
 
 
 def _group_lines(words: list[dict], page_number: int) -> list[RawLine]:

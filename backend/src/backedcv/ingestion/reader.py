@@ -20,14 +20,17 @@ class ReadResult:
     kind: str  # pdf / docx / text
     filename: str | None
     size: int
+    multi_column: bool = False  # a PDF page was read as two columns
 
 
 def read_cv(data: bytes, filename: str | None) -> ReadResult:
     if len(data) > MAX_BYTES:
         raise IngestionError("cv_too_large", "This file is larger than 4 MB.", status=413)
     kind = _detect_kind(data, filename)
-    rows = read_pdf(data, MAX_PAGES) if kind == "pdf" else read_docx(data)
-    return ReadResult(_finish(rows), kind, filename, len(data))
+    if kind == "pdf":
+        pdf = read_pdf(data, MAX_PAGES)
+        return ReadResult(_finish(pdf.rows), kind, filename, len(data), pdf.multi_column)
+    return ReadResult(_finish(read_docx(data)), kind, filename, len(data))
 
 
 def read_cv_text(text: str) -> ReadResult:
