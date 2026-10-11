@@ -1,6 +1,7 @@
 """Rule-based verdict: knockouts first, then score bands. The first matching rule wins."""
 
 from backedcv.domain.models import (
+    Contribution,
     JobPosting,
     PostingBanner,
     RequirementAssessment,
@@ -17,6 +18,7 @@ TITLES = {
     "stretch": "Stretch: apply if you can explain the gaps",
     "long_shot": "Long shot",
 }
+NAMED_LIMIT = 3  # most requirements that one reason names
 
 
 def compute_verdict(
@@ -110,16 +112,46 @@ def _band(job, assessments, score, excluded, flagged, included, config):
         and config.category_weights.get(r.category, 1) >= config.blocking_min_category_weight
         and (assessments.get(r.id) is not None and assessments[r.id].status == "missing")
     ]
+    reasons = [_fit_reason(score.fit, config)]
     if score.fit >= config.apply_min_fit and not blocking:
-        return "apply", [VerdictReason(text=score.summary)]
-    reasons = [VerdictReason(text=score.summary)]
-    if blocking:
-        reasons.append(
-            VerdictReason(
-                text="Missing required: " + ", ".join(r.label for r in blocking) + ".",
-                requirement_ids=[r.id for r in blocking],
-            )
+        matches = _heaviest(score, "met")
+        if matches:
+            reasons.append(_named("Strongest matches", matches))
+        return "apply", reasons
+    missing = _heaviest(score, "missing", importance="required")
+    if missing:
+        reasons.append(_named("Missing required", missing))
+    band = "stretch" if score.fit >= config.stretch_min_fit else "long_shot"
+    return band, reasons
+
+
+def _fit_reason(fit: float, config: ScoringConfig) -> VerdictReason:
+    """The Fit value next to the two thresholds, so every band can be read against them."""
+    return VerdictReason(
+        text=(
+            f"Your Fit is {fit:g} out of 100; {config.stretch_min_fit:g} is needed for a stretch "
+            f"and {config.apply_min_fit:g} to apply with confidence."
         )
-    if score.fit >= config.stretch_min_fit:
-        return "stretch", reasons
-    return "long_shot", reasons
+    )
+
+
+def _heaviest(
+    score: ScoreBreakdown, status: str, importance: str | None = None
+) -> list[Contribution]:
+    """Up to NAMED_LIMIT counted requirements with this status, heaviest first. Sorting is
+    stable, so ties keep the order of the posting."""
+    rows = [
+        c
+        for c in score.contributions
+        if c.excluded_reason is None
+        and c.status == status
+        and (importance is None or c.importance == importance)
+    ]
+    return sorted(rows, key=lambda c: -c.weight)[:NAMED_LIMIT]
+
+
+def _named(lead: str, rows: list[Contribution]) -> VerdictReason:
+    return VerdictReason(
+        text=f"{lead}: " + ", ".join(c.label for c in rows) + ".",
+        requirement_ids=[c.requirement_id for c in rows],
+    )

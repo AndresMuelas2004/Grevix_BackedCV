@@ -1,4 +1,4 @@
-// ATS-safe CV: one column, plain text, no tables, images, boxes or headers.
+// ATS-safe CV: one column, plain text, no tables, images, framed boxes or headers.
 // The document arrives as JSON in sys.inputs.data (see pdf_writer.py). Strings are
 // inserted as plain text, so special characters need no escaping.
 
@@ -20,8 +20,10 @@
   #par[#cv.contact.headline]
 ]
 
+// Each detail sits in its own box, so a long link moves to the next line whole. The space before
+// the bar is a non-breaking one, so a line never starts with a bar.
 #if cv.contact.details.len() > 0 [
-  #par[#cv.contact.details.join(" | ")]
+  #par[#cv.contact.details.map(detail => box[#detail]).join("\u{a0}| ")]
 ]
 
 #for section in cv.sections [

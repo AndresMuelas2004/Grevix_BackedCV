@@ -1,7 +1,13 @@
 from datetime import date
 
-from backedcv.domain.models import JobPosting, Requirement, RequirementAssessment
+from backedcv.domain.models import (
+    CandidateFacts,
+    JobPosting,
+    Requirement,
+    RequirementAssessment,
+)
 from backedcv.domain.rules.absurd import flag_requirements, flags_by_requirement
+from backedcv.domain.rules.knockout import apply_facts, likely_question
 from backedcv.domain.scoring import compute_score
 from backedcv.domain.verdict import compute_verdict
 
@@ -191,3 +197,133 @@ def test_r2_still_flags_a_requirement_that_r1_already_flags():
     assert score.fit == 100
     assert verdict.label == "apply"
     assert verdict.badges.count("screening_risk") == 1
+
+
+FIT_LINE = (
+    "Your Fit is {fit} out of 100; 55 is needed for a stretch and 75 to apply with confidence."
+)
+
+
+def test_long_shot_explains_the_fit_and_names_the_heaviest_gaps():
+    reqs = [
+        req("R01", label="Python"),
+        req("R02", label="SQL"),
+        req("R03", label="Kubernetes"),
+        req("R04", importance="preferred", label="Spark"),
+        req("R05", category="soft_skill", label="Teamwork"),
+        req("R06", category="soft_skill", label="Mentoring"),
+    ]
+    assessments = {
+        "R01": assess("R01", "met"),
+        "R02": assess("R02", "partial"),
+        "R03": assess("R03", "missing"),
+        "R04": assess("R04", "met"),
+        "R05": assess("R05", "partial"),
+        "R06": assess("R06", "missing"),
+    }
+    score = compute_score(reqs, assessments)
+
+    verdict = compute_verdict(_job(*reqs), assessments, score)
+
+    assert score.fit == 52
+    assert verdict.label == "long_shot"
+    assert [r.text for r in verdict.reasons] == [
+        FIT_LINE.format(fit="52"),
+        "Missing required: Kubernetes, Mentoring.",
+    ]
+    assert verdict.reasons[1].requirement_ids == ["R03", "R06"]
+
+
+def test_stretch_names_only_the_missing_required_items():
+    reqs = [
+        req("R01", label="Python"),
+        req("R02", importance="preferred", label="Spark"),
+        req("R03", category="soft_skill", label="Teamwork"),
+        req("R04", category="soft_skill", label="Mentoring"),
+    ]
+    assessments = {
+        "R01": assess("R01", "met"),
+        "R02": assess("R02", "missing"),
+        "R03": assess("R03", "met"),
+        "R04": assess("R04", "missing"),
+    }
+    score = compute_score(reqs, assessments)
+
+    verdict = compute_verdict(_job(*reqs), assessments, score)
+
+    assert verdict.label == "stretch"
+    assert [r.text for r in verdict.reasons] == [
+        FIT_LINE.format(fit="61.5"),
+        "Missing required: Mentoring.",
+    ]
+    assert verdict.reasons[1].requirement_ids == ["R04"]
+
+
+def test_apply_names_the_strongest_matches():
+    reqs = [
+        req("R01", label="Python"),
+        req("R02", label="SQL"),
+        req("R03", label="AWS"),
+        req("R04", importance="preferred", label="Git"),
+        req("R05", category="soft_skill", label="Teamwork"),
+    ]
+    assessments = {r.id: assess(r.id, "met") for r in reqs}
+    score = compute_score(reqs, assessments)
+
+    verdict = compute_verdict(_job(*reqs), assessments, score)
+
+    assert verdict.label == "apply"
+    assert [r.text for r in verdict.reasons] == [
+        FIT_LINE.format(fit="100"),
+        "Strongest matches: Python, SQL, AWS.",
+    ]
+    assert verdict.reasons[1].requirement_ids == ["R01", "R02", "R03"]
+
+
+def test_missing_required_items_are_named_at_most_three_heaviest_first():
+    reqs = [
+        req("R01", category="soft_skill", label="Teamwork"),
+        req("R02", category="job_title", label="Data Engineer"),
+        req("R03", label="Kubernetes"),
+        req("R04", category="education", label="Degree"),
+    ]
+    assessments = {r.id: assess(r.id, "missing") for r in reqs}
+    score = compute_score(reqs, assessments)
+
+    verdict = compute_verdict(_job(*reqs), assessments, score)
+
+    assert verdict.label == "long_shot"
+    assert verdict.reasons[1].text == "Missing required: Kubernetes, Data Engineer, Degree."
+    assert verdict.reasons[1].requirement_ids == ["R03", "R02", "R04"]
+
+
+def test_a_long_shot_reached_by_answering_a_knockout_explains_itself():
+    years = req(
+        "R01",
+        category="experience_years",
+        min_years=5,
+        knockout_type="experience_years",
+        label="5+ years",
+    )
+    job = _job(years, req("R02", label="Python"), req("R03", label="Kubernetes"))
+    by_id = {r.id: r for r in job.requirements}
+    pending = {
+        "R01": RequirementAssessment(
+            requirement_id="R01", status="unknown", question=likely_question(years, job)
+        ),
+        "R02": assess("R02", "missing"),
+        "R03": assess("R03", "missing"),
+    }
+
+    def verdict_after(facts: CandidateFacts):
+        resolved = {rid: apply_facts(by_id[rid], a, facts, job) for rid, a in pending.items()}
+        return compute_verdict(job, resolved, compute_score(job.requirements, resolved))
+
+    assert verdict_after(CandidateFacts()).label == "answer_questions"
+    answered = verdict_after(CandidateFacts(answers={"R01": True}))
+
+    assert answered.label == "long_shot"
+    assert [r.text for r in answered.reasons] == [
+        FIT_LINE.format(fit="33.3"),
+        "Missing required: Python, Kubernetes.",
+    ]

@@ -15,7 +15,16 @@ from backedcv.api.errors import install_error_handlers
 from backedcv.api.locks import RunLocks
 from backedcv.api.rate_limit import RunLimiter
 from backedcv.api.retention import AnalysisLedger, purge_hourly, utc_now
-from backedcv.api.routes import analyses, downloads, health, inputs, meta, optimize, samples
+from backedcv.api.routes import (
+    analyses,
+    downloads,
+    health,
+    inputs,
+    meta,
+    optimize,
+    preview,
+    samples,
+)
 from backedcv.graph.builder import build_graph
 from backedcv.llm.structured import OpenAIStructuredLLM, StructuredLLM
 from backedcv.settings import get_settings
@@ -67,6 +76,7 @@ def create_app(llm: StructuredLLM | None = None, checkpointer=None) -> FastAPI:
     app.include_router(analyses.router, prefix="/api")
     app.include_router(inputs.router, prefix="/api")
     app.include_router(optimize.router, prefix="/api")
+    app.include_router(preview.router, prefix="/api")
     app.include_router(downloads.router, prefix="/api")
     app.include_router(samples.router, prefix="/api")
     app.include_router(meta.router, prefix="/api")
