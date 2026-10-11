@@ -12,7 +12,7 @@ All on 2026-10-11 (Madrid time), with the live demo at [backedcv.onrender.com](h
 | X, mentioning @Grevixofficial, with the video | [post](https://x.com/Andresmuel74552/status/2109301122103971871) | [02-x-post.png](screenshots/02-x-post.png) |
 | Reddit, r/LangChain | [post](https://www.reddit.com/r/LangChain/comments/1x39r2p/i_built_a_langgraph_app_that_reads_a_job_posting/) | [03-reddit-langchain.png](screenshots/03-reddit-langchain.png) |
 | Reddit, r/hackathon | [post](https://www.reddit.com/r/hackathon/comments/1x39u1b/my_24hour_hackathon_project_backedcv_which_tells/) | [04-reddit-hackathon.png](screenshots/04-reddit-hackathon.png) |
-| The GREVIX AfterCode participants' WhatsApp group | (private group) | |
+| The GREVIX AfterCode participants' WhatsApp group, at 17:12 | (private group) | [05-whatsapp-group.png](screenshots/05-whatsapp-group.png) (other members' names and numbers blurred) |
 | A public feedback form in this repository | [form](https://github.com/AndresMuelas2004/Grevix_BackedCV/issues/new?template=feedback.yml) | |
 
 Reddit's automatic filters removed both Reddit posts within minutes, because the account is new. I asked the moderators to review them. The r/hackathon moderator approved the post at 17:15; my own edit to tidy its wording triggered the filter again, and I asked for a second review.
