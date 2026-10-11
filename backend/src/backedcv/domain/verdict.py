@@ -41,6 +41,7 @@ NAMED_LIMIT = 3  # most requirements that one reason names
 YEARS_STRETCH_SHARE = 0.75  # this share of the asked years caps at Stretch; less, at Long shot
 # Legal bans: the only knockouts whose absence in the CV means "Likely screened out".
 HARD_KNOCKOUTS = frozenset({"work_authorization", "clearance", "certification_license"})
+CODE_SENTENCE = "The job asks for"  # how the sentences code writes with levels or years begin
 _BAND_RANK = {"long_shot": 0, "stretch": 1, "apply": 2}
 
 
@@ -111,7 +112,8 @@ def compute_verdict(
     ]
     soft = [r for r in missing if r not in hard]  # a top risk that caps the band at Long shot
     top = years_reasons + [
-        VerdictReason(text=_soft_reason(r, recency), requirement_ids=[r.id]) for r in soft
+        VerdictReason(text=_soft_reason(r, assessments[r.id], recency), requirement_ids=[r.id])
+        for r in soft
     ]
     if hard or failed:
         return Verdict(
@@ -182,13 +184,19 @@ def compute_verdict(
     )
 
 
-def _soft_reason(r: Requirement, recency: dict[str, RecencyCheck] | None) -> str:
-    """Why a soft knockout counts against the candidate: the recency check's sentence when the
-    posting's window ruled it out (it has the numbers), else the requirement in plain words."""
+def _soft_reason(
+    r: Requirement, assessment: RequirementAssessment, recency: dict[str, RecencyCheck] | None
+) -> str:
+    """Why a soft knockout counts against the candidate, with numbers when code has them: the
+    recency check's sentence when the posting's window ruled it out, the code's own sentence
+    (levels, years: "The job asks for English at C1; your CV states B2."), else the requirement
+    in plain words."""
     check = (recency or {}).get(r.id)
     if check is not None and check.effect == "downgraded" and check.explanation:
         return check.explanation
-    return f"The job asks for {clean_prose(r.label)}; your CV does not show it."
+    if assessment.rationale.startswith(CODE_SENTENCE):
+        return assessment.rationale
+    return f"{CODE_SENTENCE} {clean_prose(r.label)}; your CV does not show it."
 
 
 def _years_short(assessment: RequirementAssessment | None) -> bool:

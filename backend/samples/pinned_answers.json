@@ -1,0 +1,1645 @@
+{
+  "format": 1,
+  "about": "Model answers recorded from one real run of the built-in samples (scripts/pin_samples.py). The app replays them so the demo is reproducible; any other CV is cached for 24 hours.",
+  "generated_at": "2026-10-11T16:39:07+00:00",
+  "samples": {
+    "curated": {
+      "fit": 66.0,
+      "coverage": 29.8,
+      "verdict": "answer_questions",
+      "verdict_title": "Answer 2 questions first",
+      "requirements": 26,
+      "suggestions": 4,
+      "verified": 4
+    },
+    "hidden_risk": {
+      "fit": 74.1,
+      "coverage": 83.8,
+      "verdict": "answer_questions",
+      "verdict_title": "Answer 2 questions first",
+      "requirements": 14,
+      "suggestions": 0,
+      "verified": 0
+    }
+  },
+  "entries": [
+    {
+      "key": "475c4f0e294b80db757e751b9b55a180462a488cbfe3de313244b4534a0b8a3b",
+      "model": "gpt-6-luna",
+      "effort": "low",
+      "prompt_id": "extract_job",
+      "prompt_version": "3",
+      "schema": "JobExtractionDraft",
+      "input_tokens": 1908,
+      "output_tokens": 1657,
+      "answer": {
+        "title": "Platform Engineer",
+        "company": "Sable Creek Freight Systems",
+        "seniority": null,
+        "seniority_quote": null,
+        "location": "Austin, TX",
+        "remote_policy": "hybrid",
+        "employment_type": null,
+        "salary_present": false,
+        "requirements": [
+          {
+            "quote": "Lead incident reviews and turn their findings into automated guardrails.",
+            "terms": [
+              "incident reviews",
+              "automated guardrails"
+            ],
+            "label": "Incident reviews and guardrails",
+            "category": "hard_skill",
+            "importance": "required",
+            "cue": "What you will do",
+            "knockout_type": null,
+            "min_years": null,
+            "aliases": []
+          },
+          {
+            "quote": "- 4+ years of experience in platform, DevOps or cloud engineering.",
+            "terms": [
+              "platform",
+              "DevOps",
+              "cloud engineering"
+            ],
+            "label": "Platform engineering experience",
+            "category": "experience_years",
+            "importance": "required",
+            "cue": "Requirements",
+            "knockout_type": "experience_years",
+            "min_years": 4.0,
+            "aliases": []
+          },
+          {
+            "quote": "- Strong Python skills.",
+            "terms": [
+              "Python"
+            ],
+            "label": "Python",
+            "category": "hard_skill",
+            "importance": "required",
+            "cue": "Requirements",
+            "knockout_type": null,
+            "min_years": null,
+            "aliases": []
+          },
+          {
+            "quote": "- Hands-on experience with Terraform and AWS.",
+            "terms": [
+              "Terraform"
+            ],
+            "label": "Terraform",
+            "category": "hard_skill",
+            "importance": "required",
+            "cue": "Requirements",
+            "knockout_type": null,
+            "min_years": null,
+            "aliases": []
+          },
+          {
+            "quote": "- Hands-on experience with Terraform and AWS.",
+            "terms": [
+              "AWS"
+            ],
+            "label": "AWS",
+            "category": "hard_skill",
+            "importance": "required",
+            "cue": "Requirements",
+            "knockout_type": null,
+            "min_years": null,
+            "aliases": []
+          },
+          {
+            "quote": "- Experience building CI/CD pipelines with GitHub Actions or similar tools.",
+            "terms": [
+              "CI/CD",
+              "GitHub Actions"
+            ],
+            "label": "CI/CD pipelines",
+            "category": "hard_skill",
+            "importance": "required",
+            "cue": "Requirements",
+            "knockout_type": null,
+            "min_years": null,
+            "aliases": []
+          },
+          {
+            "quote": "- Working knowledge of Docker.",
+            "terms": [
+              "Docker"
+            ],
+            "label": "Docker",
+            "category": "hard_skill",
+            "importance": "required",
+            "cue": "Requirements",
+            "knockout_type": null,
+            "min_years": null,
+            "aliases": []
+          },
+          {
+            "quote": "- 3+ years of hands-on Kubernetes experience within the last 5 years.",
+            "terms": [
+              "Kubernetes"
+            ],
+            "label": "Kubernetes experience",
+            "category": "experience_years",
+            "importance": "required",
+            "cue": "Requirements",
+            "knockout_type": "experience_years",
+            "min_years": 3.0,
+            "aliases": []
+          },
+          {
+            "quote": "- Clear written communication and a habit of documenting decisions.",
+            "terms": [],
+            "label": "Written communication",
+            "category": "soft_skill",
+            "importance": "required",
+            "cue": "Requirements",
+            "knockout_type": null,
+            "min_years": null,
+            "aliases": []
+          },
+          {
+            "quote": "- Experience with Prometheus or Grafana.",
+            "terms": [
+              "Prometheus",
+              "Grafana"
+            ],
+            "label": "Monitoring tools",
+            "category": "hard_skill",
+            "importance": "preferred",
+            "cue": "Nice to have",
+            "knockout_type": null,
+            "min_years": null,
+            "aliases": []
+          },
+          {
+            "quote": "- A background in logistics or fleet software.",
+            "terms": [
+              "logistics",
+              "fleet software"
+            ],
+            "label": "Logistics background",
+            "category": "experience_years",
+            "importance": "preferred",
+            "cue": "Nice to have",
+            "knockout_type": null,
+            "min_years": null,
+            "aliases": []
+          },
+          {
+            "quote": "This is a hybrid role: three days a week in our Austin office.",
+            "terms": [
+              "Austin"
+            ],
+            "label": "Austin hybrid attendance",
+            "category": "location",
+            "importance": "required",
+            "cue": "This is a hybrid role",
+            "knockout_type": "location",
+            "min_years": null,
+            "aliases": []
+          },
+          {
+            "quote": "Please note we are unable to sponsor work visas, so you must already have the right to work in the United States.",
+            "terms": [
+              "right to work in the United States"
+            ],
+            "label": "US work authorization",
+            "category": "work_authorization",
+            "importance": "required",
+            "cue": "must already have",
+            "knockout_type": "work_authorization",
+            "min_years": null,
+            "aliases": []
+          },
+          {
+            "quote": "Fluent English (C1 or above) is required for client calls.",
+            "terms": [
+              "English",
+              "C1 or above"
+            ],
+            "label": "Fluent English",
+            "category": "language",
+            "importance": "required",
+            "cue": "required",
+            "knockout_type": "language",
+            "min_years": null,
+            "aliases": []
+          }
+        ]
+      }
+    },
+    {
+      "key": "c38e8faf413e728169ccbabdc921f7e67e22171bbbc7884c862af5cee7f73569",
+      "model": "gpt-6-luna",
+      "effort": "low",
+      "prompt_id": "extract_job",
+      "prompt_version": "3",
+      "schema": "JobExtractionDraft",
+      "input_tokens": 1900,
+      "output_tokens": 2546,
+      "answer": {
+        "title": "Junior AI Engineer",
+        "company": "Lanternfield Analytics",
+        "seniority": "entry-level",
+        "seniority_quote": "Junior AI Engineer (entry-level)",
+        "location": "New York, NY",
+        "remote_policy": "onsite",
+        "employment_type": null,
+        "salary_present": false,
+        "requirements": [
+          {
+            "quote": "- Build and test assistants that answer analytics questions in plain English.",
+            "terms": [
+              "assistants"
+            ],
+            "label": "Build analytics assistants",
+            "category": "hard_skill",
+            "importance": "required",
+            "cue": "What you will do",
+            "knockout_type": null,
+            "min_years": null,
+            "aliases": []
+          },
+          {
+            "quote": "- Design evaluation sets and report answer accuracy every sprint.",
+            "terms": [
+              "evaluation sets"
+            ],
+            "label": "Design evaluation sets",
+            "category": "hard_skill",
+            "importance": "required",
+            "cue": "What you will do",
+            "knockout_type": null,
+            "min_years": null,
+            "aliases": []
+          },
+          {
+            "quote": "- Bachelor's degree in Computer Science or a related field.",
+            "terms": [
+              "Bachelor's degree",
+              "Computer Science"
+            ],
+            "label": "Computer science degree",
+            "category": "education",
+            "importance": "required",
+            "cue": "Requirements",
+            "knockout_type": "education",
+            "min_years": null,
+            "aliases": []
+          },
+          {
+            "quote": "- At least 3 years of professional experience building production software.",
+            "terms": [
+              "production software"
+            ],
+            "label": "Production software experience",
+            "category": "experience_years",
+            "importance": "required",
+            "cue": "At least",
+            "knockout_type": "experience_years",
+            "min_years": 3.0,
+            "aliases": []
+          },
+          {
+            "quote": "- Strong Python and SQL skills.",
+            "terms": [
+              "Python"
+            ],
+            "label": "Python",
+            "category": "hard_skill",
+            "importance": "required",
+            "cue": "Requirements",
+            "knockout_type": null,
+            "min_years": null,
+            "aliases": []
+          },
+          {
+            "quote": "- Strong Python and SQL skills.",
+            "terms": [
+              "SQL"
+            ],
+            "label": "SQL",
+            "category": "hard_skill",
+            "importance": "required",
+            "cue": "Requirements",
+            "knockout_type": null,
+            "min_years": null,
+            "aliases": []
+          },
+          {
+            "quote": "- Experience building data pipelines.",
+            "terms": [
+              "data pipelines"
+            ],
+            "label": "Data pipelines",
+            "category": "hard_skill",
+            "importance": "required",
+            "cue": "Requirements",
+            "knockout_type": null,
+            "min_years": null,
+            "aliases": []
+          },
+          {
+            "quote": "- Hands-on experience with LangChain.",
+            "terms": [
+              "LangChain"
+            ],
+            "label": "LangChain",
+            "category": "hard_skill",
+            "importance": "required",
+            "cue": "Requirements",
+            "knockout_type": null,
+            "min_years": null,
+            "aliases": []
+          },
+          {
+            "quote": "- 5+ years of hands-on experience with LangGraph.",
+            "terms": [
+              "LangGraph"
+            ],
+            "label": "LangGraph experience",
+            "category": "experience_years",
+            "importance": "required",
+            "cue": "Requirements",
+            "knockout_type": "experience_years",
+            "min_years": 5.0,
+            "aliases": []
+          },
+          {
+            "quote": "- Experience with Kubernetes in production.",
+            "terms": [
+              "Kubernetes"
+            ],
+            "label": "Kubernetes in production",
+            "category": "hard_skill",
+            "importance": "required",
+            "cue": "Requirements",
+            "knockout_type": null,
+            "min_years": null,
+            "aliases": []
+          },
+          {
+            "quote": "- Excellent communication skills.",
+            "terms": [],
+            "label": "Communication skills",
+            "category": "soft_skill",
+            "importance": "required",
+            "cue": "Requirements",
+            "knockout_type": null,
+            "min_years": null,
+            "aliases": []
+          },
+          {
+            "quote": "- Fluent English (C1 or higher).",
+            "terms": [
+              "English",
+              "C1"
+            ],
+            "label": "Fluent English",
+            "category": "language",
+            "importance": "required",
+            "cue": "Requirements",
+            "knockout_type": "language",
+            "min_years": null,
+            "aliases": []
+          },
+          {
+            "quote": "- Must be authorized to work in the United States without visa sponsorship.",
+            "terms": [
+              "authorized to work in the United States",
+              "without visa sponsorship"
+            ],
+            "label": "Work authorization",
+            "category": "work_authorization",
+            "importance": "required",
+            "cue": "Must",
+            "knockout_type": "work_authorization",
+            "min_years": null,
+            "aliases": []
+          },
+          {
+            "quote": "- Able to work on-site in our New York office five days a week.",
+            "terms": [
+              "on-site",
+              "New York office",
+              "five days a week"
+            ],
+            "label": "On-site in New York",
+            "category": "location",
+            "importance": "required",
+            "cue": "Requirements",
+            "knockout_type": "location",
+            "min_years": null,
+            "aliases": []
+          },
+          {
+            "quote": "- Experience with AWS.",
+            "terms": [
+              "AWS"
+            ],
+            "label": "AWS",
+            "category": "hard_skill",
+            "importance": "preferred",
+            "cue": "Nice to have",
+            "knockout_type": null,
+            "min_years": null,
+            "aliases": []
+          },
+          {
+            "quote": "- Familiarity with vector databases.",
+            "terms": [
+              "vector databases"
+            ],
+            "label": "Vector databases",
+            "category": "hard_skill",
+            "importance": "preferred",
+            "cue": "Nice to have",
+            "knockout_type": null,
+            "min_years": null,
+            "aliases": []
+          },
+          {
+            "quote": "- Working knowledge of Docker and FastAPI.",
+            "terms": [
+              "Docker"
+            ],
+            "label": "Docker",
+            "category": "hard_skill",
+            "importance": "preferred",
+            "cue": "Nice to have",
+            "knockout_type": null,
+            "min_years": null,
+            "aliases": []
+          },
+          {
+            "quote": "- Working knowledge of Docker and FastAPI.",
+            "terms": [
+              "FastAPI"
+            ],
+            "label": "FastAPI",
+            "category": "hard_skill",
+            "importance": "preferred",
+            "cue": "Nice to have",
+            "knockout_type": null,
+            "min_years": null,
+            "aliases": []
+          },
+          {
+            "quote": "- Working knowledge of PostgreSQL and Snowflake.",
+            "terms": [
+              "PostgreSQL"
+            ],
+            "label": "PostgreSQL",
+            "category": "hard_skill",
+            "importance": "preferred",
+            "cue": "Nice to have",
+            "knockout_type": null,
+            "min_years": null,
+            "aliases": []
+          },
+          {
+            "quote": "- Working knowledge of PostgreSQL and Snowflake.",
+            "terms": [
+              "Snowflake"
+            ],
+            "label": "Snowflake",
+            "category": "hard_skill",
+            "importance": "preferred",
+            "cue": "Nice to have",
+            "knockout_type": null,
+            "min_years": null,
+            "aliases": []
+          },
+          {
+            "quote": "- Familiarity with Spark, Airflow, dbt and Kafka.",
+            "terms": [
+              "Spark"
+            ],
+            "label": "Spark",
+            "category": "hard_skill",
+            "importance": "preferred",
+            "cue": "Nice to have",
+            "knockout_type": null,
+            "min_years": null,
+            "aliases": []
+          },
+          {
+            "quote": "- Familiarity with Spark, Airflow, dbt and Kafka.",
+            "terms": [
+              "Airflow"
+            ],
+            "label": "Airflow",
+            "category": "hard_skill",
+            "importance": "preferred",
+            "cue": "Nice to have",
+            "knockout_type": null,
+            "min_years": null,
+            "aliases": []
+          },
+          {
+            "quote": "- Familiarity with Spark, Airflow, dbt and Kafka.",
+            "terms": [
+              "dbt"
+            ],
+            "label": "dbt",
+            "category": "hard_skill",
+            "importance": "preferred",
+            "cue": "Nice to have",
+            "knockout_type": null,
+            "min_years": null,
+            "aliases": []
+          },
+          {
+            "quote": "- Familiarity with Spark, Airflow, dbt and Kafka.",
+            "terms": [
+              "Kafka"
+            ],
+            "label": "Kafka",
+            "category": "hard_skill",
+            "importance": "preferred",
+            "cue": "Nice to have",
+            "knockout_type": null,
+            "min_years": null,
+            "aliases": []
+          },
+          {
+            "quote": "- Familiarity with Terraform and Tableau.",
+            "terms": [
+              "Terraform"
+            ],
+            "label": "Terraform",
+            "category": "hard_skill",
+            "importance": "preferred",
+            "cue": "Nice to have",
+            "knockout_type": null,
+            "min_years": null,
+            "aliases": []
+          },
+          {
+            "quote": "- Familiarity with Terraform and Tableau.",
+            "terms": [
+              "Tableau"
+            ],
+            "label": "Tableau",
+            "category": "hard_skill",
+            "importance": "preferred",
+            "cue": "Nice to have",
+            "knockout_type": null,
+            "min_years": null,
+            "aliases": []
+          }
+        ]
+      }
+    },
+    {
+      "key": "72a4b660f7a55d08fae6ed109955380caf1df16ae6ff4916ef47c3b8a7fa9539",
+      "model": "gpt-6-luna",
+      "effort": "low",
+      "prompt_id": "hidden_barriers",
+      "prompt_version": "1",
+      "schema": "HiddenBarriersDraft",
+      "input_tokens": 1939,
+      "output_tokens": 452,
+      "answer": {
+        "items": [
+          {
+            "kind": "work_authorization",
+            "quote": "Must be authorized to work in the United States without visa sponsorship.",
+            "explicit": true,
+            "place": "United States",
+            "window_years": null,
+            "requirement_ids": [
+              "R13"
+            ],
+            "explanation": "Applicants who need visa sponsorship may be rejected.",
+            "action": "Confirm that you are authorized to work in the United States without visa sponsorship.",
+            "question": "Are you authorized to work in the United States without visa sponsorship?"
+          },
+          {
+            "kind": "location",
+            "quote": "Able to work on-site in our New York office five days a week.",
+            "explicit": true,
+            "place": "New York",
+            "window_years": null,
+            "requirement_ids": [
+              "R14"
+            ],
+            "explanation": "Applicants unable to work on-site in New York five days a week may be rejected.",
+            "action": "Confirm you can work on-site in New York five days a week.",
+            "question": "Can you work on-site in the New York office five days a week?"
+          },
+          {
+            "kind": "language",
+            "quote": "Fluent English (C1 or higher).",
+            "explicit": true,
+            "place": null,
+            "window_years": null,
+            "requirement_ids": [
+              "R12"
+            ],
+            "explanation": "Applicants below the stated English fluency level may be rejected.",
+            "action": "State your English proficiency clearly in your application.",
+            "question": "Are you fluent in English at C1 level or higher?"
+          }
+        ]
+      }
+    },
+    {
+      "key": "da319c7b5df275ff6eefc4894e92d4e47cc1c502cd9431a7176cd5c1bcedaa6f",
+      "model": "gpt-6-luna",
+      "effort": "low",
+      "prompt_id": "hidden_barriers",
+      "prompt_version": "1",
+      "schema": "HiddenBarriersDraft",
+      "input_tokens": 1835,
+      "output_tokens": 466,
+      "answer": {
+        "items": [
+          {
+            "kind": "work_authorization",
+            "quote": "Please note we are unable to sponsor work visas, so you must already have the right to work in the United States.",
+            "explicit": true,
+            "place": "United States",
+            "window_years": null,
+            "requirement_ids": [
+              "R13"
+            ],
+            "explanation": "Applicants who need visa sponsorship may be rejected without further contact.",
+            "action": "Confirm that you already have the right to work in the United States without sponsorship.",
+            "question": "Do you already have the right to work in the United States without visa sponsorship?"
+          },
+          {
+            "kind": "location",
+            "quote": "This is a hybrid role: three days a week in our Austin office.",
+            "explicit": true,
+            "place": "Austin",
+            "window_years": null,
+            "requirement_ids": [
+              "R01"
+            ],
+            "explanation": "Applicants unable to work in the Austin office three days weekly may be screened out.",
+            "action": "Confirm you can work from the Austin office three days a week.",
+            "question": "Can you work in the Austin office three days a week?"
+          },
+          {
+            "kind": "recency",
+            "quote": "3+ years of hands-on Kubernetes experience within the last 5 years.",
+            "explicit": true,
+            "place": null,
+            "window_years": 5.0,
+            "requirement_ids": [
+              "R09"
+            ],
+            "explanation": "Applicants without three years of recent Kubernetes experience may be screened out.",
+            "action": "Highlight when you gained your hands-on Kubernetes experience.",
+            "question": null
+          },
+          {
+            "kind": "language",
+            "quote": "Fluent English (C1 or above) is required for client calls.",
+            "explicit": true,
+            "place": null,
+            "window_years": null,
+            "requirement_ids": [
+              "R14"
+            ],
+            "explanation": "Applicants below the stated English level may be rejected for client calls.",
+            "action": "State your English level clearly in your application.",
+            "question": "Is your English proficiency at C1 level or above?"
+          }
+        ]
+      }
+    },
+    {
+      "key": "00717298f0f5404bf04fc2d5fde3e118934a93114991a4b642ba37850d68a045",
+      "model": "gpt-6-luna",
+      "effort": "low",
+      "prompt_id": "match_requirements",
+      "prompt_version": "4",
+      "schema": "MatchChunkDraft",
+      "input_tokens": 1464,
+      "output_tokens": 185,
+      "answer": {
+        "assessments": [
+          {
+            "requirement_id": "R25",
+            "status": "missing",
+            "line_ids": [],
+            "match_type": null,
+            "rationale": "No Terraform or related infrastructure-as-code experience is shown."
+          },
+          {
+            "requirement_id": "R26",
+            "status": "partial",
+            "line_ids": [
+              "L034"
+            ],
+            "match_type": "inferred",
+            "rationale": "Built a dashboard, but the CV does not show Tableau experience."
+          }
+        ]
+      }
+    },
+    {
+      "key": "6c16c943ca19665a2f6a39ce94bf27925119a0e6650bb1e85b074d7b440384b6",
+      "model": "gpt-6-luna",
+      "effort": "low",
+      "prompt_id": "match_requirements",
+      "prompt_version": "4",
+      "schema": "MatchChunkDraft",
+      "input_tokens": 1657,
+      "output_tokens": 364,
+      "answer": {
+        "assessments": [
+          {
+            "requirement_id": "R01",
+            "status": "partial",
+            "line_ids": [
+              "L022"
+            ],
+            "match_type": "semantic",
+            "rationale": "Built a customer-support assistant, but the CV does not show an assistant for analytics questions."
+          },
+          {
+            "requirement_id": "R02",
+            "status": "met",
+            "line_ids": [
+              "L023",
+              "L039"
+            ],
+            "match_type": "semantic",
+            "rationale": "Compared labeled test sets and reported answer accuracy; a project also used a measured evaluation set."
+          },
+          {
+            "requirement_id": "R03",
+            "status": "met",
+            "line_ids": [
+              "L010"
+            ],
+            "match_type": "exact",
+            "rationale": "The CV lists a Bachelor of Science in Computer Science."
+          },
+          {
+            "requirement_id": "R04",
+            "status": "met",
+            "line_ids": [
+              "F01"
+            ],
+            "match_type": "exact",
+            "rationale": "The CV shows 3.4 years of professional experience."
+          },
+          {
+            "requirement_id": "R05",
+            "status": "met",
+            "line_ids": [
+              "L014",
+              "L024",
+              "L030",
+              "L034"
+            ],
+            "match_type": "exact",
+            "rationale": "Python is listed as a skill and used in work experience."
+          },
+          {
+            "requirement_id": "R06",
+            "status": "met",
+            "line_ids": [
+              "L014",
+              "L029",
+              "L034"
+            ],
+            "match_type": "exact",
+            "rationale": "SQL is listed as a skill and used in work experience."
+          },
+          {
+            "requirement_id": "R07",
+            "status": "met",
+            "line_ids": [
+              "L024",
+              "L031"
+            ],
+            "match_type": "semantic",
+            "rationale": "Built ETL jobs and ran scheduled data refreshes."
+          },
+          {
+            "requirement_id": "R08",
+            "status": "partial",
+            "line_ids": [
+              "L018",
+              "L022"
+            ],
+            "match_type": "inferred",
+            "rationale": "The CV shows agent-framework experience but does not name LangChain."
+          }
+        ]
+      }
+    },
+    {
+      "key": "7ef6764cc158e6f2a2809db20955a0eb6cf1140cc25b8405e1319ebd0066234b",
+      "model": "gpt-6-luna",
+      "effort": "low",
+      "prompt_id": "match_requirements",
+      "prompt_version": "4",
+      "schema": "MatchChunkDraft",
+      "input_tokens": 1449,
+      "output_tokens": 417,
+      "answer": {
+        "assessments": [
+          {
+            "requirement_id": "R09",
+            "status": "partial",
+            "line_ids": [
+              "L021"
+            ],
+            "match_type": "alias",
+            "rationale": "K8s experience is shown, but the CV does not establish three years within the last five years."
+          },
+          {
+            "requirement_id": "R10",
+            "status": "missing",
+            "line_ids": [],
+            "match_type": null,
+            "rationale": "The CV does not mention written communication or documenting decisions."
+          },
+          {
+            "requirement_id": "R11",
+            "status": "met",
+            "line_ids": [
+              "L029"
+            ],
+            "match_type": "exact",
+            "rationale": "Prometheus is listed among the candidate’s skills."
+          },
+          {
+            "requirement_id": "R12",
+            "status": "missing",
+            "line_ids": [],
+            "match_type": null,
+            "rationale": "The CV does not show a logistics or fleet software background."
+          },
+          {
+            "requirement_id": "R13",
+            "status": "unknown",
+            "line_ids": [],
+            "match_type": null,
+            "rationale": "The CV does not state whether the candidate is authorized to work in the United States."
+          },
+          {
+            "requirement_id": "R14",
+            "status": "met",
+            "line_ids": [
+              "L031"
+            ],
+            "match_type": "exact",
+            "rationale": "The CV lists English at C1 level."
+          }
+        ]
+      }
+    },
+    {
+      "key": "ae46708305751cee13fa61d971da230b6bbd7c97b2ba49d6ab54da89db0bdcd9",
+      "model": "gpt-6-luna",
+      "effort": "low",
+      "prompt_id": "match_requirements",
+      "prompt_version": "4",
+      "schema": "MatchChunkDraft",
+      "input_tokens": 1639,
+      "output_tokens": 541,
+      "answer": {
+        "assessments": [
+          {
+            "requirement_id": "R09",
+            "status": "partial",
+            "line_ids": [
+              "L018",
+              "L022"
+            ],
+            "match_type": "inferred",
+            "rationale": "Agent-framework experience is related, but does not establish LangGraph use or five years of experience."
+          },
+          {
+            "requirement_id": "R10",
+            "status": "missing",
+            "line_ids": [],
+            "match_type": null,
+            "rationale": "The CV does not mention Kubernetes or production use."
+          },
+          {
+            "requirement_id": "R11",
+            "status": "met",
+            "line_ids": [
+              "L012",
+              "L035"
+            ],
+            "match_type": "semantic",
+            "rationale": "Teaching weekly labs and presenting findings demonstrate communication skills."
+          },
+          {
+            "requirement_id": "R12",
+            "status": "met",
+            "line_ids": [
+              "L016"
+            ],
+            "match_type": "semantic",
+            "rationale": "English is listed at C1, the stated proficiency level."
+          },
+          {
+            "requirement_id": "R13",
+            "status": "unknown",
+            "line_ids": [],
+            "match_type": null,
+            "rationale": "The CV does not state whether the candidate has U.S. work authorization."
+          },
+          {
+            "requirement_id": "R14",
+            "status": "unknown",
+            "line_ids": [],
+            "match_type": null,
+            "rationale": "The CV does not state whether the candidate can work on-site in New York."
+          },
+          {
+            "requirement_id": "R15",
+            "status": "missing",
+            "line_ids": [],
+            "match_type": null,
+            "rationale": "The CV does not mention AWS."
+          },
+          {
+            "requirement_id": "R16",
+            "status": "met",
+            "line_ids": [
+              "L014",
+              "L038"
+            ],
+            "match_type": "semantic",
+            "rationale": "Using pgvector to store embeddings demonstrates familiarity with vector databases."
+          }
+        ]
+      }
+    },
+    {
+      "key": "b9a91d075683c1882a90d5c8a232b57a53cba52240f50e43ca2abbc2b0293ff7",
+      "model": "gpt-6-luna",
+      "effort": "low",
+      "prompt_id": "match_requirements",
+      "prompt_version": "4",
+      "schema": "MatchChunkDraft",
+      "input_tokens": 1664,
+      "output_tokens": 377,
+      "answer": {
+        "assessments": [
+          {
+            "requirement_id": "R17",
+            "status": "met",
+            "line_ids": [
+              "L014",
+              "L026"
+            ],
+            "match_type": "exact",
+            "rationale": "Docker is listed as a skill and used to containerize services."
+          },
+          {
+            "requirement_id": "R18",
+            "status": "met",
+            "line_ids": [
+              "L014",
+              "L018",
+              "L026"
+            ],
+            "match_type": "exact",
+            "rationale": "FastAPI is listed as a skill and used to serve services."
+          },
+          {
+            "requirement_id": "R19",
+            "status": "met",
+            "line_ids": [
+              "L014",
+              "L024"
+            ],
+            "match_type": "exact",
+            "rationale": "PostgreSQL is listed as a skill and used for daily data loads."
+          },
+          {
+            "requirement_id": "R20",
+            "status": "missing",
+            "line_ids": [],
+            "match_type": null,
+            "rationale": "The CV does not mention Snowflake."
+          },
+          {
+            "requirement_id": "R21",
+            "status": "missing",
+            "line_ids": [],
+            "match_type": null,
+            "rationale": "The CV does not mention Spark."
+          },
+          {
+            "requirement_id": "R22",
+            "status": "missing",
+            "line_ids": [],
+            "match_type": null,
+            "rationale": "The CV does not mention Airflow."
+          },
+          {
+            "requirement_id": "R23",
+            "status": "missing",
+            "line_ids": [],
+            "match_type": null,
+            "rationale": "The CV does not mention dbt."
+          },
+          {
+            "requirement_id": "R24",
+            "status": "missing",
+            "line_ids": [],
+            "match_type": null,
+            "rationale": "The CV does not mention Kafka."
+          }
+        ]
+      }
+    },
+    {
+      "key": "df38741f1cd6fdfb6e574c011b72188cb09a144aa9d17465ab4eb28951a18efc",
+      "model": "gpt-6-luna",
+      "effort": "low",
+      "prompt_id": "match_requirements",
+      "prompt_version": "4",
+      "schema": "MatchChunkDraft",
+      "input_tokens": 1538,
+      "output_tokens": 561,
+      "answer": {
+        "assessments": [
+          {
+            "requirement_id": "R01",
+            "status": "unknown",
+            "line_ids": [],
+            "match_type": null,
+            "rationale": "The CV does not say whether Austin hybrid attendance is possible."
+          },
+          {
+            "requirement_id": "R02",
+            "status": "partial",
+            "line_ids": [
+              "L018"
+            ],
+            "match_type": "inferred",
+            "rationale": "Pre-merge checks are automated safeguards, but the CV does not mention incident reviews."
+          },
+          {
+            "requirement_id": "R03",
+            "status": "met",
+            "line_ids": [
+              "L012",
+              "L013",
+              "L019",
+              "L020",
+              "F01"
+            ],
+            "match_type": "semantic",
+            "rationale": "The CV shows platform and DevOps roles spanning more than four years."
+          },
+          {
+            "requirement_id": "R04",
+            "status": "met",
+            "line_ids": [
+              "L010",
+              "L017",
+              "L023",
+              "L029"
+            ],
+            "match_type": "exact",
+            "rationale": "The CV describes Python tools and scripts."
+          },
+          {
+            "requirement_id": "R05",
+            "status": "met",
+            "line_ids": [
+              "L002",
+              "L010",
+              "L014",
+              "L029"
+            ],
+            "match_type": "exact",
+            "rationale": "The CV shows hands-on Terraform infrastructure work."
+          },
+          {
+            "requirement_id": "R06",
+            "status": "met",
+            "line_ids": [
+              "L002",
+              "L010",
+              "L014",
+              "L029"
+            ],
+            "match_type": "exact",
+            "rationale": "The CV shows hands-on AWS infrastructure work."
+          },
+          {
+            "requirement_id": "R07",
+            "status": "met",
+            "line_ids": [
+              "L010",
+              "L015",
+              "L022",
+              "L029"
+            ],
+            "match_type": "exact",
+            "rationale": "The CV shows CI/CD pipelines with GitHub Actions and Jenkins."
+          },
+          {
+            "requirement_id": "R08",
+            "status": "met",
+            "line_ids": [
+              "L016",
+              "L029"
+            ],
+            "match_type": "exact",
+            "rationale": "The CV describes containerizing services with Docker."
+          }
+        ]
+      }
+    },
+    {
+      "key": "bf7672d97b441a631e8f706dbf3349790b70bc6de96af42444439f7b6d253ab9",
+      "model": "gpt-6-luna",
+      "effort": "low",
+      "prompt_id": "review_posting",
+      "prompt_version": "1",
+      "schema": "PostingReviewDraft",
+      "input_tokens": 1073,
+      "output_tokens": 70,
+      "answer": {
+        "contradictions": [],
+        "doubtful_credentials": []
+      }
+    },
+    {
+      "key": "dbf4ecce46f661b252b43e3d9a5e3c460dd5b81f531b01fad209b5baad1fddd0",
+      "model": "gpt-6-luna",
+      "effort": "low",
+      "prompt_id": "review_posting",
+      "prompt_version": "1",
+      "schema": "PostingReviewDraft",
+      "input_tokens": 955,
+      "output_tokens": 21,
+      "answer": {
+        "contradictions": [],
+        "doubtful_credentials": []
+      }
+    },
+    {
+      "key": "0f12fbcf826be5d8c2dca53dc8b4ec832725fc3d2f6c4ccda31c5ea5decb02ca",
+      "model": "gpt-6-luna",
+      "effort": "low",
+      "prompt_id": "structure_cv",
+      "prompt_version": "1",
+      "schema": "CVStructureDraft",
+      "input_tokens": 1334,
+      "output_tokens": 1034,
+      "answer": {
+        "name_line_id": "L001",
+        "location_line_id": "L004",
+        "sections": [
+          {
+            "type": "summary",
+            "heading_line_id": null,
+            "first_line_id": "L002",
+            "last_line_id": "L002"
+          },
+          {
+            "type": "contact",
+            "heading_line_id": "L003",
+            "first_line_id": "L003",
+            "last_line_id": "L008"
+          },
+          {
+            "type": "education",
+            "heading_line_id": "L009",
+            "first_line_id": "L009",
+            "last_line_id": "L012"
+          },
+          {
+            "type": "skills",
+            "heading_line_id": "L013",
+            "first_line_id": "L013",
+            "last_line_id": "L014"
+          },
+          {
+            "type": "languages",
+            "heading_line_id": "L015",
+            "first_line_id": "L015",
+            "last_line_id": "L016"
+          },
+          {
+            "type": "summary",
+            "heading_line_id": "L017",
+            "first_line_id": "L017",
+            "last_line_id": "L018"
+          },
+          {
+            "type": "experience",
+            "heading_line_id": "L019",
+            "first_line_id": "L019",
+            "last_line_id": "L035"
+          },
+          {
+            "type": "projects",
+            "heading_line_id": "L036",
+            "first_line_id": "L036",
+            "last_line_id": "L039"
+          }
+        ],
+        "entries": [
+          {
+            "kind": "education",
+            "title": "BSc Computer Science",
+            "organization": "Universidad Example",
+            "location": "Valencia",
+            "first_line_id": "L010",
+            "last_line_id": "L012",
+            "date_line_id": "L011"
+          },
+          {
+            "kind": "job",
+            "title": "AI-focused Software Engineer",
+            "organization": "Harbor Data Co.",
+            "location": "Valencia",
+            "first_line_id": "L020",
+            "last_line_id": "L026",
+            "date_line_id": "L021"
+          },
+          {
+            "kind": "job",
+            "title": "Junior Data Engineer",
+            "organization": "Tidewater Sales Ops",
+            "location": "Valencia",
+            "first_line_id": "L027",
+            "last_line_id": "L031",
+            "date_line_id": "L028"
+          },
+          {
+            "kind": "job",
+            "title": "Data Analyst Intern",
+            "organization": "Kestrel Solar Labs",
+            "location": "Valencia",
+            "first_line_id": "L032",
+            "last_line_id": "L035",
+            "date_line_id": "L033"
+          },
+          {
+            "kind": "project",
+            "title": "Policy Search Prototype (personal project)",
+            "organization": null,
+            "location": null,
+            "first_line_id": "L037",
+            "last_line_id": "L039",
+            "date_line_id": null
+          }
+        ]
+      }
+    },
+    {
+      "key": "99d6962905ae7ca3e4e4be6ed8c38d2d048288dcdacfda5f8d5694231808376d",
+      "model": "gpt-6-luna",
+      "effort": "low",
+      "prompt_id": "structure_cv",
+      "prompt_version": "1",
+      "schema": "CVStructureDraft",
+      "input_tokens": 1172,
+      "output_tokens": 635,
+      "answer": {
+        "name_line_id": "L001",
+        "location_line_id": "L004",
+        "sections": [
+          {
+            "type": "contact",
+            "heading_line_id": "L003",
+            "first_line_id": "L001",
+            "last_line_id": "L008"
+          },
+          {
+            "type": "summary",
+            "heading_line_id": "L009",
+            "first_line_id": "L009",
+            "last_line_id": "L010"
+          },
+          {
+            "type": "experience",
+            "heading_line_id": "L011",
+            "first_line_id": "L011",
+            "last_line_id": "L023"
+          },
+          {
+            "type": "education",
+            "heading_line_id": "L024",
+            "first_line_id": "L024",
+            "last_line_id": "L027"
+          },
+          {
+            "type": "skills",
+            "heading_line_id": "L028",
+            "first_line_id": "L028",
+            "last_line_id": "L029"
+          },
+          {
+            "type": "languages",
+            "heading_line_id": "L030",
+            "first_line_id": "L030",
+            "last_line_id": "L031"
+          }
+        ],
+        "entries": [
+          {
+            "kind": "job",
+            "title": "Platform Engineer",
+            "organization": "Faro Mesa Software",
+            "location": "Valencia",
+            "first_line_id": "L012",
+            "last_line_id": "L018",
+            "date_line_id": "L013"
+          },
+          {
+            "kind": "job",
+            "title": "DevOps Engineer",
+            "organization": "Alameda Ticketing Labs",
+            "location": "Valencia",
+            "first_line_id": "L019",
+            "last_line_id": "L023",
+            "date_line_id": "L020"
+          },
+          {
+            "kind": "education",
+            "title": "BSc Computer Engineering",
+            "organization": "Universidad Example",
+            "location": "Valencia",
+            "first_line_id": "L025",
+            "last_line_id": "L027",
+            "date_line_id": "L026"
+          }
+        ]
+      }
+    },
+    {
+      "key": "d1d984b9f23ee12eb0dbcd8055112eba33ee4ec7474873c7c04f5e98d32663aa",
+      "model": "gpt-6-luna",
+      "effort": "low",
+      "prompt_id": "suggest",
+      "prompt_version": "2",
+      "schema": "SuggestionsDraft",
+      "input_tokens": 2373,
+      "output_tokens": 742,
+      "answer": {
+        "suggestions": [
+          {
+            "kind": "align_wording",
+            "target": "L023",
+            "after": "Compared 6 prompt versions on a labeled evaluation set of 300 support tickets, raising answer accuracy from 71% to 84%.",
+            "cited_refs": [
+              "L023"
+            ],
+            "requirement_ids": [
+              "R02"
+            ],
+            "rationale": "Names the labeled ticket set as an evaluation set while keeping its size and measured accuracy gain clear."
+          },
+          {
+            "kind": "align_wording",
+            "target": "L024",
+            "after": "Built Python data pipelines loading 2 million rows a day into PostgreSQL.",
+            "cited_refs": [
+              "L024"
+            ],
+            "requirement_ids": [
+              "R07"
+            ],
+            "rationale": "Makes the daily data-pipeline work and its volume easier to spot."
+          },
+          {
+            "kind": "add_skill",
+            "target": "L013",
+            "after": "Vector databases",
+            "cited_refs": [
+              "L013",
+              "L038"
+            ],
+            "requirement_ids": [
+              "R16"
+            ],
+            "rationale": "Adds a clear skill label for the pgvector retrieval work shown in the project."
+          },
+          {
+            "kind": "tailor_summary",
+            "target": "L017",
+            "after": "Software engineer with three years of data and backend work, now moving into AI engineering. Built a customer-support assistant that cut first-response time by 30%, and compared 6 prompt versions on 300 labeled support tickets, raising answer accuracy from 71% to 84%.",
+            "cited_refs": [
+              "L017",
+              "L018",
+              "L022",
+              "L023"
+            ],
+            "requirement_ids": [
+              "R02"
+            ],
+            "rationale": "Brings the strongest measured AI results into the summary and makes the evaluation work explicit."
+          }
+        ]
+      }
+    },
+    {
+      "key": "404d9f24243c39b4f5fcb137bb4bdbaf3bcc91af48fee198276b3247d732a2dd",
+      "model": "gpt-6-luna",
+      "effort": "medium",
+      "prompt_id": "verify",
+      "prompt_version": "3",
+      "schema": "VerificationBatchDraft",
+      "input_tokens": 1960,
+      "output_tokens": 745,
+      "answer": {
+        "verifications": [
+          {
+            "suggestion_id": "S01",
+            "claims": [
+              {
+                "text": "Compared 6 prompt versions",
+                "supported_by": [
+                  "L023"
+                ],
+                "unsupported_reason": null
+              },
+              {
+                "text": "on a labeled evaluation set of 300 support tickets",
+                "supported_by": [
+                  "L023"
+                ],
+                "unsupported_reason": null
+              },
+              {
+                "text": "raising answer accuracy from 71% to 84%",
+                "supported_by": [
+                  "L023"
+                ],
+                "unsupported_reason": null
+              }
+            ],
+            "term_judgements": [
+              {
+                "term": "evaluation set",
+                "verdict": "faithful_name",
+                "line_id": "L023"
+              }
+            ],
+            "uncertain": false
+          },
+          {
+            "suggestion_id": "S02",
+            "claims": [
+              {
+                "text": "Built Python data pipelines",
+                "supported_by": [
+                  "L024"
+                ],
+                "unsupported_reason": null
+              },
+              {
+                "text": "loading 2 million rows a day",
+                "supported_by": [
+                  "L024"
+                ],
+                "unsupported_reason": null
+              },
+              {
+                "text": "into PostgreSQL",
+                "supported_by": [
+                  "L024"
+                ],
+                "unsupported_reason": null
+              }
+            ],
+            "term_judgements": [
+              {
+                "term": "data pipelines",
+                "verdict": "faithful_name",
+                "line_id": "L024"
+              }
+            ],
+            "uncertain": false
+          }
+        ]
+      }
+    },
+    {
+      "key": "4a6a7e4f9d31b687441a0c6463b229da088ee252f0cea8b361b4b4d4656c3aa3",
+      "model": "gpt-6-luna",
+      "effort": "medium",
+      "prompt_id": "verify",
+      "prompt_version": "3",
+      "schema": "VerificationBatchDraft",
+      "input_tokens": 1910,
+      "output_tokens": 247,
+      "answer": {
+        "verifications": [
+          {
+            "suggestion_id": "S03",
+            "claims": [
+              {
+                "text": "Vector databases",
+                "supported_by": [
+                  "L038"
+                ],
+                "unsupported_reason": null
+              }
+            ],
+            "term_judgements": [
+              {
+                "term": "Vector databases",
+                "verdict": "faithful_name",
+                "line_id": "L038"
+              }
+            ],
+            "uncertain": false
+          }
+        ]
+      }
+    },
+    {
+      "key": "ae9f1ef917a120e5202e53e3c61d86cb41c45766d964b568216236ac7befea8b",
+      "model": "gpt-6-luna",
+      "effort": "medium",
+      "prompt_id": "verify",
+      "prompt_version": "3",
+      "schema": "VerificationBatchDraft",
+      "input_tokens": 1968,
+      "output_tokens": 474,
+      "answer": {
+        "verifications": [
+          {
+            "suggestion_id": "S04",
+            "claims": [
+              {
+                "text": "Software engineer",
+                "supported_by": [
+                  "L018"
+                ],
+                "unsupported_reason": null
+              },
+              {
+                "text": "three years of data and backend work",
+                "supported_by": [
+                  "L018"
+                ],
+                "unsupported_reason": null
+              },
+              {
+                "text": "now moving into AI engineering",
+                "supported_by": [
+                  "L018"
+                ],
+                "unsupported_reason": null
+              },
+              {
+                "text": "Built a customer-support assistant",
+                "supported_by": [
+                  "L022"
+                ],
+                "unsupported_reason": null
+              },
+              {
+                "text": "cut first-response time by 30%",
+                "supported_by": [
+                  "L022"
+                ],
+                "unsupported_reason": null
+              },
+              {
+                "text": "compared 6 prompt versions",
+                "supported_by": [
+                  "L023"
+                ],
+                "unsupported_reason": null
+              },
+              {
+                "text": "on 300 labeled support tickets",
+                "supported_by": [
+                  "L023"
+                ],
+                "unsupported_reason": null
+              },
+              {
+                "text": "raising answer accuracy from 71% to 84%",
+                "supported_by": [
+                  "L023"
+                ],
+                "unsupported_reason": null
+              }
+            ],
+            "term_judgements": [],
+            "uncertain": false
+          }
+        ]
+      }
+    }
+  ]
+}

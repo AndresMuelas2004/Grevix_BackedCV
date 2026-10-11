@@ -29,6 +29,7 @@ from backedcv.domain.models.screening import clean_prose
 from backedcv.domain.rules.knockout import (
     asks_min_years,
     is_knockout,
+    language_check,
     likely_question,
     years_sentence,
 )
@@ -242,7 +243,8 @@ def build_assessments(
         present = keyword_present(req, cv.lines)
         draft = drafts.get(req.id)
         if draft is None:
-            result[req.id] = _with_years(req, job, cv, _fallback(req, job, cv, present))
+            fallback = _with_years(req, job, cv, _fallback(req, job, cv, present))
+            result[req.id] = _with_language(req, cv, fallback)
             continue
 
         ids = list(dict.fromkeys(i for i in draft.line_ids if i in refs))
@@ -270,8 +272,30 @@ def build_assessments(
             keyword_present=present,
             question=likely_question(req, job) if status == "unknown" and gate_like else None,
         )
-        result[req.id] = _with_years(req, job, cv, assessment)
+        result[req.id] = _with_language(req, cv, _with_years(req, job, cv, assessment))
     return result
+
+
+def _with_language(
+    req: Requirement, cv: ParsedCV, assessment: RequirementAssessment
+) -> RequirementAssessment:
+    """A language requirement is settled by the level the CV itself states (CEFR A1-C2, or
+    native), never asked: at or above the asked level it is met, below it is missing."""
+    if "language" not in (req.category, req.knockout_type):
+        return assessment
+    found = language_check(req, cv.lines)
+    if found is None:
+        return assessment
+    status, line_ids, sentence = found
+    texts = {line.id: line.text for line in cv.lines}
+    return assessment.model_copy(
+        update={
+            "status": status,
+            "evidence": [Evidence(ref=i, quote=texts[i], match_type="exact") for i in line_ids],
+            "rationale": sentence,
+            "question": None,
+        }
+    )
 
 
 def _asked_never_asserted(req: Requirement) -> bool:

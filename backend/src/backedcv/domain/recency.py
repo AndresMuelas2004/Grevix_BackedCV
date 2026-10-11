@@ -30,7 +30,8 @@ _GENERAL_CATEGORIES = frozenset({"hard_skill", "experience_years"})
 # Recency is about use: only job and project entries date a line. Degrees and certifications do
 # not expire, so requirements of these categories, or shown only by such lines, get no check.
 DATED_KINDS = frozenset({"job", "project"})
-_CREDENTIAL_CATEGORIES = frozenset({"education", "certification_license"})
+# A language level does not expire either.
+_CREDENTIAL_CATEGORIES = frozenset({"education", "certification_license", "language"})
 _CREDENTIAL_SECTIONS = frozenset({"education", "certifications"})
 _YEAR_MONTH = re.compile(r"\d{4}-(?:0[1-9]|1[0-2])")
 _YEAR_ONLY = re.compile(r"\d{4}")
