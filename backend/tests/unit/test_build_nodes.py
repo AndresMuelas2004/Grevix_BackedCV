@@ -243,3 +243,41 @@ def test_a_failed_order_agent_is_recorded_as_an_error(monkeypatch):
 
     assert update["built_by"] == "fallback"
     assert update["errors"] == [{"node": "build_cv", "error": "TimeoutError", "detail": "slow"}]
+
+
+def _reading_order_state() -> dict:
+    """A CV whose sections come in reading order: education and skills come before the summary."""
+    cv = ParsedCV(
+        lines=[
+            CVLine(id="L001", text="Jane Doe"),
+            CVLine(id="L002", text="Education"),
+            CVLine(id="L003", text="MSc Computer Science, 2016-2018"),
+            CVLine(id="L004", text="Skills"),
+            CVLine(id="L005", text="Python, SQL, Docker"),
+            CVLine(id="L006", text="Summary"),
+            CVLine(id="L007", text="Backend engineer focused on APIs."),
+            CVLine(id="L008", text="Experience"),
+            CVLine(id="L009", text="Built the billing API in Python"),
+        ],
+        contact=Contact(name=ContactField(value="Jane Doe", line_id="L001")),
+        sections=[
+            CVSection(id="S00", heading_line_id=None, type="contact", line_ids=["L001"]),
+            CVSection(
+                id="S01", heading_line_id="L002", type="education", line_ids=["L002", "L003"]
+            ),
+            CVSection(id="S02", heading_line_id="L004", type="skills", line_ids=["L004", "L005"]),
+            CVSection(id="S03", heading_line_id="L006", type="summary", line_ids=["L006", "L007"]),
+            CVSection(
+                id="S04", heading_line_id="L008", type="experience", line_ids=["L008", "L009"]
+            ),
+        ],
+    )
+    return {"cv": cv.model_dump(), "suggestions": [], "decisions": {"accepted": [], "rejected": []}}
+
+
+def test_without_an_order_model_the_fallback_uses_the_standard_section_order():
+    update = _built(_reading_order_state())
+
+    assert update["built_by"] == "fallback"
+    doc = CVDocument.model_validate(update["document"])
+    assert [section.id for section in doc.sections] == ["S03", "S04", "S01", "S02"]

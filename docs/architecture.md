@@ -50,7 +50,7 @@ flowchart TD
 - `suggest`: `suggest` call for requirements that are met but lack the posting's exact terms. Runs the deterministic guards on each rewrite.
 - `verify_batch`: `verify` call for one CV section's pending rewrites. One per section, in parallel.
 - `await_review`: **pause 2**. `interrupt({"stage": "review_ready"})`. The resume value is the user's accepted and rejected IDs.
-- `build_cv`: applies accepted, verified rewrites in code. Then the order agent, or the original order.
+- `build_cv`: applies accepted, verified rewrites in code. Then the order agent, or the standard section order.
 - `final_checks`: renders the PDF, reads it back, validates the document, compares keyword coverage before and after the build, and records fit. Writes `build_report`.
 
 Max concurrency is 4 (`run_config`).
@@ -90,7 +90,7 @@ Max concurrency is 4 (`run_config`).
 5. **Binary status.** A rewrite ends as `verified` or `unsupported`. `pending` exists only between steps 3 and 4. It is verified only if every claim is supported, no new name adds a claim, the verifier is not uncertain, and it returned claims. Otherwise the first reason is shown.
 6. **User review.** Pause 2 takes the accepted and rejected IDs. Only rewrites that are both accepted and verified are applied.
 7. **Code-applied changes.** `apply_suggestions` is deterministic. `align_wording` replaces one line's text. `add_skill` appends a line to the Skills section (or to a new "added-skills" section at the end if there is none). `tailor_summary` replaces the Summary lines (or adds an "added-summary" section at the top if there is none). `validate_document` then checks that every original line is unchanged or replaced by an applied rewrite.
-8. **Ordering agent** (`agents/cv_builder`). A tool-calling model (`create_agent`, recursion limit 25) with three tools: `move_section(section_id, position)`, `reorder_items(section_id, ordered_ids)` and `finalize()`. The first two only move sections and items, and return bad input as text. `finalize` runs `validate_document`. The agent's order is used only if the last `finalize` returned ok. Otherwise the original order is kept (`built_by` = `fallback`). That also happens when there is no order model (no OpenAI key, or the app was created with an injected LLM for tests) or the agent raises.
+8. **Ordering agent** (`agents/cv_builder`). A tool-calling model (`create_agent`, recursion limit 25) with three tools: `move_section(section_id, position)`, `reorder_items(section_id, ordered_ids)` and `finalize()`. The first two only move sections and items, and return bad input as text. `finalize` runs `validate_document`. The agent's order is used only if the last `finalize` returned ok. Otherwise the standard section order is used (`built_by` = `fallback`): summary, experience, projects, education, certifications, skills, languages, other. That also happens when there is no order model (no OpenAI key, or the app was created with an injected LLM for tests) or the agent raises.
 9. **Read-back check** (`final_checks`). The document is rendered to PDF with Typst, the PDF is read back with the app's own reader, and every document line's words must appear in the extracted text, in order. Failures go to `build_report.roundtrip_issues`. `validate_document` errors go to `validation_errors`. The check reports only. It does not stop the build.
 
 ## 5. API

@@ -12,6 +12,7 @@ from backedcv.domain.document_diff import (
     apply_suggestions,
     diff_document,
     document_from_cv,
+    standard_order,
     validate_document,
 )
 from backedcv.domain.models import (
@@ -33,7 +34,8 @@ log = logging.getLogger(__name__)
 
 
 def make_build_nodes(order_model: BaseChatModel | None = None) -> dict[str, Callable]:
-    """The build_cv and final_checks nodes. Without an order model, the original order is kept."""
+    """The build_cv and final_checks nodes. Without an order model, the standard section order
+    is used."""
 
     async def build_cv(state: AnalysisState) -> dict:
         _progress("build", "started")
@@ -47,6 +49,8 @@ def make_build_nodes(order_model: BaseChatModel | None = None) -> dict[str, Call
             doc, built_by = await run_order_agent(ws, _job_summary(state), order_model)
             usage = ws.usage
             errors = [_error("build_cv", ws.error)] if ws.error is not None else []
+        else:
+            doc = standard_order(doc)
         _progress("build", "done", built_by=built_by)
         return {
             "document": doc.model_dump(),

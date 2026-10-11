@@ -35,6 +35,19 @@ STANDARD_HEADINGS: dict[SectionType, str] = {
     "other": "Other",
 }
 
+# The section order of a built CV when no agent orders it. A section type that is not listed goes
+# just before "other".
+STANDARD_SECTION_ORDER: tuple[str, ...] = (
+    "summary",
+    "experience",
+    "projects",
+    "education",
+    "certifications",
+    "skills",
+    "languages",
+    "other",
+)
+
 # Headings that open the contact block. The model often leaves that heading out of the contact
 # section, so the text decides it for a line outside every content section.
 _CONTACT_HEADINGS = frozenset(
@@ -436,6 +449,23 @@ def reorder_items(doc: CVDocument, section_id: str, ordered_ids: Sequence[str]) 
         reordered.append(remaining.pop(index))
     section.items = reordered
     return result
+
+
+# Standard order -------------------------------------------------------------------------------
+
+
+def standard_order(doc: CVDocument) -> CVDocument:
+    """The document with its sections in STANDARD_SECTION_ORDER. Sections of one type keep their
+    relative order, and so do the items inside every section."""
+    result = doc.model_copy(deep=True)
+    result.sections.sort(key=lambda section: _standard_rank(section.type))
+    return result
+
+
+def _standard_rank(section_type: str) -> float:
+    if section_type in STANDARD_SECTION_ORDER:
+        return STANDARD_SECTION_ORDER.index(section_type)
+    return STANDARD_SECTION_ORDER.index("other") - 0.5  # an unknown type goes just before "other"
 
 
 # Shared helpers -------------------------------------------------------------------------------

@@ -141,7 +141,7 @@ export default function BuildScreen({ analysis, onStartOver }: BuildScreenProps)
 function orderNote(builtBy: BuildReport['built_by']): string {
   return builtBy === 'agent'
     ? 'An AI agent chose the section order. It can only move sections: the only text changes are the suggestions you accepted.'
-    : 'Original section order kept. The only text changes are the suggestions you accepted.'
+    : 'Standard section order used. The only text changes are the suggestions you accepted.'
 }
 
 // For example: "2 changed, 1 added, 0 removed, 14 unchanged".

@@ -1,5 +1,5 @@
 """The order agent: a small tool-calling model that puts one built CV in the best order for one
-job. It can only reorder. Any failure keeps the original order."""
+job. It can only reorder. Any failure falls back to the standard section order."""
 
 import logging
 from typing import Literal
@@ -11,6 +11,7 @@ from langchain_openai import ChatOpenAI
 
 from backedcv.agents.cv_builder.tools import Workspace, make_tools
 from backedcv.config import load
+from backedcv.domain.document_diff import standard_order
 from backedcv.domain.models import CVDocument, CVEntry, DocItem
 from backedcv.llm.prompt_loader import load_prompt
 from backedcv.llm.structured import usage_record
@@ -23,8 +24,8 @@ RECURSION_LIMIT = 25
 async def run_order_agent(
     ws: Workspace, job_summary: str, model: BaseChatModel
 ) -> tuple[CVDocument, Literal["agent", "fallback"]]:
-    """Return the reordered document when the agent finalized it, else the original order.
-    A failure is kept on the workspace; this function never raises."""
+    """Return the reordered document when the agent finalized it, else the document in the standard
+    section order. A failure is kept on the workspace; this function never raises."""
     original = ws.document
     prompt = load_prompt("build_cv")
     message = (
@@ -42,17 +43,17 @@ async def run_order_agent(
                 "tags": [prompt.id],
             },
         )
-    except Exception as exc:  # the order agent is optional: the original order is kept
+    except Exception as exc:  # the order agent is optional: the standard order is used instead
         log.warning("build agent failed: %s", exc)
         ws.error = exc
-        return original, "fallback"
+        return standard_order(original), "fallback"
 
     name = getattr(model, "model_name", "unknown")
     ws.usage.extend(
         usage_record("build_cv", name, m) for m in result["messages"] if isinstance(m, AIMessage)
     )
     if not ws.approved:
-        return original, "fallback"
+        return standard_order(original), "fallback"
     return ws.document, "agent"
 
 

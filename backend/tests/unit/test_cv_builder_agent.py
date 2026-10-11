@@ -7,7 +7,7 @@ from langgraph.errors import GraphRecursionError
 from pydantic import Field
 
 from backedcv.agents.cv_builder import Workspace, make_tools, run_order_agent
-from backedcv.domain.document_diff import document_from_cv
+from backedcv.domain.document_diff import document_from_cv, standard_order
 from backedcv.domain.models import (
     Contact,
     ContactField,
@@ -15,6 +15,8 @@ from backedcv.domain.models import (
     CVEntry,
     CVLine,
     CVSection,
+    DocItem,
+    DocSection,
     ParsedCV,
 )
 from backedcv.llm.prompt_loader import load_prompt
@@ -119,6 +121,51 @@ def _order(doc: CVDocument) -> list[str]:
     return [section.id for section in doc.sections]
 
 
+def _reading_order_cv() -> ParsedCV:
+    """The sections in reading order, as a two-column CV gives them: education, skills and
+    languages come before the summary and the experience."""
+    return ParsedCV(
+        lines=[
+            CVLine(id="L001", text="Jane Doe"),
+            CVLine(id="L002", text="Education"),
+            CVLine(id="L003", text="MSc Computer Science, 2016-2018"),
+            CVLine(id="L004", text="Skills"),
+            CVLine(id="L005", text="Python, SQL, Docker"),
+            CVLine(id="L006", text="Languages"),
+            CVLine(id="L007", text="English, Spanish"),
+            CVLine(id="L008", text="Summary"),
+            CVLine(id="L009", text="Backend engineer focused on APIs."),
+            CVLine(id="L010", text="Experience"),
+            CVLine(id="L011", text="Built the billing API in Python"),
+        ],
+        contact=Contact(name=ContactField(value="Jane Doe", line_id="L001")),
+        sections=[
+            CVSection(id="S00", heading_line_id=None, type="contact", line_ids=["L001"]),
+            CVSection(
+                id="S01", heading_line_id="L002", type="education", line_ids=["L002", "L003"]
+            ),
+            CVSection(id="S02", heading_line_id="L004", type="skills", line_ids=["L004", "L005"]),
+            CVSection(
+                id="S03", heading_line_id="L006", type="languages", line_ids=["L006", "L007"]
+            ),
+            CVSection(id="S04", heading_line_id="L008", type="summary", line_ids=["L008", "L009"]),
+            CVSection(
+                id="S05", heading_line_id="L010", type="experience", line_ids=["L010", "L011"]
+            ),
+        ],
+    )
+
+
+def _reading_order_workspace() -> Workspace:
+    cv = _reading_order_cv()
+    return Workspace(document=document_from_cv(cv), cv=cv, applied=[], accepted_ids=set())
+
+
+def _section(section_id: str, section_type: str, item_ids: list[str] | None = None) -> DocSection:
+    items = [DocItem(id=item_id) for item_id in item_ids or []]
+    return DocSection(id=section_id, type=section_type, heading=section_id, items=items)
+
+
 def test_agent_moves_a_section_and_finalizes_so_the_new_order_is_kept():
     ws = _workspace()
     model = ScriptedChatModel(
@@ -193,3 +240,70 @@ def test_tools_report_problems_as_text_and_finalize_approves_a_valid_order():
     assert tools["reorder_items"].invoke(duplicate).startswith("Error:")
     assert tools["finalize"].invoke({}) == "ok"
     assert ws.approved is True
+
+
+def test_a_failed_order_agent_gives_the_standard_section_order():
+    ws = _reading_order_workspace()
+    assert _order(ws.document) == ["S01", "S02", "S03", "S04", "S05"]
+
+    doc, built_by = asyncio.run(run_order_agent(ws, JOB, ScriptedChatModel(fail=True)))
+
+    assert built_by == "fallback"
+    assert _order(doc) == ["S04", "S05", "S01", "S02", "S03"]
+    assert isinstance(ws.error, RuntimeError)
+
+
+def test_an_order_that_is_never_finalized_gives_the_standard_section_order():
+    ws = _reading_order_workspace()
+    model = ScriptedChatModel(
+        script=[_call("move_section", {"section_id": "S02", "position": 0}, "c1")]
+    )
+
+    doc, built_by = asyncio.run(run_order_agent(ws, JOB, model))
+
+    assert built_by == "fallback"
+    assert ws.approved is False
+    assert _order(doc) == ["S04", "S05", "S01", "S02", "S03"]
+
+
+def test_a_finalized_agent_order_is_kept_even_when_it_differs_from_the_standard_order():
+    ws = _reading_order_workspace()
+    model = ScriptedChatModel(
+        script=[
+            _call("move_section", {"section_id": "S02", "position": 0}, "c1"),
+            _call("finalize", {}, "c2"),
+        ]
+    )
+
+    doc, built_by = asyncio.run(run_order_agent(ws, JOB, model))
+
+    assert built_by == "agent"
+    assert _order(doc) == ["S02", "S01", "S03", "S04", "S05"]
+
+
+def test_standard_order_keeps_the_items_and_the_order_of_sections_of_one_type():
+    doc = CVDocument(
+        sections=[
+            _section("S01", "other"),
+            _section("S02", "skills", ["S02-i2", "S02-i1"]),
+            _section("S03", "languages"),
+            _section("S04", "skills"),
+            _section("S05", "summary"),
+        ]
+    )
+
+    result = standard_order(doc)
+
+    assert _order(result) == ["S05", "S02", "S04", "S03", "S01"]
+    assert [item.id for item in result.sections[1].items] == ["S02-i2", "S02-i1"]
+    assert _order(doc) == ["S01", "S02", "S03", "S04", "S05"]  # the input is not changed
+
+
+def test_standard_order_puts_an_unknown_section_type_just_before_other():
+    # The section type field allows only known types, so this section skips validation.
+    hobbies = DocSection.model_construct(id="S02", type="hobbies", heading="Hobbies", items=[])
+    doc = CVDocument.model_construct(
+        sections=[_section("S01", "other"), hobbies, _section("S03", "languages")]
+    )
+
+    assert _order(standard_order(doc)) == ["S03", "S02", "S01"]
