@@ -6,7 +6,14 @@ import {
   type FormEvent,
   type KeyboardEvent,
 } from 'react'
-import { ApiError, getSamples, type AnalysisInput } from '../api/client'
+import {
+  ApiError,
+  getSampleCvFile,
+  getSamples,
+  isSampleCvFile,
+  type AnalysisInput,
+} from '../api/client'
+import type { Samples } from '../api/types'
 import {
   ACCEPTED_FILE_TYPES,
   MAX_JOB_CHARS,
@@ -33,6 +40,15 @@ const TAB_LABELS: Record<CvMode, string> = {
   text: 'Paste text',
 }
 
+// The sample PDF as a File, or null when it cannot be fetched.
+async function fetchSamplePdf(sample: Samples): Promise<File | null> {
+  try {
+    return await getSampleCvFile(sample)
+  } catch {
+    return null
+  }
+}
+
 export default function InputForm({ draft, onChange, onSubmit }: InputFormProps) {
   const [showProblems, setShowProblems] = useState(false)
   const [fileError, setFileError] = useState<string | null>(null)
@@ -48,6 +64,7 @@ export default function InputForm({ draft, onChange, onSubmit }: InputFormProps)
   const jobOver = jobLength > MAX_JOB_CHARS
   const shownJob = showProblems ? problems.job : null
   const cvMessage = draft.cvMode === 'file' && fileError ? fileError : showProblems ? problems.cv : null
+  const sampleInUse = draft.cvFile !== null && isSampleCvFile(draft.cvFile)
 
   function update(patch: Partial<AnalysisDraft>) {
     onChange({ ...draft, ...patch })
@@ -98,12 +115,20 @@ export default function InputForm({ draft, onChange, onSubmit }: InputFormProps)
     document.getElementById(`cv-tab-${mode}`)?.focus()
   }
 
+  // Loads the sample CV as a PDF upload and fills the posting. When the PDF cannot be fetched,
+  // the sample text goes in paste mode instead.
   async function loadSample() {
     setSampleLoading(true)
     setSampleError(null)
+    setFileError(null)
     try {
       const sample = await getSamples()
-      update({ cvMode: 'text', cvText: sample.cv_text, jobText: sample.job_text })
+      const cvFile = await fetchSamplePdf(sample)
+      if (cvFile) {
+        update({ cvMode: 'file', cvFile, jobText: sample.job_text })
+      } else {
+        update({ cvMode: 'text', cvText: sample.cv_text, jobText: sample.job_text })
+      }
     } catch (error) {
       setSampleError(error instanceof ApiError ? error.title : 'The sample could not be loaded.')
     } finally {
@@ -218,6 +243,12 @@ export default function InputForm({ draft, onChange, onSubmit }: InputFormProps)
                 Remove file
               </button>
             </div>
+          )}
+          {sampleInUse && (
+            <p className="notice notice-info">
+              Sample: a fictional candidate. The PDF has two columns on purpose, to show how
+              screening software reads it.
+            </p>
           )}
         </div>
 

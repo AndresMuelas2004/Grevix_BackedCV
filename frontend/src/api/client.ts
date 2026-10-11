@@ -67,10 +67,29 @@ export async function getSamples(): Promise<Samples> {
   const response = await send(`${API_BASE}/samples`, {})
   if (!response.ok) throw await readError(response)
   const body: unknown = await response.json()
-  if (!isRecord(body) || typeof body.cv_text !== 'string' || typeof body.job_text !== 'string') {
+  if (!isSamples(body)) {
     throw new ApiError(response.status, 'bad_response', 'The sample could not be read.')
   }
-  return { cv_text: body.cv_text, job_text: body.job_text }
+  return body
+}
+
+// The Files made by getSampleCvFile. Kept by identity, so the form can tell them from uploads.
+const sampleFiles = new WeakSet<File>()
+
+// Downloads the sample CV PDF that getSamples describes, as a File ready to upload.
+// Throws when the PDF cannot be fetched.
+export async function getSampleCvFile(samples: Samples): Promise<File> {
+  const response = await send(samples.cv_pdf_url, {})
+  if (!response.ok) throw await readError(response)
+  const blob = await response.blob()
+  const file = new File([blob], samples.cv_filename, { type: 'application/pdf' })
+  sampleFiles.add(file)
+  return file
+}
+
+// True for a File made by getSampleCvFile, also after the form was unmounted and mounted again.
+export function isSampleCvFile(file: File): boolean {
+  return sampleFiles.has(file)
 }
 
 export async function getAnalysis(id: string): Promise<AnalysisReport> {
@@ -277,6 +296,17 @@ function isErrorBody(value: unknown): value is ErrorBody {
     typeof value.code === 'string' &&
     typeof value.title === 'string' &&
     typeof value.detail === 'string'
+  )
+}
+
+function isSamples(value: unknown): value is Samples {
+  return (
+    isRecord(value) &&
+    typeof value.cv_text === 'string' &&
+    typeof value.job_text === 'string' &&
+    typeof value.cv_pdf_url === 'string' &&
+    typeof value.cv_docx_url === 'string' &&
+    typeof value.cv_filename === 'string'
   )
 }
 

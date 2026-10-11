@@ -428,10 +428,14 @@ export interface ErrorBody {
   detail: string
 }
 
-// Body of GET /api/samples.
+// Body of GET /api/samples. The sample CV is also served as a PDF and a DOCX, at the two URLs.
+// cv_filename is the name the PDF gets when it is uploaded as a CV.
 export interface Samples {
   cv_text: string
   job_text: string
+  cv_pdf_url: string
+  cv_docx_url: string
+  cv_filename: string
 }
 
 // Body of PATCH /api/analyses/{id}/inputs. A field left out keeps its value, and a list that

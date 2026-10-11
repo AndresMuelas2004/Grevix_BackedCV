@@ -11,7 +11,14 @@ from backedcv.main import create_app
 from backedcv.settings import get_settings
 from tests.fakes import FakeLLM
 
-SAMPLES_DIR = Path(__file__).resolve().parents[2] / "samples"
+CURATED_DIR = Path(__file__).resolve().parents[2] / "samples" / "curated"
+PDF_TYPE = "application/pdf"
+DOCX_TYPE = "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+SAMPLE_LINKS = {
+    "cv_pdf_url": "/api/samples/cv.pdf",
+    "cv_docx_url": "/api/samples/cv.docx",
+    "cv_filename": "sample-cv.pdf",
+}
 
 
 @pytest.fixture(autouse=True)
@@ -37,40 +44,83 @@ def _set_env(monkeypatch, **values: str | None) -> None:
     get_settings.cache_clear()
 
 
-def test_samples_returns_the_bundled_texts(client, monkeypatch):
+def _write_texts(folder: Path) -> None:
+    """Make a samples folder with the two curated texts and no PDF or DOCX."""
+    curated = folder / "curated"
+    curated.mkdir()
+    (curated / "cv.txt").write_text("CV · Data Engineer\n", encoding="utf-8")
+    (curated / "job.txt").write_text("Job posting\n", encoding="utf-8")
+
+
+def test_samples_returns_the_curated_sample(client, monkeypatch):
     _set_env(monkeypatch, BACKEDCV_SAMPLES_DIR=None)
 
     response = client.get("/api/samples")
 
     assert response.status_code == 200
     assert response.json() == {
-        "cv_text": (SAMPLES_DIR / "sample_cv.txt").read_text(encoding="utf-8"),
-        "job_text": (SAMPLES_DIR / "sample_job.txt").read_text(encoding="utf-8"),
+        "cv_text": (CURATED_DIR / "cv.txt").read_text(encoding="utf-8"),
+        "job_text": (CURATED_DIR / "job.txt").read_text(encoding="utf-8"),
+        **SAMPLE_LINKS,
     }
 
 
 def test_samples_follow_the_samples_dir_setting(client, monkeypatch, tmp_path):
-    (tmp_path / "sample_cv.txt").write_text("CV · Data Engineer\n", encoding="utf-8")
-    (tmp_path / "sample_job.txt").write_text("Job posting\n", encoding="utf-8")
+    _write_texts(tmp_path)
     _set_env(monkeypatch, BACKEDCV_SAMPLES_DIR=str(tmp_path))
 
     response = client.get("/api/samples")
 
     assert response.status_code == 200
-    assert response.json() == {"cv_text": "CV · Data Engineer\n", "job_text": "Job posting\n"}
+    assert response.json() == {
+        "cv_text": "CV · Data Engineer\n",
+        "job_text": "Job posting\n",
+        **SAMPLE_LINKS,
+    }
 
 
-@pytest.mark.parametrize("missing", ["sample_cv.txt", "sample_job.txt"])
-def test_missing_sample_file_is_404(client, monkeypatch, tmp_path, missing):
-    (tmp_path / "sample_cv.txt").write_text("CV\n", encoding="utf-8")
-    (tmp_path / "sample_job.txt").write_text("Job posting\n", encoding="utf-8")
-    (tmp_path / missing).unlink()
+@pytest.mark.parametrize("missing", ["cv.txt", "job.txt"])
+def test_missing_sample_text_is_404(client, monkeypatch, tmp_path, missing):
+    _write_texts(tmp_path)
+    (tmp_path / "curated" / missing).unlink()
     _set_env(monkeypatch, BACKEDCV_SAMPLES_DIR=str(tmp_path))
 
     response = client.get("/api/samples")
 
     assert response.status_code == 404
     assert response.json()["code"] == "samples_missing"
+
+
+@pytest.mark.parametrize(
+    ("route", "filename", "media_type"),
+    [
+        ("/api/samples/cv.pdf", "cv.pdf", PDF_TYPE),
+        ("/api/samples/cv.docx", "cv.docx", DOCX_TYPE),
+    ],
+)
+def test_sample_files_are_served_with_their_content_type(
+    client, monkeypatch, route, filename, media_type
+):
+    _set_env(monkeypatch, BACKEDCV_SAMPLES_DIR=None)
+
+    response = client.get(route)
+
+    assert response.status_code == 200
+    assert response.headers["content-type"] == media_type
+    assert response.content == (CURATED_DIR / filename).read_bytes()
+
+
+@pytest.mark.parametrize("route", ["/api/samples/cv.pdf", "/api/samples/cv.docx"])
+def test_missing_sample_file_is_404_and_the_texts_still_load(client, monkeypatch, tmp_path, route):
+    _write_texts(tmp_path)
+    _set_env(monkeypatch, BACKEDCV_SAMPLES_DIR=str(tmp_path))
+
+    response = client.get(route)
+
+    assert response.status_code == 404
+    assert response.json()["code"] == "samples_missing"
+    # The frontend falls back to the sample text when the PDF is missing, so the text must load.
+    assert client.get("/api/samples").status_code == 200
 
 
 def test_meta_reports_version_models_and_limits(client):
