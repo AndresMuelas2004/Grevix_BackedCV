@@ -71,6 +71,17 @@ def test_consecutive_bullets_stay_separate_lines(tmp_path):
     assert texts == [BULLET, second]
 
 
+def test_literal_bullet_wrapped_to_the_margin_stays_whole(tmp_path):
+    # A "•" typed as text: its wrapped line starts at the margin, not under the bullet's text.
+    markup = NARROW_PAGE + (
+        "• Containerized three internal services with Docker and exposed them through FastAPI.\n"
+    )
+
+    assert _pdf_texts(tmp_path, markup) == [
+        "Containerized three internal services with Docker and exposed them through FastAPI."
+    ]
+
+
 def test_wrapped_paragraph_becomes_one_line(tmp_path):
     summary = (
         "Software engineer with three years of data and backend work, now moving into AI "
@@ -132,7 +143,7 @@ def test_curated_sample_keeps_bullets_and_wrapped_paragraphs_whole():
 
     assert [text for text in bullets + paragraphs if text not in texts] == []
     assert "Wrote ETL jobs in Python that load 2 million rows a day into PostgreSQL." in texts
-    assert not {"PostgreSQL.", "analysts."} & set(texts)
+    assert not {"PostgreSQL.", "analysts.", "FastAPI."} & set(texts)
     assert {"Valencia, Spain", "nuria.calvo@example.com"} <= set(texts)
 
 

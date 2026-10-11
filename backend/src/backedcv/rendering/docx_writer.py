@@ -13,7 +13,7 @@ FONT_NAME = "Calibri"
 BODY_SIZE = Pt(10.5)
 NAME_SIZE = Pt(14)
 MARGIN = Inches(0.7)
-CONTACT_SEPARATOR = " | "
+CONTACT_SEPARATOR = " · "
 
 
 def render_docx(doc: CVDocument) -> bytes:
@@ -25,8 +25,9 @@ def render_docx(doc: CVDocument) -> bytes:
         _name(document, doc.contact.name)
     if doc.contact.headline:
         document.add_paragraph(doc.contact.headline)
-    if doc.contact.details:
-        document.add_paragraph(CONTACT_SEPARATOR.join(doc.contact.details))
+    details = [detail for detail in doc.contact.details if detail.strip()]
+    if details:
+        document.add_paragraph(CONTACT_SEPARATOR.join(details))
     for section in doc.sections:
         if section.heading:
             _heading(document, section.heading)

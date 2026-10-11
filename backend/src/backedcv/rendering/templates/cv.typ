@@ -20,10 +20,12 @@
   #par[#cv.contact.headline]
 ]
 
-// Each detail sits in its own box, so a long link moves to the next line whole. The space before
-// the bar is a non-breaking one, so a line never starts with a bar.
-#if cv.contact.details.len() > 0 [
-  #par[#cv.contact.details.map(detail => box[#detail]).join("\u{a0}| ")]
+// Each detail sits in its own unbreakable box, and the boxes are separated by horizontal space
+// only, with no separator character. A long line breaks in that gap, so a wrapped line never ends
+// with a stray bar. Blank details are skipped.
+#let details = cv.contact.details.filter(detail => detail.trim() != "")
+#if details.len() > 0 [
+  #par[#details.map(detail => box[#detail]).join(h(1.2em))]
 ]
 
 #for section in cv.sections [

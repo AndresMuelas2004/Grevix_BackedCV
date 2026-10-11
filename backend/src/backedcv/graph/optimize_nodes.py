@@ -67,6 +67,16 @@ def _suggestion_row(s: Suggestion) -> str:
     return f"{s.id} | cited: {cited} | introduced: {introduced} | after: {after}"
 
 
+def _suggested_after(d: SuggestionDraft) -> str:
+    """Skill names start with a capital, so "vector databases" reads "Vector databases" under
+    Skills. A first word that already has a capital ("iOS") keeps its casing. Other kinds keep
+    the model's wording."""
+    first_word = d.after.partition(" ")[0]
+    if d.kind != "add_skill" or first_word != first_word.lower():
+        return d.after
+    return d.after[:1].upper() + d.after[1:]
+
+
 def _suggest_target(d: SuggestionDraft, cv: ParsedCV) -> str:
     """Maps the heading or line IDs the model gives onto the section IDs the app uses."""
     if d.kind == "align_wording":
@@ -162,7 +172,7 @@ def make_optimize_nodes(llm: StructuredLLM) -> dict[str, Callable]:
                     id=f"S{i:02d}",
                     kind=d.kind,
                     target=_suggest_target(d, cv),
-                    after=d.after,
+                    after=_suggested_after(d),
                     requirement_ids=d.requirement_ids,
                     cited_refs=d.cited_refs,
                 ),

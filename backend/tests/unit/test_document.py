@@ -206,6 +206,94 @@ def test_missing_heading_gets_a_standard_one_and_lines_outside_sections_are_kept
     assert validate_document(doc, cv, [], []) == []
 
 
+def _contact_block_cv(heading: str, first_id: str) -> ParsedCV:
+    """The left column of a two-column CV as the reader gives it: name, headline, then a contact
+    heading and its details, then the summary. The model's contact section starts at first_id and
+    has no heading_line_id, the way the model often returns it."""
+    texts = [
+        ("L001", "Ana Ruiz"),
+        ("L002", HEADLINE),
+        ("L003", heading),
+        ("L004", "Valencia, Spain"),
+        ("L005", "ana@example.com"),
+        ("L006", "linkedin.com/in/anaruiz"),
+        ("L007", "Summary"),
+        ("L008", "Backend engineer with 5 years of Python APIs."),
+    ]
+    block = ["L001", "L002", "L003", "L004", "L005", "L006"]
+    return ParsedCV(
+        lines=[CVLine(id=line_id, text=text) for line_id, text in texts],
+        contact=Contact(
+            name=ContactField(value="Ana Ruiz", line_id="L001"),
+            location=ContactField(value="Valencia, Spain", line_id="L004"),
+            email=ContactField(value="ana@example.com", line_id="L005"),
+            links=[ContactField(value="linkedin.com/in/anaruiz", line_id="L006")],
+        ),
+        sections=[
+            CVSection(
+                id="S00",
+                heading_line_id=None,
+                type="contact",
+                line_ids=block[block.index(first_id) :],
+            ),
+            CVSection(id="S01", heading_line_id="L007", type="summary", line_ids=["L007", "L008"]),
+        ],
+    )
+
+
+@pytest.mark.parametrize(
+    ("heading", "first_id"),
+    [
+        ("Contact", "L003"),  # the contact section starts at its heading
+        ("Contact", "L001"),  # the contact section starts at the name, above the headline
+        ("Contact", "L004"),  # the heading sits outside every section
+        ("CONTACT:", "L003"),
+        ("Datos de contacto", "L003"),
+    ],
+)
+def test_contact_heading_is_not_content_so_no_other_section_is_made(heading, first_id):
+    cv = _contact_block_cv(heading, first_id)
+
+    doc = document_from_cv(cv)
+
+    assert [section.type for section in doc.sections] == ["summary"]
+    assert (doc.contact.headline, doc.contact.headline_origin) == (HEADLINE, "L002")
+    assert _origins(doc) == ["L008"]
+    assert validate_document(doc, cv, [], []) == []
+    assert [entry.origin for entry in diff_document(cv, doc)] == ["L002", "L008"]
+
+
+def test_content_beside_the_contact_heading_still_goes_to_other():
+    cv = _contact_block_cv("Contact", "L003")
+    cv.lines.append(CVLine(id="L009", text="Available from May"))
+    cv.sections[0].line_ids.append("L009")
+
+    doc = document_from_cv(cv)
+
+    assert (doc.sections[-1].type, _origins(doc)[-1]) == ("other", "L009")
+    assert validate_document(doc, cv, [], []) == []
+
+
+def test_a_line_called_contact_inside_a_content_section_is_kept():
+    cv = ParsedCV(
+        lines=[
+            CVLine(id="L001", text="Skills"),
+            CVLine(id="L002", text="Contact"),
+            CVLine(id="L003", text="Python"),
+        ],
+        sections=[
+            CVSection(
+                id="S01", heading_line_id="L001", type="skills", line_ids=["L001", "L002", "L003"]
+            )
+        ],
+    )
+
+    doc = document_from_cv(cv)
+
+    assert _origins(doc) == ["L002", "L003"]
+    assert validate_document(doc, cv, [], []) == []
+
+
 def _headline_cv() -> ParsedCV:
     """A name, a headline under it, one loose line before the first heading, then a summary."""
     return ParsedCV(

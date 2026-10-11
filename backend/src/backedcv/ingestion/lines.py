@@ -110,11 +110,15 @@ def _continues(group: list[Fragment], nxt: Fragment, reach: float) -> bool:
         return False
     if abs(nxt.size - last.size) > _SIZE_TOLERANCE or nxt.top - last.bottom > _MAX_GAP * nxt.size:
         return False
-    if _is_bullet(first.text):  # a bullet's wrapped lines hang under the bullet's text
-        return abs(nxt.x0 - first.text_x0) <= _INDENT_TOLERANCE
+    unfinished = _SENTENCE_END.search(fold(last.text)) is None
+    if _is_bullet(first.text):
+        if abs(nxt.x0 - first.text_x0) <= _INDENT_TOLERANCE:  # hangs under the bullet's text
+            return True
+        # A "•" typed as text wraps to the margin; there, only an unfinished line runs on.
+        return unfinished and abs(nxt.x0 - first.x0) <= _INDENT_TOLERANCE
     if abs(nxt.x0 - first.x0) > _INDENT_TOLERANCE:
         return False
-    return _SENTENCE_END.search(fold(last.text)) is None or _starts_lower(nxt.text)
+    return unfinished or _starts_lower(nxt.text)
 
 
 def _is_break(fragment: Fragment) -> bool:

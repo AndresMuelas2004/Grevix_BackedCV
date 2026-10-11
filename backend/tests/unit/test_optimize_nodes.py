@@ -221,6 +221,42 @@ async def test_suggest_maps_heading_lines_to_section_ids(cv, kind, target, expec
 
 
 @pytest.mark.anyio
+@pytest.mark.parametrize(
+    ("kind", "drafted", "shown"),
+    [
+        ("add_skill", "vector databases", "Vector databases"),
+        ("add_skill", "node.js", "Node.js"),
+        ("add_skill", "iOS development", "iOS development"),  # a capital already: kept
+        (
+            "align_wording",  # other kinds keep their wording
+            "built a support bot with agent frameworks",
+            "built a support bot with agent frameworks",
+        ),
+    ],
+)
+async def test_suggest_capitalizes_skill_names_before_they_are_verified(kind, drafted, shown):
+    draft = SuggestionDraft(
+        kind=kind,
+        target="L007",
+        after=drafted,
+        cited_refs=["L007"],
+        requirement_ids=["R03"],
+        rationale="L007 shows LangGraph, which is an agent framework.",
+    )
+    llm = FakeOptimizeLLM(suggestions=[draft])
+    state = await _analysis_state(llm)
+    nodes = make_optimize_nodes(llm)
+
+    suggested = (await nodes["suggest"](state))["suggestions"]
+    assert suggested[0]["after"] == shown
+
+    sends = nodes["route_verification"]({**state, "suggestions": suggested})
+    verified = (await nodes["verify_batch"](sends[0].arg))["suggestions"]
+    assert [s["verification"]["status"] for s in verified] == ["verified"]
+    assert f"after: {shown}" in llm.inputs[-1][1]
+
+
+@pytest.mark.anyio
 async def test_suggest_model_error_leaves_no_suggestions():
     state = await _analysis_state(FakeOptimizeLLM())
 

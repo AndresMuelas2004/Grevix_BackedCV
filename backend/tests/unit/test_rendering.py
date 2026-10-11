@@ -1,17 +1,23 @@
 import io
+from datetime import date
+from pathlib import Path
 
 import docx
 from docx.shared import Inches, Pt
 
+from backedcv.domain.builders import build_parsed_cv
+from backedcv.domain.document_diff import document_from_cv
 from backedcv.domain.models import CVDocument, DocContact, DocItem, DocLine, DocSection
 from backedcv.ingestion import read_cv
+from backedcv.llm.drafts import CVStructureDraft, SectionDraft
 from backedcv.rendering import render_docx, render_pdf, roundtrip_check
 
+CURATED_CV = Path(__file__).resolve().parents[2] / "samples" / "curated" / "cv.pdf"
 HEADLINE = "Software engineer moving into AI engineering"
 EXPECTED_LINES = [
     "José Muñoz",
     HEADLINE,
-    "jose.munoz@example.com | +34 600 123 456 | Málaga, Spain",
+    "jose.munoz@example.com · +34 600 123 456 · Málaga, Spain",
     "Summary",
     "R&D engineer with C++ and C#",
     "Experience",
@@ -104,6 +110,81 @@ def test_pdf_reads_back_with_every_line():
 
     assert pdf.startswith(b"%PDF")
     ok, issues = roundtrip_check(pdf, _cv())
+    assert ok, issues
+
+
+def test_docx_contact_line_skips_blank_details():
+    doc = _cv()
+    doc.contact.details = ["jose.munoz@example.com", "", "  ", "Málaga, Spain"]
+
+    paragraphs = [p.text for p in docx.Document(io.BytesIO(render_docx(doc))).paragraphs]
+
+    assert "jose.munoz@example.com · Málaga, Spain" in paragraphs
+
+
+def test_pdf_contact_line_skips_blank_details():
+    doc = _cv()
+    doc.contact.details = ["jose.munoz@example.com", "", "  ", "Málaga, Spain"]
+
+    texts = [line.text for line in read_cv(render_pdf(doc), "cv.pdf").lines]
+
+    assert "jose.munoz@example.com Málaga, Spain" in texts
+
+
+def test_pdf_contact_wraps_between_details_without_a_separator():
+    details = [
+        "jose.munoz@example.com",
+        "+34 600 123 456",
+        "Calle Mayor 12, 29001 Málaga, Spain",
+        "https://github.com/jose-munoz-example-portfolio",
+        "https://linkedin.com/in/jose-munoz-example-profile",
+        "https://jose-munoz.example.dev/projects/2026",
+    ]
+    doc = _cv()
+    doc.contact.details = details
+
+    texts = [line.text for line in read_cv(render_pdf(doc), "cv.pdf").lines]
+
+    assert not any(all(detail in text for detail in details) for text in texts)  # it wraps
+    assert all(any(detail in text for text in texts) for detail in details)  # none is split
+    assert not any(text.endswith(("|", "·")) for text in texts)
+
+
+def test_curated_sample_builds_a_document_that_round_trips():
+    # The sample's structure as a model would return it, with the reader's line IDs.
+    draft = CVStructureDraft(
+        name_line_id="L001",
+        location_line_id="L004",
+        sections=[
+            SectionDraft(
+                type="contact", heading_line_id=None, first_line_id="L003", last_line_id="L008"
+            ),
+            SectionDraft(
+                type="education", heading_line_id="L009", first_line_id="L009", last_line_id="L013"
+            ),
+            SectionDraft(
+                type="skills", heading_line_id="L014", first_line_id="L014", last_line_id="L015"
+            ),
+            SectionDraft(
+                type="languages", heading_line_id="L016", first_line_id="L016", last_line_id="L017"
+            ),
+            SectionDraft(
+                type="summary", heading_line_id="L018", first_line_id="L018", last_line_id="L019"
+            ),
+            SectionDraft(
+                type="experience", heading_line_id="L020", first_line_id="L020", last_line_id="L036"
+            ),
+            SectionDraft(
+                type="projects", heading_line_id="L037", first_line_id="L037", last_line_id="L040"
+            ),
+        ],
+        entries=[],
+    )
+    lines = read_cv(CURATED_CV.read_bytes(), "cv.pdf").lines
+    doc = document_from_cv(build_parsed_cv(lines, draft, today=date(2026, 10, 11)))
+
+    assert "other" not in [section.type for section in doc.sections]
+    ok, issues = roundtrip_check(render_pdf(doc), doc)
     assert ok, issues
 
 

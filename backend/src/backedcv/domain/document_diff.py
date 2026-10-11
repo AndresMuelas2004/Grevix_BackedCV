@@ -35,12 +35,30 @@ STANDARD_HEADINGS: dict[SectionType, str] = {
     "other": "Other",
 }
 
+# Headings that open the contact block. The model often leaves that heading out of the contact
+# section, so the text decides it for a line outside every content section.
+_CONTACT_HEADINGS = frozenset(
+    {
+        "contact",
+        "contacts",
+        "contact details",
+        "contact information",
+        "contact info",
+        "contacto",
+        "contactos",
+        "datos de contacto",
+        "informacion de contacto",
+        "información de contacto",
+    }
+)
+
 
 # Building the document ------------------------------------------------------------------------
 
 
 def document_from_cv(cv: ParsedCV) -> CVDocument:
-    """The parsed CV as an editable document. Every body line appears exactly once."""
+    """The parsed CV as an editable document. Every body line appears exactly once. Headings and
+    contact lines are never body lines, so an Other section never holds only those."""
     lines = {line.id: line for line in cv.lines}
     placed: set[str] = set()
     sections = [
@@ -67,8 +85,8 @@ def _contact(cv: ParsedCV) -> DocContact:
 
 def _headline_line(cv: ParsedCV) -> CVLine | None:
     """The line under the name: the first line above every content section that is not a contact
-    field. The contact block is not a content section, so a headline inside it still counts.
-    Later loose lines keep their usual place."""
+    field or a contact heading. The contact block is not a content section, so a headline inside
+    it still counts. Later loose lines keep their usual place."""
     position = {line.id: i for i, line in enumerate(cv.lines)}
     content = [section for section in cv.sections if section.type != "contact"]
     starts = [
@@ -77,9 +95,9 @@ def _headline_line(cv: ParsedCV) -> CVLine | None:
         for line_id in [section.heading_line_id, *section.line_ids]
         if line_id in position
     ]
-    contact = set(_contact_origins(cv))
+    skipped = set(_contact_origins(cv)) | _contact_heading_ids(cv)
     for line in cv.lines[: min(starts, default=len(cv.lines))]:
-        if line.id not in contact:
+        if line.id not in skipped:
             return line
     return None
 
@@ -430,10 +448,16 @@ def _body_ids(cv: ParsedCV) -> list[str]:
 
 
 def _non_body_ids(cv: ParsedCV) -> set[str]:
-    """Lines that never become body lines: section headings, contact details and the headline."""
+    """Lines that never become body lines: section headings, contact details, the contact heading
+    and the headline."""
     headings = {s.heading_line_id for s in cv.sections if s.heading_line_id is not None}
     headline = _headline_line(cv)
-    return headings | set(_contact_origins(cv)) | ({headline.id} if headline is not None else set())
+    return (
+        headings
+        | set(_contact_origins(cv))
+        | _contact_heading_ids(cv)
+        | ({headline.id} if headline is not None else set())
+    )
 
 
 def _contact_origins(cv: ParsedCV) -> list[str]:
@@ -441,6 +465,30 @@ def _contact_origins(cv: ParsedCV) -> list[str]:
     contact = cv.contact
     fields = [contact.name, contact.email, contact.phone, contact.location, *contact.links]
     return list(dict.fromkeys(field.line_id for field in fields if field is not None))
+
+
+def _contact_heading_ids(cv: ParsedCV) -> set[str]:
+    """The lines that head the contact block: the contact section's own heading line, and a line
+    that reads as a contact heading ("Contact") outside every content section. The model often
+    leaves the heading out of the contact section, so the text is checked as well."""
+    content = {
+        line_id
+        for section in cv.sections
+        if section.type != "contact"
+        for line_id in [section.heading_line_id, *section.line_ids]
+        if line_id is not None
+    }
+    own = {
+        s.heading_line_id
+        for s in cv.sections
+        if s.type == "contact" and s.heading_line_id is not None
+    }
+    by_text = {
+        line.id
+        for line in cv.lines
+        if line.id not in content and fold_lower(line.text).strip(" :") in _CONTACT_HEADINGS
+    }
+    return own | by_text
 
 
 def _entry_map(cv: ParsedCV, section_id: str) -> dict[str, CVEntry]:

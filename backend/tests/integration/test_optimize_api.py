@@ -99,7 +99,7 @@ def test_the_whole_flow_ends_in_a_built_cv(client):
     assert built["build_report"]["roundtrip_ok"] is True
     lines = _lines(built["document"])
     assert "Built a support bot with agent frameworks (LangGraph)" in lines
-    assert "agent frameworks" in lines
+    assert "Agent frameworks" in lines  # an added skill starts with a capital
     invented = "Built a support bot with agent frameworks (LangGraph), cutting tickets by 40%"
     assert invented not in lines
     docx = client.get(f"/api/analyses/{analysis_id}/cv.docx")
