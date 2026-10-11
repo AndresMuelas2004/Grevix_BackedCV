@@ -13,6 +13,7 @@ from backedcv.agents.cv_builder.tools import Workspace, make_tools
 from backedcv.config import load
 from backedcv.domain.document_diff import standard_order
 from backedcv.domain.models import CVDocument, CVEntry, DocItem
+from backedcv.domain.redaction import redact_contact
 from backedcv.llm.prompt_loader import load_prompt
 from backedcv.llm.structured import usage_record
 from backedcv.settings import Settings
@@ -58,17 +59,18 @@ async def run_order_agent(
 
 
 def _outline(ws: Workspace) -> str:
-    """One row per section, then one row per item with its first line (and its dates, for jobs)."""
+    """One row per section, then one row per item with its first line (and its dates, for jobs).
+    Headings and lines are redacted: the agent sees no contact details."""
     entries = {entry.id: entry for entry in ws.cv.entries}
     rows: list[str] = []
     for section in ws.document.sections:
-        rows.append(f"{section.id} | {section.type} | {section.heading}")
+        rows.append(f"{section.id} | {section.type} | {redact_contact(section.heading)}")
         rows.extend(_item_row(item, entries.get(item.id)) for item in section.items)
     return "\n".join(rows)
 
 
 def _item_row(item: DocItem, entry: CVEntry | None) -> str:
-    first = item.lines[0].text if item.lines else ""
+    first = redact_contact(item.lines[0].text) if item.lines else ""
     dates = ""
     if entry is not None and entry.start:
         dates = f" | {entry.start} to {entry.end or 'unknown'}"

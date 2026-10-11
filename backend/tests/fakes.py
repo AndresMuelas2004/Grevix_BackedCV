@@ -200,9 +200,11 @@ def review_draft() -> PostingReviewDraft:
 class FakeLLM:
     def __init__(self):
         self.calls: list[str] = []
+        self.received: list[tuple[str, str]] = []  # (node, data) of every call: what the model got
 
     async def run(self, prompt, data, schema, *, node):
         self.calls.append(node)
+        self.received.append((node, data))
         usage = {
             "node": node,
             "model": "fake",

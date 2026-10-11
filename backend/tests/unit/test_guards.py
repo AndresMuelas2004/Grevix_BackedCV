@@ -131,6 +131,7 @@ def test_faithful_rewording_passes_every_guard():
         "fact_scope",
         "no_posting_entities",
         "length",
+        "no_placeholders",
         "introduced_terms",
     ]
     assert all(g.ok for g in guards)
@@ -288,7 +289,7 @@ def test_apply_guards_fills_the_original_and_the_computed_fields():
     assert result.introduced_terms == []
     assert result.verification.status == "pending"
     assert result.verification.reason is None
-    assert len(result.verification.guards) == 7
+    assert len(result.verification.guards) == 8
     assert s.before is None  # the input is not changed
 
 
@@ -443,3 +444,25 @@ def test_apply_guards_blocks_the_c09_pattern_with_the_scope_reason():
 
     assert result.verification.status == "unsupported"
     assert result.verification.reason == TOTAL_DETAIL
+
+
+@pytest.mark.parametrize("placeholder", ["[email]", "[phone]", "[link]", "[LINK]"])
+def test_no_placeholders_fails_a_rewrite_that_carries_one(placeholder):
+    result = _guard(_align(f"{FAITHFUL}, reach me at {placeholder}"), "no_placeholders")
+
+    assert result.ok is False
+    assert result.hard is True
+    assert result.detail.endswith(placeholder.lower())
+
+
+@pytest.mark.parametrize("after", [FAITHFUL, "Reduced costs [see CV] by 35%"])
+def test_no_placeholders_lets_other_brackets_through(after):
+    assert _guard(_align(after), "no_placeholders").ok is True
+
+
+def test_a_placeholder_in_a_rewrite_makes_it_unsupported():
+    s = _align(f"{FAITHFUL}, [email]")
+    result = apply_guards(s, CV, JOB)
+
+    assert result.verification.status == "unsupported"
+    assert result.verification.reason == _guard(s, "no_placeholders").detail

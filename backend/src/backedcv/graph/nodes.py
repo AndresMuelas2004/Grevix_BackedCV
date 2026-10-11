@@ -12,6 +12,7 @@ from backedcv.domain.keywords import keyword_hits
 from backedcv.domain.models import CVLine, JobPosting, ParsedCV, PostingBanner
 from backedcv.domain.parse_checks import run_parse_checks
 from backedcv.domain.recruiter_tips import recruiter_tips
+from backedcv.domain.redaction import numbered_rows
 from backedcv.domain.rules.absurd import flag_requirements
 from backedcv.domain.rules.posting import tool_sprawl_banner
 from backedcv.domain.text import fold_lower
@@ -93,7 +94,7 @@ def make_nodes(llm: StructuredLLM):
     async def prepare_cv(state: AnalysisState) -> dict:
         _progress("prepare_cv", "started")
         lines = [CVLine.model_validate(row) for row in state["cv_lines"]]
-        numbered = "\n".join(f"{line.id} | {line.text}" for line in lines)
+        numbered = numbered_rows((line.id, line.text) for line in lines)
         update: dict = {}
         try:
             draft, usage = await llm.run(

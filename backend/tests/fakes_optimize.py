@@ -66,10 +66,12 @@ class FakeOptimizeLLM(FakeLLM):
         if schema is SuggestionsDraft:
             self.calls.append(node)
             self.inputs.append((node, data))
+            self.received.append((node, data))
             return SuggestionsDraft(suggestions=self.suggestions), _usage(node)
         if schema is VerificationBatchDraft:
             self.calls.append(node)
             self.inputs.append((node, data))
+            self.received.append((node, data))
             rows = data.split("<suggestions>\n", 1)[1].split("\n</suggestions>", 1)[0]
             verifications = [_supports(row) for row in rows.splitlines()]
             return VerificationBatchDraft(verifications=verifications), _usage(node)

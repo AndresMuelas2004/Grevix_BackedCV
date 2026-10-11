@@ -4,6 +4,8 @@ from typing import Literal
 
 from pydantic import BaseModel, Field
 
+from backedcv.domain.redaction import numbered_rows
+
 LineSource = Literal["body", "header", "footer", "textbox", "table"]
 SectionType = Literal[
     "contact",
@@ -91,8 +93,9 @@ class ParsedCV(BaseModel):
         return refs
 
     def numbered(self, include_facts: bool = True) -> str:
-        """The CV in the only format the model sees: `L012 | text`, then the computed facts."""
-        rows = [f"{line.id} | {line.text}" for line in self.lines]
+        """The CV in the only format the model sees: `L012 | text`, then the computed facts.
+        Contact details are replaced by placeholders (domain/redaction.py)."""
+        rows = [(line.id, line.text) for line in self.lines]
         if include_facts:
-            rows += [f"{fact.id} | {fact.text}" for fact in self.facts]
-        return "\n".join(rows)
+            rows += [(fact.id, fact.text) for fact in self.facts]
+        return numbered_rows(rows)

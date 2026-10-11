@@ -166,7 +166,7 @@ BackedCV adapts to the hackathon's Challenge Cards as they arrive. Each card's d
 ## Privacy and limits
 
 - The uploaded file is not kept. The app reads it during the request and stores only the extracted text. An analysis (its CV text, posting and results) is deleted after 24 hours. A purge runs at startup and then every hour. `DELETE /api/analyses/{analysis_id}` deletes one earlier.
-- OpenAI receives the CV and posting text in each model call.
+- OpenAI receives the CV and posting text in each model call, with email addresses, phone numbers and links replaced by placeholders first: the model never sees them.
 - Model answers, which can contain text from your CV, are cached in `data/llm_cache.sqlite` (the `backedcv-data` volume under Docker Compose) so identical calls are not paid twice. The hourly purge deletes cached answers older than 24 hours, like analyses. Set `BACKEDCV_LLM_CACHE=false` to turn the cache off.
 - LangSmith tracing is optional. Without `BACKEDCV_ENV=prod`, traces include the CV and posting text. With it, inputs and outputs are hidden. The default is `dev`.
 - Limits: a CV file up to 4 MB and 6 PDF pages, with up to 30,000 characters of text; a posting of 150 to 20,000 characters. Model-using requests are limited to 30 per IP address per hour and 300 per UTC day for all users (defaults, set with `BACKEDCV_RATE_LIMIT_PER_HOUR` and `BACKEDCV_DAILY_MODEL_RUNS`).

@@ -5,6 +5,7 @@ import re
 from backedcv.domain.keywords import contains_term
 from backedcv.domain.models import GuardResult, JobPosting, ParsedCV, Suggestion
 from backedcv.domain.numbers import extract_numbers
+from backedcv.domain.redaction import PLACEHOLDERS
 from backedcv.domain.text import fold_lower
 
 NEW_SUMMARY = "new-summary"  # tailor_summary target for a CV that has no summary section yet
@@ -189,6 +190,16 @@ def _length(s: Suggestion) -> GuardResult:
     return GuardResult(name="length", ok=False, detail=f"{words} words, limit is {limit}")
 
 
+def _no_placeholders(s: Suggestion) -> GuardResult:
+    """The model sees placeholders for contact details, never the details. It must not write them
+    into the CV either."""
+    found = [p for p in PLACEHOLDERS if p in s.after.lower()]
+    if not found:
+        return GuardResult(name="no_placeholders", ok=True)
+    detail = f"contains a placeholder that must not reach the CV: {', '.join(found)}"
+    return GuardResult(name="no_placeholders", ok=False, detail=detail)
+
+
 def run_guards(s: Suggestion, cv: ParsedCV, job: JobPosting) -> list[GuardResult]:
     """Every deterministic check on one suggestion, in a fixed order. The last one is soft."""
     terms = introduced_terms(s.after, cv)
@@ -199,6 +210,7 @@ def run_guards(s: Suggestion, cv: ParsedCV, job: JobPosting) -> list[GuardResult
         _fact_scope(s, cv),
         _no_posting_entities(s, cv, job),
         _length(s),
+        _no_placeholders(s),
         GuardResult(name="introduced_terms", ok=True, hard=False, detail=", ".join(terms) or None),
     ]
 

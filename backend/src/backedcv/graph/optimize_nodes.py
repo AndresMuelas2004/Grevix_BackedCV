@@ -16,6 +16,7 @@ from backedcv.domain.models import (
     Suggestion,
 )
 from backedcv.domain.models.suggestion import VerificationStatus
+from backedcv.domain.redaction import numbered_rows
 from backedcv.graph.nodes import _error, _progress
 from backedcv.graph.state import AnalysisState
 from backedcv.llm.drafts_optimize import (
@@ -37,8 +38,9 @@ class VerifyTask(TypedDict):
 
 
 def _cv_block(cv: ParsedCV) -> str:
+    """The CV lines and computed facts that suggest and verify read, with contact data redacted."""
     lines = cv.numbered(include_facts=False)
-    facts = "\n".join(f"{fact.id} | {fact.text}" for fact in cv.facts)
+    facts = numbered_rows((fact.id, fact.text) for fact in cv.facts)
     return f"<cv_lines>\n{lines}\n</cv_lines>\n\n<facts>\n{facts}\n</facts>"
 
 
