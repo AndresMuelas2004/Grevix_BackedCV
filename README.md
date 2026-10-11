@@ -6,13 +6,15 @@ I built BackedCV solo during the Grevix AfterCode 24-hour hackathon (October 202
 
 **Try it in 2 minutes: [backedcv.onrender.com](https://backedcv.onrender.com).** Press **Try the sample** or **Try a posting with hidden barriers**, answer the yes/no questions, then press **Improve my CV**. It is a temporary demo on a free server, so the first visit may take a minute to wake it up. Please use the samples or a CV with fictional details. Feedback is welcome in the [feedback form](https://github.com/AndresMuelas2004/Grevix_BackedCV/issues/new?template=feedback.yml).
 
+**Demo video (81 seconds): [youtu.be/1tFbO5Qdkbw](https://youtu.be/1tFbO5Qdkbw)**
+
 ![BackedCV demo: the first screen with its example report; a posting with hidden barriers (verdict, skills match, two questions, what to fix, how your dates were read); a No to the work permit question gives Likely screened out; then the default sample: two Yes answers, Improve my CV, the review of verified suggestions and the built CV](docs/screenshots/demo.gif)
 
-## Why
+## Problem
 
 Most applicant tracking systems (ATS) do not auto-reject on keywords. Knockout questions usually do: work authorization, licenses, minimum years, location. Volume is the bigger problem: an entry-level role can draw hundreds of applications. Popular tools mostly give one opaque keyword score, which does not show what would screen you out. Some AI CV writers add experience you do not have.
 
-## What it does
+## Solution
 
 1. **Reads your CV.** It extracts the text from a PDF or DOCX and shows what a parser reads, line by line. It flags parse warnings, such as a two-column PDF.
 2. **Splits the posting into requirements.** Each one has a type (skill, job title, education, years, language) and is required or preferred. Knockouts are the questions an employer usually screens on, such as work authorization or location. Red flags catch absurd requirements, such as 3 or more years for an entry-level role, or years asked for a technology younger than that.
