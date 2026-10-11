@@ -6,7 +6,7 @@
 
 .meters {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 160px), 1fr));
   gap: 1.25rem;
 }
 
@@ -63,4 +63,10 @@
 .score-note {
   font-size: 0.875rem;
   color: var(--muted);
+}
+
+@media (max-width: 480px) {
+  .meter-value {
+    font-size: 2rem;
+  }
 }

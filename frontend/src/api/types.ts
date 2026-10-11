@@ -283,6 +283,15 @@ export interface ReviewDecisions {
   rejected: string[]
 }
 
+// Answer of POST /api/analyses/{id}/coverage-preview, whose body is {accepted: suggestion IDs}.
+// `coverage` is the keyword coverage if the accepted changes were built, `coverage_now` the
+// current one. `gained_requirement_ids` are the requirements those changes newly cover.
+export interface CoveragePreview {
+  coverage: number | null
+  coverage_now: number | null
+  gained_requirement_ids: string[]
+}
+
 // ---- Rebuilt CV ------------------------------------------------------------
 
 export type DocLineKind = 'text' | 'bullet'

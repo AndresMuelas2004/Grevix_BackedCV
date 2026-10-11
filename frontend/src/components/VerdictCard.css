@@ -26,6 +26,22 @@
   line-height: 1.3;
 }
 
+@media (max-width: 480px) {
+  .verdict h2 {
+    font-size: 1.3rem;
+  }
+}
+
+/* The reasons sit right under the title: they say why the verdict is what it is. */
+.reasons {
+  display: grid;
+  gap: 0.5rem;
+  margin: 0;
+  padding-left: 1.2rem;
+  font-size: 1rem;
+  line-height: 1.5;
+}
+
 .badges {
   display: flex;
   flex-wrap: wrap;
@@ -35,7 +51,6 @@
   list-style: none;
 }
 
-.reasons,
 .questions ul {
   display: grid;
   gap: 0.4rem;
@@ -51,4 +66,33 @@
 .req-tag {
   font-weight: 600;
   color: var(--muted);
+}
+
+/* Requirement IDs in the reasons. A button when it can select the requirement. */
+.req-chip {
+  display: inline-flex;
+  align-items: center;
+  margin: 0.1rem 0 0.1rem 0.35rem;
+  padding: 0 0.45rem;
+  border: 1px solid var(--border-strong);
+  border-radius: 999px;
+  background: var(--surface);
+  color: var(--muted);
+  font-family: ui-monospace, Consolas, monospace;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  line-height: 1.6;
+  vertical-align: middle;
+  white-space: nowrap;
+}
+
+/* At least 24 px tall, so the button is easy to hit on a phone. */
+.req-chip-action {
+  min-height: 1.5rem;
+  color: var(--text);
+  cursor: pointer;
+}
+
+.req-chip-action:hover {
+  background: var(--bg);
 }

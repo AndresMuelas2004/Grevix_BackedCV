@@ -1,8 +1,8 @@
-import { useState } from 'react'
-import { verifySuggestion } from '../../api/client'
+import { useEffect, useState } from 'react'
+import { previewCoverage, verifySuggestion } from '../../api/client'
 import type {
   AnalysisReport,
-  Category,
+  CoveragePreview,
   CvLine,
   CvSection,
   ReviewDecisions,
@@ -23,14 +23,8 @@ interface ReviewScreenProps {
 
 type Decisions = Partial<Record<string, Decision>>
 
-// Categories that count toward keyword coverage. Same list as config/scoring.toml.
-const COVERAGE_CATEGORIES: ReadonlySet<Category> = new Set<Category>([
-  'hard_skill',
-  'job_title',
-  'education',
-  'certification_license',
-  'language',
-])
+// Wait this long after the last change to the accepted set before asking for a new preview.
+const PREVIEW_DELAY_MS = 300
 
 export default function ReviewScreen({
   analysis,
@@ -46,7 +40,8 @@ export default function ReviewScreen({
   const unsupported = suggestions.filter((s) => s.verification.status === 'unsupported')
   const accepted = suggestions.filter((s) => effectiveDecision(s, decisions) === 'accepted')
   const rejected = suggestions.filter((s) => effectiveDecision(s, decisions) === 'rejected')
-  const coverage = estimateCoverage(analysis, accepted)
+  const acceptedKey = accepted.map((s) => s.id).join('|')
+  const coverage = useCoveragePreview(analysis.analysis_id, acceptedKey)
   const groups = groupSuggestions(analysis)
 
   const requirementLabels = new Map<string, string>(
@@ -106,27 +101,32 @@ export default function ReviewScreen({
           <li className="chip chip-neutral">{rejected.length} rejected</li>
         </ul>
 
-        <section className="review-coverage" aria-labelledby="coverage-title">
-          <h3 id="coverage-title">Keyword coverage</h3>
-          <div className="compare">
-            <div className="compare-item">
-              <span className="compare-label">Now</span>
-              <span className="compare-value">
-                <ScoreValue value={coverage.now} />
-              </span>
-            </div>
-            <span className="compare-arrow" aria-hidden="true">
-              →
-            </span>
-            <div className="compare-item">
-              <span className="compare-label">If accepted</span>
-              <span className="compare-value">
-                <ScoreValue value={coverage.ifAccepted} />
-              </span>
-            </div>
-          </div>
-          <p className="screen-note">Estimate from the changes you accept. It updates as you choose.</p>
-        </section>
+        {/* A failed preview shows nothing: the estimate is optional, so the error stays quiet. */}
+        {coverage.status !== 'failed' && (
+          <section className="review-coverage" aria-live="polite">
+            {coverage.status === 'loading' ? (
+              <p className="screen-note">Checking keyword coverage...</p>
+            ) : (
+              <>
+                <p className="coverage-line">
+                  Keyword coverage now{' '}
+                  <strong>
+                    <ScoreValue value={coverage.preview.coverage_now} />
+                  </strong>{' '}
+                  <span aria-hidden="true">→</span>
+                  <span className="visually-hidden"> to </span>{' '}
+                  <strong>
+                    <ScoreValue value={coverage.preview.coverage} />
+                  </strong>{' '}
+                  if you build with these changes.
+                </p>
+                <p className="screen-note">
+                  {gainedSentence(coverage.preview.gained_requirement_ids, requirementLabels)}
+                </p>
+              </>
+            )}
+          </section>
+        )}
 
         <div className="summary-actions">
           <button
@@ -197,40 +197,47 @@ function effectiveDecision(suggestion: Suggestion, decisions: Decisions): Decisi
   return decision
 }
 
-interface CoverageEstimate {
-  now: number | null
-  ifAccepted: number | null
+type CoverageState =
+  | { status: 'loading' }
+  | { status: 'ready'; preview: CoveragePreview }
+  | { status: 'failed' }
+
+// The keyword coverage for the accepted suggestions, from the backend. It is asked for again when
+// the accepted set changes, after a short pause. A reply for a set that has changed since is
+// dropped. A failed call gives 'failed'.
+function useCoveragePreview(analysisId: string, acceptedKey: string): CoverageState {
+  const [answer, setAnswer] = useState<{ key: string; state: CoverageState } | null>(null)
+
+  useEffect(() => {
+    const ids = acceptedKey === '' ? [] : acceptedKey.split('|')
+    const controller = new AbortController()
+    const timer = window.setTimeout(() => {
+      void previewCoverage(analysisId, ids, controller.signal)
+        .then((preview) => {
+          if (!controller.signal.aborted) {
+            setAnswer({ key: acceptedKey, state: { status: 'ready', preview } })
+          }
+        })
+        .catch(() => {
+          if (!controller.signal.aborted) {
+            setAnswer({ key: acceptedKey, state: { status: 'failed' } })
+          }
+        })
+    }, PREVIEW_DELAY_MS)
+    return () => {
+      window.clearTimeout(timer)
+      controller.abort()
+    }
+  }, [analysisId, acceptedKey])
+
+  return answer !== null && answer.key === acceptedKey ? answer.state : { status: 'loading' }
 }
 
-// Keyword coverage now, and if the accepted changes are applied. Each requirement that an
-// accepted change newly covers adds its weight, as the score counts it.
-function estimateCoverage(analysis: AnalysisReport, accepted: Suggestion[]): CoverageEstimate {
-  const score = analysis.score
-  if (!score || score.coverage === null || score.coverage_denominator <= 0) {
-    return { now: null, ifAccepted: null }
-  }
-
-  const contributions = new Map(
-    score.contributions.map((item) => [item.requirement_id, item] as const),
-  )
-  const newlyCovered = new Set<string>()
-  for (const suggestion of accepted) {
-    for (const requirementId of suggestion.covers_requirement_ids) {
-      const item = contributions.get(requirementId)
-      if (!item || item.excluded_reason !== null || !COVERAGE_CATEGORIES.has(item.category)) continue
-      if (analysis.assessments[requirementId]?.keyword_present) continue
-      newlyCovered.add(requirementId)
-    }
-  }
-
-  let gained = 0
-  for (const requirementId of newlyCovered) {
-    gained += contributions.get(requirementId)?.weight ?? 0
-  }
-  return {
-    now: score.coverage,
-    ifAccepted: (100 * (score.coverage_numerator + gained)) / score.coverage_denominator,
-  }
+// Names the requirements that the accepted changes newly cover.
+function gainedSentence(ids: readonly string[], labels: ReadonlyMap<string, string>): string {
+  if (ids.length === 0) return 'These changes cover no new requirement.'
+  const names = ids.map((id) => labels.get(id) ?? id)
+  return `Requirements that become covered: ${names.join(', ')}.`
 }
 
 interface SuggestionGroup {

@@ -1,5 +1,5 @@
 import { cvDownloadUrl } from '../../api/client'
-import type { AnalysisReport, DiffLine } from '../../api/types'
+import type { AnalysisReport, BuildReport, DiffLine } from '../../api/types'
 import ScoreValue from '../review/ScoreValue'
 import LineDiff from './LineDiff'
 import './BuildScreen.css'
@@ -35,9 +35,7 @@ export default function BuildScreen({ analysis, onStartOver }: BuildScreenProps)
       <section className="card build-summary" aria-labelledby="build-title">
         <p className="eyebrow">Built</p>
         <h2 id="build-title">Your new CV is ready</h2>
-        <p className="built-by">
-          Built by: {report.built_by === 'agent' ? 'ordering agent' : 'fallback order'}
-        </p>
+        <p className="order-note">{orderNote(report.built_by)}</p>
 
         <section className="build-fact" aria-labelledby="coverage-title">
           <h3 id="coverage-title">Keyword coverage</h3>
@@ -125,6 +123,13 @@ export default function BuildScreen({ analysis, onStartOver }: BuildScreenProps)
       </section>
     </div>
   )
+}
+
+// How the section order was chosen, in plain words.
+function orderNote(builtBy: BuildReport['built_by']): string {
+  return builtBy === 'agent'
+    ? 'Section order chosen by an AI agent with guarded tools (your text is unchanged)'
+    : 'Original section order kept'
 }
 
 // For example: "2 changed, 1 added, 0 removed, 14 unchanged".

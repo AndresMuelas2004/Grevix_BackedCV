@@ -49,7 +49,7 @@
 
 .cv-line {
   display: grid;
-  grid-template-columns: 3.25rem 1fr auto;
+  grid-template-columns: 3.25rem minmax(0, 1fr) auto;
   align-items: start;
   gap: 0.5rem;
   padding: 0.3rem 0.5rem;
@@ -121,6 +121,18 @@
   font-size: 0.8125rem;
   font-weight: 800;
   line-height: 1;
+}
+
+/* On small screens the tags go under the line text, so the text keeps its width. */
+@media (max-width: 480px) {
+  .cv-line {
+    grid-template-columns: 3.25rem minmax(0, 1fr);
+  }
+
+  .cv-tags {
+    grid-column: 2;
+    justify-content: flex-start;
+  }
 }
 
 @media (min-width: 900px) {

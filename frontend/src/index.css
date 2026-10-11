@@ -77,6 +77,7 @@ p {
 }
 
 .card {
+  min-width: 0;
   background: var(--surface);
   border: 1px solid var(--border);
   border-radius: var(--radius);
@@ -135,7 +136,8 @@ p {
   font-size: 0.8125rem;
   font-weight: 600;
   line-height: 1.5;
-  white-space: nowrap;
+  max-width: 100%;
+  white-space: normal;
   border: 1px solid transparent;
 }
 
@@ -199,10 +201,12 @@ p {
 
 /* ---- Layout ---- */
 
+/* Long words, IDs and URLs wrap instead of pushing the page wider than the screen. */
 .app {
   min-height: 100vh;
   display: flex;
   flex-direction: column;
+  overflow-wrap: anywhere;
 }
 
 .app-header {
@@ -264,16 +268,25 @@ p {
 
 /* ---- Report layout ---- */
 
+/* Fixed tracks (minmax(0, 1fr)) keep a wide child from stretching the column past the screen. */
 .report {
   display: grid;
+  grid-template-columns: minmax(0, 1fr);
   gap: 1.25rem;
+  min-width: 0;
 }
 
 .report-top {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(min(100%, 320px), 1fr));
+  grid-template-columns: minmax(0, 1fr);
   gap: 1.25rem;
   align-items: start;
+}
+
+@media (min-width: 760px) {
+  .report-top {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
 }
 
 .report-grid {
@@ -325,7 +338,7 @@ p {
 
 .optimize-action {
   display: grid;
-  justify-items: end;
+  justify-items: start;
   gap: 0.4rem;
 }
 
@@ -333,7 +346,6 @@ p {
   max-width: 42ch;
   font-size: 0.875rem;
   color: var(--muted);
-  text-align: right;
 }
 
 .screen-note {
@@ -377,6 +389,30 @@ p {
 .compare-arrow {
   font-size: 1.5rem;
   color: var(--muted);
+}
+
+/* ---- Small screens (360 to 430 px wide) ---- */
+
+@media (max-width: 480px) {
+  .card {
+    padding: 1.1rem 1rem;
+  }
+
+  .app-header,
+  .app-main,
+  .app-footer {
+    padding-left: 0.9rem;
+    padding-right: 0.9rem;
+  }
+
+  .optimize-action,
+  .optimize-action .btn {
+    width: 100%;
+  }
+
+  .optimize-hint {
+    max-width: none;
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {

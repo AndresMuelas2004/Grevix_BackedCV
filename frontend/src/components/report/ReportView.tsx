@@ -36,6 +36,14 @@ export default function ReportView({ analysis, onAnalysisChange, actions }: Repo
     setSelectedId(null)
   }
 
+  // Selects a requirement picked in the verdict, then moves the focus to its row (which scrolls it into view).
+  function revealRequirement(requirementId: string) {
+    selectRequirement(requirementId)
+    window.requestAnimationFrame(() => {
+      document.getElementById(`req-${requirementId}`)?.focus()
+    })
+  }
+
   return (
     <div className="report">
       {analysis.errors.length > 0 && (
@@ -52,6 +60,7 @@ export default function ReportView({ analysis, onAnalysisChange, actions }: Repo
               job={analysis.job}
               assessments={analysis.assessments}
               showQuestions={false}
+              onSelectRequirement={revealRequirement}
             />
           )}
           {actions && <div className="report-actions">{actions}</div>}

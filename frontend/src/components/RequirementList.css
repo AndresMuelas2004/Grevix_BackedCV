@@ -50,6 +50,11 @@
   background: var(--bg);
 }
 
+/* The row clips its contents, so the focus ring is drawn inside the button. */
+.req-select:focus-visible {
+  outline-offset: -4px;
+}
+
 .req-select[aria-pressed='true'] {
   background: var(--accent-soft);
 }

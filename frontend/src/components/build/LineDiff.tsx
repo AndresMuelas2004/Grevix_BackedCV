@@ -79,7 +79,7 @@ function groupBySection(lines: DiffLine[], titles: ReadonlyMap<string, string>):
     const section: Section =
       last && last.id === line.section_id
         ? last
-        : { id: line.section_id, title: titles.get(line.section_id) ?? line.section_id, items: [] }
+        : { id: line.section_id, title: sectionTitle(line.section_id, titles), items: [] }
     if (section !== last) sections.push(section)
 
     if (line.status === 'unchanged') {
@@ -91,4 +91,13 @@ function groupBySection(lines: DiffLine[], titles: ReadonlyMap<string, string>):
     }
   }
   return sections
+}
+
+// The heading of a section: the CV's own heading when it has one, else the section name with a
+// capital letter (e.g. "contact" becomes "Contact").
+function sectionTitle(sectionId: string, titles: ReadonlyMap<string, string>): string {
+  const heading = titles.get(sectionId)
+  if (heading) return heading
+  const name = sectionId.replace(/[-_]+/g, ' ').trim()
+  return name.charAt(0).toUpperCase() + name.slice(1)
 }

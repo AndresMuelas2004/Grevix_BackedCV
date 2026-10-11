@@ -186,6 +186,7 @@ function RequirementRow({
     <li className={selected ? 'req-row is-selected' : 'req-row'}>
       <button
         type="button"
+        id={`req-${requirement.id}`}
         className="req-select"
         aria-pressed={selected}
         onClick={onSelect}

@@ -8,6 +8,8 @@ interface VerdictCardProps {
   assessments: Record<string, RequirementAssessment>
   // Set to false when the questions are answered in another block (KnockoutQuestions).
   showQuestions?: boolean
+  // Turns the requirement IDs in the reasons into buttons that select the requirement.
+  onSelectRequirement?: (requirementId: string) => void
 }
 
 const TONE: Record<VerdictLabel, 'good' | 'warn' | 'bad' | 'neutral'> = {
@@ -29,6 +31,7 @@ export default function VerdictCard({
   job,
   assessments,
   showQuestions = true,
+  onSelectRequirement,
 }: VerdictCardProps) {
   const labelFor = (requirementId: string): string =>
     job?.requirements.find((req) => req.id === requirementId)?.label ?? requirementId
@@ -53,6 +56,24 @@ export default function VerdictCard({
       <p className="eyebrow">Verdict</p>
       <h2 id="verdict-title">{verdict.title}</h2>
 
+      {reasons.length > 0 && (
+        <ul className="reasons" aria-label="Why this verdict">
+          {reasons.map((reason, index) => (
+            <li key={`${index}-${reason.text}`}>
+              {reason.text}
+              {reason.requirement_ids.map((requirementId) => (
+                <RequirementChip
+                  key={requirementId}
+                  requirementId={requirementId}
+                  label={labelFor(requirementId)}
+                  onSelect={onSelectRequirement}
+                />
+              ))}
+            </li>
+          ))}
+        </ul>
+      )}
+
       {verdict.badges.length > 0 && (
         <ul className="badges" aria-label="Flags for this job">
           {verdict.badges.map((badge) => (
@@ -69,14 +90,6 @@ export default function VerdictCard({
         </p>
       )}
 
-      {reasons.length > 0 && (
-        <ul className="reasons">
-          {reasons.map((reason) => (
-            <li key={reason.text}>{reason.text}</li>
-          ))}
-        </ul>
-      )}
-
       {showQuestions && questions.length > 0 && (
         <div className="questions">
           <h3>Questions an employer may ask</h3>
@@ -90,5 +103,31 @@ export default function VerdictCard({
         </div>
       )}
     </section>
+  )
+}
+
+interface RequirementChipProps {
+  requirementId: string
+  label: string
+  onSelect?: (requirementId: string) => void
+}
+
+// A requirement ID as a small chip. With a handler, the chip is a button that selects the requirement.
+function RequirementChip({ requirementId, label, onSelect }: RequirementChipProps) {
+  const name = (
+    <>
+      {requirementId}
+      {label !== requirementId && <span className="visually-hidden">: {label}</span>}
+    </>
+  )
+  if (!onSelect) return <span className="req-chip">{name}</span>
+  return (
+    <button
+      type="button"
+      className="req-chip req-chip-action"
+      onClick={() => onSelect(requirementId)}
+    >
+      {name}
+    </button>
   )
 }

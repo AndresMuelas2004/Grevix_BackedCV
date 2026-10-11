@@ -2,6 +2,7 @@ import type {
   AnalysisReport,
   BuildStep,
   CandidateFacts,
+  CoveragePreview,
   ErrorBody,
   InputsUpdate,
   OptimizeStep,
@@ -174,6 +175,27 @@ export async function verifySuggestion(
   return (await response.json()) as AnalysisReport
 }
 
+// Keyword coverage now, and if the given suggestions were accepted. Asked for each time the
+// accepted set changes during the review. Pass a signal to cancel a request that is no longer wanted.
+export async function previewCoverage(
+  id: string,
+  accepted: string[],
+  signal?: AbortSignal,
+): Promise<CoveragePreview> {
+  const response = await send(`${API_BASE}/analyses/${encodeURIComponent(id)}/coverage-preview`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ accepted }),
+    signal,
+  })
+  if (!response.ok) throw await readError(response)
+  const body: unknown = await response.json()
+  if (!isCoveragePreview(body)) {
+    throw new ApiError(response.status, 'bad_response', 'The coverage preview could not be read.')
+  }
+  return body
+}
+
 // Builds the new CV from the user's decisions. The "built" event (or "error") ends the run.
 export async function runBuild(
   id: string,
@@ -297,6 +319,20 @@ function isErrorBody(value: unknown): value is ErrorBody {
     typeof value.title === 'string' &&
     typeof value.detail === 'string'
   )
+}
+
+function isCoveragePreview(value: unknown): value is CoveragePreview {
+  return (
+    isRecord(value) &&
+    isNullableNumber(value.coverage) &&
+    isNullableNumber(value.coverage_now) &&
+    isList(value.gained_requirement_ids) &&
+    value.gained_requirement_ids.every((id) => typeof id === 'string')
+  )
+}
+
+function isNullableNumber(value: unknown): value is number | null {
+  return value === null || typeof value === 'number'
 }
 
 function isSamples(value: unknown): value is Samples {
