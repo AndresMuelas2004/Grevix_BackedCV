@@ -4,6 +4,8 @@ Is this job worth applying to? Paste a posting, upload your CV, and see what wou
 
 I built BackedCV solo during the Grevix AfterCode 24-hour hackathon (October 2026). It is a FastAPI and React web app that calls OpenAI models.
 
+![BackedCV in six steps: input, report, answers, review, build, the new CV](docs/screenshots/demo.gif)
+
 ## Why
 
 Most applicant tracking systems (ATS) do not auto-reject on keywords. Knockout questions usually do: work authorization, licenses, minimum years, location. Volume is the bigger problem: an entry-level role can draw hundreds of applications. Popular tools mostly give one opaque keyword score, which does not show what would screen you out. Some AI CV writers add experience you do not have.
