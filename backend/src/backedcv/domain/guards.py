@@ -119,6 +119,48 @@ def _numbers_backed(s: Suggestion, cv: ParsedCV) -> GuardResult:
     return GuardResult(name="numbers_backed", ok=False, detail=detail)
 
 
+# What may follow a total's number: its own scope, then the clause must end. Any other word
+# ("years of experience building X", "years as a data engineer") ties the total to one role,
+# skill or employer, which a total over the whole CV cannot support.
+_TOTAL_SCOPE = re.compile(
+    r"\+?\s*(?:years?(?:\s+of)?(?:\s+(?:total|professional))*\s+experience"
+    r"|years?['’]s?\s+experience)"
+    r"(?=\s*(?:[.,;:!?)]|$|overall\b|in\s+total\b))",
+    re.IGNORECASE,
+)
+_TOTAL_MISPLACED = (
+    "A computed total ({fact}) covers the whole CV; "
+    "it cannot be attached to one role, skill or employer."
+)
+
+
+def _fact_scope(s: Suggestion, cv: ParsedCV) -> GuardResult:
+    """Numbers that only computed facts back must keep the facts' scope. Every fact is a total."""
+    refs = cv.texts_by_ref()
+    fact_ids = {fact.id for fact in cv.facts}
+    stated = extract_numbers(s.before) if s.before else set()  # what the original already states
+    fact_of: dict[str, str] = {}  # number -> the first cited fact that states it
+    for ref in s.cited_refs:
+        if ref not in refs:
+            continue
+        if ref in fact_ids:
+            for number in extract_numbers(refs[ref]):
+                fact_of.setdefault(number, ref)
+        else:
+            stated |= extract_numbers(refs[ref])
+    misplaced: list[str] = []  # facts whose number is followed by words outside their scope
+    for match in _TOKEN.finditer(s.after):
+        only_facts = [
+            fact_of[n] for n in extract_numbers(match.group()) if n in fact_of and n not in stated
+        ]
+        if only_facts and _TOTAL_SCOPE.match(s.after, match.end()) is None:
+            misplaced += only_facts
+    if not misplaced:
+        return GuardResult(name="fact_scope", ok=True)
+    details = [_TOTAL_MISPLACED.format(fact=fact) for fact in dict.fromkeys(misplaced)]
+    return GuardResult(name="fact_scope", ok=False, detail=" ".join(details))
+
+
 def _no_posting_entities(s: Suggestion, cv: ParsedCV, job: JobPosting) -> GuardResult:
     if s.kind == "tailor_summary":
         return GuardResult(name="no_posting_entities", ok=True)
@@ -154,6 +196,7 @@ def run_guards(s: Suggestion, cv: ParsedCV, job: JobPosting) -> list[GuardResult
         _ids_exist(s, cv, job),
         _cites_evidence(s),
         _numbers_backed(s, cv),
+        _fact_scope(s, cv),
         _no_posting_entities(s, cv, job),
         _length(s),
         GuardResult(name="introduced_terms", ok=True, hard=False, detail=", ".join(terms) or None),

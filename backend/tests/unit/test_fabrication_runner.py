@@ -130,7 +130,7 @@ def test_live_path_runs_every_batch_in_one_event_loop(monkeypatch):
 
     assert run.failures == []
     assert len(run.usage) > 2  # several batches
-    assert _outcomes(run) == Counter({"caught by guards": 6, "missed": 14, "passed": 20})
+    assert _outcomes(run) == Counter({"caught by guards": 8, "missed": 12, "passed": 20})
 
 
 def test_failed_verifier_calls_leave_their_cases_not_checked(monkeypatch):
@@ -140,7 +140,7 @@ def test_failed_verifier_calls_leave_their_cases_not_checked(monkeypatch):
     run = run_checks(load_cases(), load_cv(), load_job(), live=True)
 
     assert run.failures
-    assert _outcomes(run) == Counter({"caught by guards": 6, "not checked": 34})
+    assert _outcomes(run) == Counter({"caught by guards": 8, "not checked": 32})
 
 
 def test_langsmith_scores_every_example_even_when_the_verifier_failed(monkeypatch):
@@ -155,4 +155,4 @@ def test_langsmith_scores_every_example_even_when_the_verifier_failed(monkeypatc
     run_fabrication._record_in_langsmith(run)
 
     assert len(client.scores) == 40
-    assert sum(client.scores) == 6  # only the cases the guards blocked are scored right
+    assert sum(client.scores) == 8  # only the cases the guards blocked are scored right

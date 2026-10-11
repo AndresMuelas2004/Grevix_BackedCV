@@ -75,6 +75,35 @@ JOB = JobPosting(
 )
 
 
+# A CV whose computed total is 3.2 years over three jobs, as the parser computes it.
+TOTAL_CV = ParsedCV(
+    lines=[
+        CVLine(id="L001", text="Jane Doe"),
+        CVLine(id="L002", text="Data engineer who builds data pipelines and small LLM tools."),
+        CVLine(id="L003", text="Data Engineer, Pellmark Retail Group, Valencia"),
+        CVLine(id="L004", text="Built Python ETL jobs that load 2 million rows a day."),
+        CVLine(id="L005", text="Delivered 3 pilot projects for retail teams."),
+    ],
+    facts=[
+        ComputedFact(
+            id="F01",
+            text="Total professional experience: 3.2 years (computed from the dates of 3 jobs)",
+            derived_from=["L003"],
+        )
+    ],
+    sections=[
+        CVSection(id="S01", heading_line_id=None, type="summary", line_ids=["L002"]),
+        CVSection(
+            id="S02", heading_line_id=None, type="experience", line_ids=["L003", "L004", "L005"]
+        ),
+    ],
+)
+TOTAL_DETAIL = (
+    "A computed total (F01) covers the whole CV; "
+    "it cannot be attached to one role, skill or employer."
+)
+
+
 def _align(after, **changes):
     base = {
         "id": "S01",
@@ -99,6 +128,7 @@ def test_faithful_rewording_passes_every_guard():
         "ids_exist",
         "cites_evidence",
         "numbers_backed",
+        "fact_scope",
         "no_posting_entities",
         "length",
         "introduced_terms",
@@ -258,7 +288,7 @@ def test_apply_guards_fills_the_original_and_the_computed_fields():
     assert result.introduced_terms == []
     assert result.verification.status == "pending"
     assert result.verification.reason is None
-    assert len(result.verification.guards) == 6
+    assert len(result.verification.guards) == 7
     assert s.before is None  # the input is not changed
 
 
@@ -332,3 +362,84 @@ def test_new_summary_has_no_original_and_allows_sixty_words():
     assert filled.before is None
     assert _guard(filled, "length").ok is True
     assert _guard(filled.model_copy(update={"after": "built " * 61}), "length").ok is False
+
+
+def _summary(after, cited_refs=("F01",), before=None) -> Suggestion:
+    return Suggestion(
+        id="S02",
+        kind="tailor_summary",
+        target="S01",
+        before=before,
+        after=after,
+        cited_refs=list(cited_refs),
+    )
+
+
+def _total_guard(s, name) -> GuardResult:
+    return next(g for g in run_guards(s, TOTAL_CV, JOB) if g.name == name)
+
+
+@pytest.mark.parametrize(
+    "after",
+    [
+        "Data engineer with 3.2 years of experience building Python data pipelines",  # C09
+        "Worked 3.2 years as a data engineer",
+        "Built ETL jobs for 3.2 years of experience with Python",
+        "Worked 3.2 years in data engineering",
+        "Over 3 years of Python",
+    ],
+)
+def test_a_total_attached_to_a_role_skill_or_employer_fails(after):
+    result = _total_guard(_summary(after), "fact_scope")
+
+    assert result.ok is False
+    assert result.detail == TOTAL_DETAIL
+
+
+@pytest.mark.parametrize(
+    "after",
+    [
+        "3.2 years of experience",
+        "3.2 years of professional experience",
+        "3.2 years of total experience",
+        "3.2 years' experience",
+        "3.2 years experience",
+        "+3.2 years of experience",
+        "Over 3.2 years of experience",
+        "More than 3.2 years of experience",
+        "About 3.2 years of experience.",
+        "3.2+ years of experience overall",
+    ],
+)
+def test_the_total_keeps_its_own_scope(after):
+    assert _total_guard(_summary(after), "fact_scope").ok is True
+
+
+def test_a_rounded_total_passes_because_three_is_also_in_the_fact_text():
+    # F01 also says "3 jobs", so "3" is backed by it and numbers_backed accepts it.
+    s = _summary("Over 3 years of experience")
+
+    assert _total_guard(s, "numbers_backed").ok is True
+    assert _total_guard(s, "fact_scope").ok is True
+
+
+def test_a_number_a_cited_line_also_states_is_not_checked_for_scope():
+    # "3" is on L005 as well as in F01: with L005 cited the line backs it, so the scope is free.
+    after = "Delivered 3 pilot projects for retail teams"
+
+    assert _total_guard(_summary(after, cited_refs=["L005", "F01"]), "fact_scope").ok is True
+    assert _total_guard(_summary(after), "fact_scope").ok is False
+
+
+def test_a_number_the_original_already_states_is_not_checked_for_scope():
+    s = _summary("3.2 years as a data engineer", before="Worked 3.2 years as a data engineer")
+
+    assert _total_guard(s, "fact_scope").ok is True
+
+
+def test_apply_guards_blocks_the_c09_pattern_with_the_scope_reason():
+    s = _summary("Data engineer with 3.2 years of experience building Python data pipelines")
+    result = apply_guards(s, TOTAL_CV, JOB)
+
+    assert result.verification.status == "unsupported"
+    assert result.verification.reason == TOTAL_DETAIL
