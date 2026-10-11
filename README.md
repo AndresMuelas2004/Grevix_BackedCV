@@ -15,10 +15,11 @@ Most applicant tracking systems (ATS) do not auto-reject on keywords. Knockout q
 1. **Reads your CV.** It extracts the text from a PDF or DOCX and shows what a parser reads, line by line. It flags parse warnings, such as a two-column PDF.
 2. **Splits the posting into requirements.** Each one has a type (skill, job title, education, years, language) and is required or preferred. Knockouts are the questions an employer usually screens on, such as work authorization or location. Red flags catch absurd requirements, such as 3 or more years for an entry-level role, or years asked for a technology younger than that.
 3. **Finds the evidence.** Each requirement is linked to the CV lines that prove it, by exact words or by meaning.
-4. **Scores and gives a verdict.** Two scores out of 100: Fit (do you meet the requirements?) and Keyword coverage (would an exact-term search find you?). The verdict is Likely screened out, Answer questions first, Apply, Stretch or Long shot. You can answer the open knockout questions, and the scores and verdict update without a new model call.
-5. **Suggests CV edits and checks each one.** "Optimize my CV" suggests rewording, skills and a summary, aimed at requirements you meet in different words. Each suggestion is checked by code, then by a separate model call. Anything the CV does not back is marked unsupported and cannot be accepted.
-6. **You review.** Accept or reject each suggestion. You can edit one, and the edited version is checked again.
-7. **Builds the new CV.** Only accepted, verified changes are applied, in code. An agent may reorder sections and items, but it cannot write text. You get a DOCX and a PDF, and the report shows keyword coverage before and after.
+4. **Flags hidden screening risks.** It reads the whole posting for buried disqualifiers, such as "we are unable to sponsor work visas" in a closing note or Kubernetes "within the last 5 years", quotes them, and checks them against your CV and your answers. Each CV line inherits the dates of its job, so old evidence is marked; a requirement whose keyword is in your CV but whose evidence is too old is marked "Looks met, but...".
+5. **Scores and gives a verdict.** Two scores out of 100: Fit (do you meet the requirements?) and Keyword coverage (would an exact-term search find you?). The verdict is Likely screened out, Answer questions first, Apply, Stretch or Long shot. You can answer the open knockout and hidden-risk questions, and the scores and verdict update without a new model call.
+6. **Suggests CV edits and checks each one.** "Optimize my CV" suggests rewording, skills and a summary, aimed at requirements you meet in different words. Each suggestion is checked by code, then by a separate model call. Anything the CV does not back is marked unsupported and cannot be accepted. A three-pass gate then refuses edits that are backed but not viable (evidence outside the posting's window, or a hidden barrier that no rewording can fix), with the reason.
+7. **You review.** Accept or reject each suggestion. You can edit one, and the edited version is checked again.
+8. **Builds the new CV.** Only accepted, verified changes are applied, in code. An agent may reorder sections and items, but it cannot write text. You get a DOCX and a PDF, and the report shows keyword coverage before and after.
 
 ## Screenshots
 
@@ -53,12 +54,13 @@ The report on a phone-sized screen.
 ## What is different
 
 - **Knockouts and absurd requirements.** Screening questions are marked as knockouts and come first in the verdict. Absurd requirements are flagged.
+- **Hidden screening risks and old experience.** Buried disqualifiers are quoted from the posting and rated in code against your CV; experience outside a stated window stops counting, and an edit that would make old experience look current is refused with the reason.
 - **No invented experience.** Each rewrite passes code checks, then an independent verifier that does not see the rewriter's reasoning, then your review. An unsupported rewrite cannot be accepted. The misses are reported below.
 - **A published, explainable score.** The weights and rules are in [docs/scoring.md](docs/scoring.md). Every point traces back to one requirement and its status.
 - **Matching by meaning.** A model matches requirements to CV lines by meaning, not only by exact words. If the model skips a requirement or fails, the code falls back to exact matches.
 - **Cheap and honest.** A cheaper model handles extraction and matching; a stronger one handles only rewrites and their checks. Identical model calls reuse a stored answer. In the live runs, the verifier cost under one cent per run. The score is marked indicative, and this README reports the misses.
 
-**Not a new idea.** BackedCV is inspired by Jobscan and similar tools, such as Rezi and Teal. Match scores and CV suggestions already exist in those tools. I claim only the five points above.
+**Not a new idea.** BackedCV is inspired by Jobscan and similar tools, such as Rezi and Teal. Match scores and CV suggestions already exist in those tools. I claim only the six points above.
 
 ## Measured, not assumed
 
@@ -161,7 +163,10 @@ uv run pytest
 
 ## How it evolved
 
-BackedCV adapts to the hackathon's Challenge Cards as they arrive. Each card's decisions, and the options I rejected, are recorded in [docs/decision-log.md](docs/decision-log.md). The cards themselves go in `docs/challenge-cards.md` once a card arrives.
+BackedCV adapts to the hackathon's Challenge Cards as they arrive. Each card is summarized in [docs/challenge-cards.md](docs/challenge-cards.md) (what stayed, what changed, what is new, and the demo); the decisions and the options I rejected are in [docs/decision-log.md](docs/decision-log.md).
+
+- **Before the cards (Ignition and the night):** the full flow from CV and posting to a verified, rebuilt CV; then reliability, privacy and matching by meaning.
+- **Card 1, hidden screening barriers and recency:** a model call finds buried disqualifiers with exact quotes, code rates them against the CV and the candidate's answers (two medium risks combine into a high one), evidence outside a stated window stops counting, and a three-pass corroboration gate (backed, recent enough, not blocked) refuses edits that are backed but not viable. Everything that existed keeps working: all earlier tests and end-to-end pairs still pass.
 
 ## Privacy and limits
 
