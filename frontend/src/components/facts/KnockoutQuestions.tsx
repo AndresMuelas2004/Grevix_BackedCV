@@ -48,7 +48,8 @@ export default function KnockoutQuestions({ analysis, onAnalysisChange }: Knocko
     <section className="knockouts card" aria-labelledby="knockouts-title">
       <h2 id="knockouts-title">Questions an employer may ask</h2>
       <p className="knockouts-intro">
-        Answer each one. Your answers update the verdict and the score.
+        Answer each one. Your answers update the verdict; deal-breakers are yes or no, so they
+        never add points to the score.
       </p>
 
       {!editable && (
