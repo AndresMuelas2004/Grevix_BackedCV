@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { updateInputs } from '../../api/client'
 import type { AnalysisReport, HiddenRisk, RiskLevel } from '../../api/types'
 import { describeError } from '../../lib/errors'
+import { knockoutItems } from '../../lib/knockouts'
 import { BARRIER_KIND_LABELS, RISK_LEVEL_LABELS } from '../../lib/labels'
 import type { Saving } from '../../lib/saving'
 import './HiddenRisks.css'
@@ -30,6 +31,15 @@ export default function HiddenRisks({ analysis, saving, onAnalysisChange }: Hidd
   // The server accepts answers only while the report is waiting for "optimize".
   const editable = analysis.stage === 'report_ready'
   const disabled = saving.busy || !editable
+
+  // The deal-breaker requirements whose question the questions section shows. Answering that
+  // question settles the risks tied to the requirement.
+  const askable = new Set(knockoutItems(analysis).map((item) => item.requirementId))
+  const dealBreakerIds = new Set(
+    (analysis.job?.requirements ?? [])
+      .filter((req) => req.knockout_type !== null && askable.has(req.id))
+      .map((req) => req.id),
+  )
 
   // The answers map is replaced as a whole, so every answer is sent, not only the new one.
   async function answer(risk: HiddenRisk, value: boolean) {
@@ -73,6 +83,7 @@ export default function HiddenRisks({ analysis, saving, onAnalysisChange }: Hidd
             <RiskCard
               risk={risk}
               disabled={disabled}
+              hasDealBreakerQuestion={risk.requirement_ids.some((id) => dealBreakerIds.has(id))}
               onAnswer={(value) => void answer(risk, value)}
             />
           </li>
@@ -95,12 +106,15 @@ function rank(risk: HiddenRisk): number {
 interface RiskCardProps {
   risk: HiddenRisk
   disabled: boolean
+  hasDealBreakerQuestion: boolean // a requirement of the risk has a deal-breaker question to answer
   onAnswer: (value: boolean) => void
 }
 
-function RiskCard({ risk, disabled, onAnswer }: RiskCardProps) {
+function RiskCard({ risk, disabled, hasDealBreakerQuestion, onAnswer }: RiskCardProps) {
   const titleId = `risk-${risk.id}-title`
   const note = risk.question === null ? followNote(risk) : null
+  // Without a question of its own, the risk is settled by the deal-breaker question it is tied to.
+  const settleNote = !risk.resolved && risk.question === null && hasDealBreakerQuestion
   return (
     <article
       className={risk.resolved ? 'risk is-resolved' : 'risk'}
@@ -137,6 +151,9 @@ function RiskCard({ risk, disabled, onAnswer }: RiskCardProps) {
         />
       )}
       {note !== null && <p className="risk-note">{note}</p>}
+      {settleNote && (
+        <p className="risk-note">Answer the matching deal-breaker question to settle this.</p>
+      )}
     </article>
   )
 }

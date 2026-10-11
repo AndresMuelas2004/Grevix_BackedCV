@@ -276,7 +276,7 @@ function RequirementRow({
 
         {recency && <RecencyNote check={recency} />}
 
-        {assessment?.rationale && (
+        {assessment?.rationale && !repeatsNote(assessment.rationale, screening, recency) && (
           <p className="req-rationale">
             <CitedText text={assessment.rationale} />
           </p>
@@ -325,6 +325,22 @@ function RecencyNote({ check }: { check: RecencyCheck }) {
       )}
     </div>
   )
+}
+
+// True when the rationale repeats a reason in the screening box, or the recency explanation.
+function repeatsNote(
+  rationale: string,
+  screening: ScreeningFlag | undefined,
+  recency: RecencyCheck | undefined,
+): boolean {
+  const text = plainText(rationale)
+  if (screening?.reasons.some((reason) => plainText(reason) === text)) return true
+  return recency !== undefined && plainText(recency.explanation) === text
+}
+
+// The text with its spaces tidied, so the same sentence compares equal wherever it came from.
+function plainText(text: string): string {
+  return text.trim().replace(/\s+/g, ' ')
 }
 
 // The points this requirement won out of its maximum, or that it is not counted.
