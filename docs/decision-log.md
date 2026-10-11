@@ -88,3 +88,13 @@ The card asks BackedCV to catch what a keyword match hides: disqualifiers buried
 - **Measured on a new demo sample and a fourth end-to-end pair:** a platform engineering posting with a buried no-sponsorship sentence and a 5-year Kubernetes window, and a CV in Valencia whose only Kubernetes evidence is a 2015-2017 job.
 - **A risk tied to a knockout keeps its real level.** The first live run showed the extraction also turning the buried sponsorship sentence into a knockout requirement, and my rule capped such risks at medium, hiding a CV in Spain against "the right to work in the United States". Now only the question and the verdict defer to the knockout; the level comes from the CV. The next live run passed 19 of 19 checks.
 - **A posting's own window can make the verdict "Likely screened out".** "3+ years of Kubernetes within the last 5 years" is a minimum-years knockout; when the only Kubernetes experience ended in 2017, the CV itself shows it is not met. That is the honest answer, and the report says exactly which sentence causes it.
+
+## 2026-10-11, Challenge Card 2: real-world feedback
+
+The card asks me to share BackedCV, collect genuine feedback with screenshots, ship at least one improvement based on it, and document everything in the repository. The feedback, the changes and the proof are in [feedback/README.md](../feedback/README.md).
+
+- **I share the demo video, the screenshots and the repository** on LinkedIn (mentioning GREVIX), on r/SideProject and in my own community groups. Every post ends with the same three questions (would you trust the verdict and score; which part helps and which is noise; what would stop you using it on a real application), so the answers point at something I can change.
+- **Feedback stays authentic.** I only use what people actually wrote, always with a screenshot. Names and profile photos are blurred unless the person agreed to be named: a public repository is not the place for other people's data.
+- **A public feedback form in the repository** (a GitHub issue form) gives a timestamped record anyone can check, and it asks people not to paste a real CV.
+- **I change only what a specific comment points at**, and I link each change to its comment. Feedback I chose not to act on is listed with the reason.
+- **No public instance for this card.** People watch the demo or run it with Docker. I keep my earlier decision not to deploy during the event: real CVs on a server I cannot watch, and a small API budget.
