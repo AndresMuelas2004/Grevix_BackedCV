@@ -1,9 +1,12 @@
 import { ApiError } from '../api/client'
+import { describeFailure } from './errorMessages'
 
-// A short, readable reason for a failed request. Callers put it after "not saved." or similar.
+// A short, plain reason for a failed request: what happened, then what to do next. Callers put it
+// after "not saved." or similar.
 export function describeError(error: unknown): string {
   if (error instanceof ApiError) {
-    return [error.title, error.detail].filter((part) => part !== '').join(' ')
+    const text = describeFailure({ code: error.code, title: error.title, detail: error.detail })
+    return [text.message, text.next ?? ''].filter((part) => part !== '').join(' ')
   }
   return 'Something went wrong.'
 }

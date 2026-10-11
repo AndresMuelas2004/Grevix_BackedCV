@@ -22,7 +22,9 @@ const STATE_TEXT: Record<StepState, string> = {
 export default function Progress({ title, rows }: ProgressProps) {
   return (
     <section className="progress card" aria-labelledby="progress-title">
-      <h2 id="progress-title">{title}</h2>
+      <h2 id="progress-title" tabIndex={-1} data-screen-heading>
+        {title}
+      </h2>
       <div aria-live="polite">
         <ol className="progress-steps">
           {rows.map((row, index) => (

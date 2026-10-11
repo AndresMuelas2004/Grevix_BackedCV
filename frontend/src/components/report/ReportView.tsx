@@ -3,6 +3,7 @@ import type { AnalysisReport, RequirementAssessment } from '../../api/types'
 import { problemLineIds } from '../../lib/parseWarnings'
 import CvView from '../CVView'
 import KnockoutQuestions from '../facts/KnockoutQuestions'
+import HowComputed from '../HowComputed'
 import ParseReport from '../parse/ParseReport'
 import RequirementList from '../RequirementList'
 import ScorePanel from '../ScorePanel'
@@ -102,6 +103,8 @@ export default function ReportView({ analysis, onAnalysisChange, actions }: Repo
           warnedIds={problemLineIds(analysis.parse_warnings)}
         />
       </div>
+
+      <HowComputed usage={analysis.usage} />
     </div>
   )
 }

@@ -372,6 +372,7 @@ export interface NodeError {
 
 export interface UsageTotal {
   calls: number
+  cached_calls: number // the calls replayed from the cache, also counted in calls
   input_tokens: number
   output_tokens: number
   cost_usd: number

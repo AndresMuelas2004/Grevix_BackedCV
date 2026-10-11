@@ -56,7 +56,7 @@ function Meter({ label, value }: MeterProps) {
         aria-label={label}
         aria-valuemin={0}
         aria-valuemax={100}
-        aria-valuenow={value !== null ? percent : undefined}
+        aria-valuenow={value !== null ? Math.round(percent) : undefined}
         aria-valuetext={scored ? `${formatScore(percent)} out of 100` : 'Not scorable'}
       >
         <div className="meter-fill" style={{ width: `${percent}%` }} />

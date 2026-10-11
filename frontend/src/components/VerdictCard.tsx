@@ -54,7 +54,9 @@ export default function VerdictCard({
   return (
     <section className="verdict card" data-tone={TONE[verdict.label]} aria-labelledby="verdict-title">
       <p className="eyebrow">Verdict</p>
-      <h2 id="verdict-title">{verdict.title}</h2>
+      <h2 id="verdict-title" tabIndex={-1} data-screen-heading>
+        {verdict.title}
+      </h2>
 
       {reasons.length > 0 && (
         <ul className="reasons" aria-label="Why this verdict">

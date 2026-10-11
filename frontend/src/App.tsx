@@ -24,6 +24,7 @@ import Progress, { type ProgressRow } from './components/Progress'
 import ReportView from './components/report/ReportView'
 import ReviewScreen from './components/review/ReviewScreen'
 import { EMPTY_DRAFT, type AnalysisDraft } from './lib/draft'
+import { describeFailure } from './lib/errorMessages'
 import {
   PROGRESS_STEPS,
   applyProgress,
@@ -61,6 +62,19 @@ const BUILD_STEPS: readonly { id: BuildStep; label: string }[] = [
   { id: 'checks', label: 'Checking' },
 ]
 
+// What a screen reader hears when a screen opens, in addition to the heading that takes the focus.
+const SCREEN_NOTICE: Record<Flow['kind'], string> = {
+  idle: 'Start a new check.',
+  loading: 'Opening your analysis.',
+  analyzing: 'Checking your CV against the posting.',
+  report: 'Report ready.',
+  optimizing: 'Suggesting changes to your CV.',
+  review: 'Review ready.',
+  building: 'Building your new CV.',
+  built: 'Build finished.',
+  error: 'There is a problem.',
+}
+
 const NOT_READY: ErrorBody = {
   code: 'not_ready',
   title: 'This analysis has no report yet.',
@@ -93,9 +107,15 @@ export default function App() {
       })
   }, [])
 
-  // Moves the focus to each new screen, so keyboard and screen reader users start there.
+  // Moves the focus to the heading of each new screen, so keyboard and screen reader users start
+  // there. The first screen is left alone: a page load should not take the focus.
+  const shownKind = useRef(flow.kind)
   useEffect(() => {
-    mainRef.current?.focus()
+    if (shownKind.current === flow.kind) return
+    shownKind.current = flow.kind
+    const heading = mainRef.current?.querySelector<HTMLElement>('[data-screen-heading]')
+    const target = heading ?? mainRef.current
+    target?.focus()
   }, [flow.kind])
 
   // Starts a run and cancels the one before it. Events of a cancelled run are ignored.
@@ -235,7 +255,9 @@ export default function App() {
       case 'loading':
         return (
           <section className="card loading-card" aria-live="polite">
-            <h2>Opening your analysis</h2>
+            <h2 tabIndex={-1} data-screen-heading>
+              Opening your analysis
+            </h2>
           </section>
         )
 
@@ -317,10 +339,14 @@ export default function App() {
 
       case 'error': {
         const { error, analysis, decisions } = flow
+        const failure = describeFailure(error)
         return (
-          <section className="card error-card" role="alert" aria-labelledby="error-title">
-            <h2 id="error-title">{error.title}</h2>
-            {error.detail && <p className="error-detail">Details: {error.detail}</p>}
+          <section className="card error-card" aria-labelledby="error-title">
+            <h2 id="error-title" tabIndex={-1} data-screen-heading>
+              {failure.message}
+            </h2>
+            {failure.next && <p className="error-next">{failure.next}</p>}
+            {failure.detail && <p className="error-detail">Details: {failure.detail}</p>}
             <div className="error-actions">
               {analysis ? (
                 <button
@@ -357,6 +383,9 @@ export default function App() {
       </header>
 
       <main className="app-main" ref={mainRef} tabIndex={-1}>
+        <p className="visually-hidden" role="status">
+          {SCREEN_NOTICE[flow.kind]}
+        </p>
         {renderScreen()}
       </main>
 

@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { updateInputs } from '../../api/client'
 import type { AnalysisReport } from '../../api/types'
 import { describeError } from '../../lib/errors'
@@ -105,6 +105,23 @@ function KnockoutRow({
 }: KnockoutRowProps) {
   const answered = item.answer !== null
   const showChoices = !answered || editing
+  const yesButton = useRef<HTMLButtonElement>(null)
+  const changeButton = useRef<HTMLButtonElement>(null)
+  const wasEditing = useRef(editing)
+
+  // Editing swaps the buttons. Focus follows the user: into Yes when the edit opens, back to
+  // "Change answer" when it closes, so it never falls back to the top of the page.
+  useEffect(() => {
+    if (wasEditing.current === editing) return
+    wasEditing.current = editing
+    if (editing) yesButton.current?.focus()
+    else changeButton.current?.focus()
+  }, [editing])
+
+  // The buttons are aria-disabled rather than disabled: a disabled button would drop the focus.
+  const whenEnabled = (action: () => void) => () => {
+    if (!disabled) action()
+  }
 
   return (
     <li className="knockout-item">
@@ -115,18 +132,19 @@ function KnockoutRow({
         {showChoices ? (
           <div className="knockout-actions">
             <button
+              ref={yesButton}
               type="button"
               className="btn btn-primary"
-              disabled={disabled}
-              onClick={() => onAnswer(true)}
+              aria-disabled={disabled}
+              onClick={whenEnabled(() => onAnswer(true))}
             >
               Yes
             </button>
             <button
               type="button"
               className="btn btn-secondary"
-              disabled={disabled}
-              onClick={() => onAnswer(false)}
+              aria-disabled={disabled}
+              onClick={whenEnabled(() => onAnswer(false))}
             >
               No
             </button>
@@ -134,8 +152,8 @@ function KnockoutRow({
               <button
                 type="button"
                 className="btn btn-secondary"
-                disabled={disabled}
-                onClick={onCancelEdit}
+                aria-disabled={disabled}
+                onClick={whenEnabled(onCancelEdit)}
               >
                 Cancel
               </button>
@@ -147,11 +165,12 @@ function KnockoutRow({
               Your answer: <strong>{item.answer ? 'Yes' : 'No'}</strong>
             </p>
             <button
+              ref={changeButton}
               type="button"
               className="btn btn-secondary"
-              disabled={disabled}
+              aria-disabled={disabled}
               autoFocus={focusChange}
-              onClick={onStartEdit}
+              onClick={whenEnabled(onStartEdit)}
             >
               Change answer
             </button>

@@ -1,6 +1,6 @@
 import { useRef, useState, type FormEvent } from 'react'
-import { ApiError } from '../../api/client'
 import type { Suggestion, SuggestionKind, VerificationStatus } from '../../api/types'
+import { describeError } from '../../lib/errors'
 import ChangeDiff from './ChangeDiff'
 import './SuggestionCard.css'
 
@@ -66,6 +66,7 @@ export default function SuggestionCard({
 
   async function save(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
+    if (saving) return // a second press during the check is ignored
     const next = text.trim()
     if (next === '') {
       setEditError('Write the new text first.')
@@ -185,7 +186,8 @@ export default function SuggestionCard({
             </p>
           )}
           <div className="suggestion-actions">
-            <button type="submit" className="btn btn-primary" disabled={saving}>
+            {/* aria-disabled, not disabled: a disabled button drops the keyboard focus it has. */}
+            <button type="submit" className="btn btn-primary" aria-disabled={saving}>
               {saving ? 'Checking...' : 'Save and check'}
             </button>
             <button type="button" className="btn btn-secondary" onClick={cancelEdit} disabled={saving}>
@@ -196,11 +198,4 @@ export default function SuggestionCard({
       )}
     </article>
   )
-}
-
-function describeError(error: unknown): string {
-  if (error instanceof ApiError) {
-    return error.detail ? `${error.title} ${error.detail}` : error.title
-  }
-  return 'The text could not be checked.'
 }

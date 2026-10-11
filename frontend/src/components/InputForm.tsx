@@ -7,7 +7,6 @@ import {
   type KeyboardEvent,
 } from 'react'
 import {
-  ApiError,
   getSampleCvFile,
   getSamples,
   isSampleCvFile,
@@ -24,6 +23,7 @@ import {
   type AnalysisDraft,
   type CvMode,
 } from '../lib/draft'
+import { describeError } from '../lib/errors'
 import { formatBytes, formatNumber } from '../lib/format'
 import './InputForm.css'
 
@@ -118,6 +118,7 @@ export default function InputForm({ draft, onChange, onSubmit }: InputFormProps)
   // Loads the sample CV as a PDF upload and fills the posting. When the PDF cannot be fetched,
   // the sample text goes in paste mode instead.
   async function loadSample() {
+    if (sampleLoading) return
     setSampleLoading(true)
     setSampleError(null)
     setFileError(null)
@@ -130,7 +131,7 @@ export default function InputForm({ draft, onChange, onSubmit }: InputFormProps)
         update({ cvMode: 'text', cvText: sample.cv_text, jobText: sample.job_text })
       }
     } catch (error) {
-      setSampleError(error instanceof ApiError ? error.title : 'The sample could not be loaded.')
+      setSampleError(`The sample could not be loaded. ${describeError(error)}`)
     } finally {
       setSampleLoading(false)
     }
@@ -155,7 +156,9 @@ export default function InputForm({ draft, onChange, onSubmit }: InputFormProps)
 
   return (
     <form className="input-form card" onSubmit={handleSubmit} noValidate aria-labelledby="input-title">
-      <h2 id="input-title">Check a job against your CV</h2>
+      <h2 id="input-title" tabIndex={-1} data-screen-heading>
+        Check a job against your CV
+      </h2>
 
       <section className="form-section" aria-labelledby="cv-heading">
         <div className="section-head">
@@ -164,7 +167,7 @@ export default function InputForm({ draft, onChange, onSubmit }: InputFormProps)
             type="button"
             className="btn btn-secondary"
             onClick={loadSample}
-            disabled={sampleLoading}
+            aria-disabled={sampleLoading}
           >
             {sampleLoading ? 'Loading sample...' : 'Try the sample'}
           </button>
@@ -238,6 +241,8 @@ export default function InputForm({ draft, onChange, onSubmit }: InputFormProps)
                 onClick={() => {
                   update({ cvFile: null })
                   setFileError(null)
+                  // This button leaves the page with the file, so the focus goes to the file input.
+                  fileInput.current?.focus()
                 }}
               >
                 Remove file

@@ -9,6 +9,7 @@ import type {
   Suggestion,
 } from '../../api/types'
 import { SECTION_LABELS } from '../../lib/labels'
+import HowComputed from '../HowComputed'
 import ScoreValue from './ScoreValue'
 import SuggestionCard, { type Decision } from './SuggestionCard'
 import './ReviewScreen.css'
@@ -91,7 +92,9 @@ export default function ReviewScreen({
     <div className="review">
       <section className="card review-summary" aria-labelledby="review-title">
         <p className="eyebrow">Review</p>
-        <h2 id="review-title">Choose the changes for your new CV</h2>
+        <h2 id="review-title" tabIndex={-1} data-screen-heading>
+          Choose the changes for your new CV
+        </h2>
         <p>Only verified changes can be accepted. Nothing reaches your new CV unless you accept it.</p>
 
         <ul className="counts" aria-label="Suggestion counts">
@@ -174,6 +177,8 @@ export default function ReviewScreen({
           </ul>
         </section>
       ))}
+
+      <HowComputed usage={analysis.usage} />
     </div>
   )
 }
