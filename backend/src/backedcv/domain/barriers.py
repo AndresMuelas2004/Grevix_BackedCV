@@ -471,7 +471,9 @@ def screening_flags(
     risks: list[HiddenRisk],
 ) -> list[ScreeningFlag]:
     """Requirements that look met in the CV (original status met or partial, or the keyword is
-    there) but carry a recency warning or an open medium or high risk."""
+    there) but carry a recency warning or an open medium or high risk. Each sentence is listed
+    once. A recency risk adds no sentence once the requirement's own recency check has spoken;
+    every linked risk still counts toward the level and the risk IDs."""
     flags: list[ScreeningFlag] = []
     for req in job.requirements:
         before = original_assessments.get(req.id)
@@ -479,10 +481,12 @@ def screening_flags(
             continue
         reasons: list[str] = []
         levels: list[RiskLevel] = []
+        recency_spoke = False
         check = recency.get(req.id)
         if check is not None and check.effect != "none":
-            reasons.append(check.explanation or "Its dates do not show recent use.")
+            _add_reason(reasons, check.explanation or "Its dates do not show recent use.")
             levels.append(EFFECT_LEVEL[check.effect])
+            recency_spoke = True
         linked = [
             risk
             for risk in risks
@@ -491,8 +495,10 @@ def screening_flags(
             and not risk.resolved
             and risk.risk != "low"
         ]
-        reasons += [risk.explanation for risk in linked]
-        levels += [risk.risk for risk in linked]
+        for risk in linked:
+            levels.append(risk.risk)
+            if not (risk.kind == "recency" and recency_spoke):
+                _add_reason(reasons, risk.explanation)
         if reasons:
             flags.append(
                 ScreeningFlag(
@@ -525,6 +531,15 @@ def _overlaps(a: str, b: str) -> bool:
     """Containment either way, after folding and ignoring case. Empty text overlaps nothing."""
     x, y = fold_lower(a), fold_lower(b)
     return bool(x and y) and (x in y or y in x)
+
+
+def _add_reason(reasons: list[str], sentence: str) -> None:
+    """Appends a reason unless it is empty or says a point already listed: a sentence that holds a
+    listed reason, or sits inside one, repeats it. Compared folded and ignoring case."""
+    new = fold_lower(sentence)
+    if not new or any(new in fold_lower(old) or fold_lower(old) in new for old in reasons):
+        return
+    reasons.append(sentence)
 
 
 def _names_for(place: str) -> tuple[str, ...]:

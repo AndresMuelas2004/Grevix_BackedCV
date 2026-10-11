@@ -515,6 +515,61 @@ def test_screening_flags_name_requirements_that_look_met_but_carry_a_risk():
     assert flags[1].reasons == ["A screener may drop you."]
 
 
+def test_screening_flags_never_repeat_a_sentence():
+    job = JobPosting(requirements=[req("R01", K8S), req("R02", "Strong Python skills.")])
+    original = {
+        "R01": RequirementAssessment(requirement_id="R01", status="met"),
+        "R02": RequirementAssessment(requirement_id="R02", status="met"),
+    }
+    recency = {"R01": check("downgraded", rid="R01")}
+    said = recency["R01"].explanation
+    risks = [
+        # The recency risk carries the check's sentence too: it is listed once, not twice.
+        HiddenRisk(
+            id="H01",
+            kind="recency",
+            explanation=f"A screener may drop you if your experience is too old. {said}",
+            risk="high",
+            requirement_ids=["R01"],
+        ),
+        HiddenRisk(
+            id="H02",
+            kind="other",
+            explanation=f"Note: {said}",
+            risk="medium",
+            requirement_ids=["R01"],
+        ),
+        HiddenRisk(
+            id="H03",
+            kind="other",
+            explanation="A screener may drop you on this point.",
+            risk="medium",
+            requirement_ids=["R01"],
+        ),
+        HiddenRisk(
+            id="H04",
+            kind="other",
+            explanation="A screener may drop you on this point.",
+            risk="medium",
+            requirement_ids=["R01"],
+        ),
+        # Without a recency check of its own, a recency risk still speaks.
+        HiddenRisk(
+            id="H05",
+            kind="recency",
+            explanation="A screener may drop you for your Python experience.",
+            risk="high",
+            requirement_ids=["R02"],
+        ),
+    ]
+    flags = screening_flags(job, original, recency, risks)
+    assert [(flag.requirement_id, flag.reasons) for flag in flags] == [
+        ("R01", [said, "A screener may drop you on this point."]),
+        ("R02", ["A screener may drop you for your Python experience."]),
+    ]
+    assert flags[0].risk_ids == ["H01", "H02", "H03", "H04"]
+
+
 # 6. Schemas and prompt ---------------------------------------------------------------------
 
 

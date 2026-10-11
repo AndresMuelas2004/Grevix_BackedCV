@@ -51,6 +51,18 @@ The rebuilt CV as a PDF (sample data): the accepted rewrite is in Experience, an
 
 The report on a phone-sized screen.
 
+![Hidden screening risks](docs/screenshots/08-hidden-risks.png)
+
+Challenge Card 1, "Try a posting with hidden barriers": each risk quotes the posting, says why it can screen you out and what to do. The work permit sentence was buried in the posting's closing notes; the CV is located in Spain.
+
+![Looks met, but...](docs/screenshots/09-looks-met.png)
+
+Kubernetes is in the CV, but only in a 2015-2017 job, and the posting asks for it within the last 5 years: it no longer counts as met.
+
+![Refused as not viable](docs/screenshots/10-refused.png)
+
+In the review, the Kubernetes edit is refused as not viable instead of rewording the old line to look current.
+
 ## What is different
 
 - **Knockouts and absurd requirements.** Screening questions are marked as knockouts and come first in the verdict. Absurd requirements are flagged.
@@ -81,7 +93,7 @@ The verifier is a language model, so its answers can change between runs. The li
 
 A missed case is an invented rewrite that passed the code checks and the verifier, so it would show as verified. Your review is the last check. A faithful rewrite that is blocked by mistake cannot be accepted as it is, but an edited version is checked again.
 
-End-to-end smoke pairs check the analysis itself on three synthetic CV and posting pairs: the two-column demo sample, a simpler sample, and a non-tech one (a registered nurse posting with a license knockout the CV answers). Each pair has expectations (knockout questions asked or settled, R1/R2 flags, the R3 banner, the two-column warning, a verdict that is not "screened out", and matching by meaning: "agent frameworks" in the CV counts as partial evidence for LangChain and LangGraph). Latest live run: 3 of 3 pairs and 15 of 15 checks passed, for $0.0073.
+End-to-end smoke pairs check the analysis itself on four synthetic CV and posting pairs: the two-column demo sample, a simpler sample, a non-tech one (a registered nurse posting with a license knockout the CV answers), and the Challenge Card 1 pair (a posting with a buried no-sponsorship sentence and a 5-year Kubernetes window, and a CV in Valencia whose only Kubernetes line is from 2015-2017). Each pair has expectations (knockout questions asked or settled, R1/R2 flags, the R3 banner, the two-column warning, a verdict that is not "screened out", matching by meaning: "agent frameworks" in the CV counts as partial evidence for LangChain and LangGraph, and for Card 1 a high work permit risk, Kubernetes downgraded by recency and flagged "Looks met, but..."). Latest live run: 4 of 4 pairs and 19 of 19 checks passed, for $0.0123. The run before it missed one check (the work permit risk came out medium because the posting also listed it as a knockout); I fixed the rule and kept both reports.
 
 The offline run needs no API key and runs only the code checks. Commands and the case list are in [backend/evals/README.md](backend/evals/README.md).
 
