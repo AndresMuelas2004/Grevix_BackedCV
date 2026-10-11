@@ -10,7 +10,7 @@ from backedcv.domain.models import (
     VerdictReason,
 )
 from backedcv.domain.rules.knockout import is_knockout, likely_question
-from backedcv.domain.scoring import ScoringConfig
+from backedcv.domain.scoring import ScoringConfig, round_half_up
 
 TITLES = {
     "likely_screened_out": "Likely screened out",
@@ -129,8 +129,9 @@ def _fit_reason(fit: float, config: ScoringConfig) -> VerdictReason:
     """The Fit value next to the two thresholds, so every band can be read against them."""
     return VerdictReason(
         text=(
-            f"Your Fit is {fit:g} out of 100; {config.stretch_min_fit:g} is needed for a stretch "
-            f"and {config.apply_min_fit:g} to apply with confidence."
+            f"Your Fit is {round_half_up(fit)} out of 100; "
+            f"{round_half_up(config.stretch_min_fit)} is needed for a stretch "
+            f"and {round_half_up(config.apply_min_fit)} to apply with confidence."
         )
     )
 

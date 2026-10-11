@@ -8,7 +8,7 @@ from backedcv.domain.models import (
 )
 from backedcv.domain.rules.absurd import flag_requirements, flags_by_requirement
 from backedcv.domain.rules.knockout import apply_facts, likely_question
-from backedcv.domain.scoring import compute_score
+from backedcv.domain.scoring import compute_score, round_half_up
 from backedcv.domain.verdict import compute_verdict
 
 
@@ -252,8 +252,11 @@ def test_stretch_names_only_the_missing_required_items():
     verdict = compute_verdict(_job(*reqs), assessments, score)
 
     assert verdict.label == "stretch"
+    assert score.summary == (
+        "Fit 62: you meet 2 of 3 required items; biggest losses: Spark (-23), Mentoring (-15)."
+    )
     assert [r.text for r in verdict.reasons] == [
-        FIT_LINE.format(fit="61.5"),
+        FIT_LINE.format(fit="62"),
         "Missing required: Mentoring.",
     ]
     assert verdict.reasons[1].requirement_ids == ["R04"]
@@ -324,6 +327,11 @@ def test_a_long_shot_reached_by_answering_a_knockout_explains_itself():
 
     assert answered.label == "long_shot"
     assert [r.text for r in answered.reasons] == [
-        FIT_LINE.format(fit="33.3"),
+        FIT_LINE.format(fit="33"),
         "Missing required: Python, Kubernetes.",
     ]
+
+
+def test_sentences_round_halves_up_to_whole_numbers():
+    # Python's round() would send 52.5 to 52; the sentences must show 53 like the interface.
+    assert [round_half_up(x) for x in (51.5, 52.5, 51.8, 0.4, 100.0)] == [52, 53, 52, 0, 100]

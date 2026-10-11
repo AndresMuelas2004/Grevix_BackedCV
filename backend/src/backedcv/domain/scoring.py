@@ -2,6 +2,7 @@
 
 from collections.abc import Iterable
 from dataclasses import dataclass, field
+from decimal import ROUND_HALF_UP, Decimal
 
 from backedcv.config import load
 from backedcv.domain.models import (
@@ -134,6 +135,11 @@ def compute_score(
     return breakdown
 
 
+def round_half_up(value: float) -> int:
+    """Whole number for a sentence. Halves go up (51.5 -> 52), unlike Python's round()."""
+    return int(Decimal(str(value)).quantize(Decimal(1), rounding=ROUND_HALF_UP))
+
+
 def summarize(score: ScoreBreakdown) -> str:
     """One sentence that explains the Fit score: requirements met and the biggest losses."""
     if score.fit is None:
@@ -141,12 +147,16 @@ def summarize(score: ScoreBreakdown) -> str:
     counted = [c for c in score.contributions if c.excluded_reason is None]
     required = [c for c in counted if c.importance == "required"]
     met = sum(1 for c in required if c.status == "met")
-    losses = sorted((c for c in counted if c.points_lost > 0), key=lambda c: -c.points_lost)[:3]
-    parts = [f"Fit {score.fit:g}: you meet {met} of {len(required)} required items"]
+    # A loss that rounds to 0 would read "-0", so it is not named.
+    losses = sorted(
+        (c for c in counted if round_half_up(c.points_lost) > 0),
+        key=lambda c: -c.points_lost,
+    )[:3]
+    parts = [f"Fit {round_half_up(score.fit)}: you meet {met} of {len(required)} required items"]
     if losses:
         described = []
         for c in losses:
             note = {"partial": "partial, ", "unknown": "unconfirmed, "}.get(c.status, "")
-            described.append(f"{c.label} ({note}-{c.points_lost:g})")
+            described.append(f"{c.label} ({note}-{round_half_up(c.points_lost)})")
         parts.append("biggest losses: " + ", ".join(described))
     return "; ".join(parts) + "."
