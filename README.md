@@ -4,6 +4,8 @@ Is this job worth applying to? Paste a posting, upload your CV, and see what wou
 
 I built BackedCV solo during the Grevix AfterCode 24-hour hackathon (October 2026). It is a FastAPI and React web app that calls OpenAI models.
 
+**Try it: [backedcv.onrender.com](https://backedcv.onrender.com)** (a temporary demo on a free server: the first visit may take a minute to wake it up; please use the one-click samples or a CV with fictional details). Feedback is welcome in the [feedback form](https://github.com/AndresMuelas2004/Grevix_BackedCV/issues/new?template=feedback.yml).
+
 ![BackedCV in six steps: input, report, answers, review, build, the new CV; then Challenge Card 1: hidden screening risks and an edit refused as not viable](docs/screenshots/demo.gif)
 
 ## Why
