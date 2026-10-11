@@ -13,6 +13,7 @@ from pydantic import ValidationError
 
 from backedcv.api.errors import ApiError, stream_error
 from backedcv.api.projection import project
+from backedcv.api.rate_limit import limit_model_run
 from backedcv.domain.models import CandidateFacts
 from backedcv.graph.builder import run_config
 from backedcv.ingestion import read_cv, read_cv_text
@@ -61,7 +62,9 @@ async def analysis_input(
     return NewAnalysis(cv, job_text, parsed_facts or CandidateFacts())
 
 
-@router.post("/analyses", response_class=EventSourceResponse)
+@router.post(
+    "/analyses", response_class=EventSourceResponse, dependencies=[Depends(limit_model_run)]
+)
 async def create_analysis(
     request: Request, new: Annotated[NewAnalysis, Depends(analysis_input)]
 ) -> AsyncIterable[ServerSentEvent]:

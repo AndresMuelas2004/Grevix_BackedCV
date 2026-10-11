@@ -4,9 +4,10 @@ from typing import Literal, Protocol, TypeVar
 
 from langchain_core.messages import AIMessage, HumanMessage, SystemMessage
 from langchain_openai import ChatOpenAI
-from pydantic import BaseModel
+from pydantic import BaseModel, ValidationError
 
 from backedcv.config import load
+from backedcv.llm.cache import LLMCache, answer_key
 from backedcv.llm.prompt_loader import Prompt
 from backedcv.settings import Settings
 
@@ -35,27 +36,71 @@ def usage_record(node: str, model: str, message: AIMessage | None) -> dict:
         "input_tokens": tokens_in,
         "output_tokens": tokens_out,
         "cost_usd": round(cost, 6),
+        "cached": False,
     }
 
 
 class OpenAIStructuredLLM:
-    def __init__(self, settings: Settings):
+    def __init__(self, settings: Settings, cache: bool | None = None):
+        """`cache` overrides `settings.llm_cache` when it is given (the evals pass False)."""
         self.settings = settings
+        enabled = settings.llm_cache if cache is None else cache
+        self.cache = LLMCache(settings.data_dir / "llm_cache.sqlite") if enabled else None
 
     def _model_name(self, tier: str) -> str:
         return self.settings.model_strong if tier == "strong" else self.settings.model_fast
 
+    def _effort(self, prompt_id: str) -> str:
+        return load("models").get("effort", {}).get(prompt_id, "low")
+
     def _chat(self, tier: str, prompt_id: str) -> ChatOpenAI:
-        effort = load("models").get("effort", {}).get(prompt_id, "low")
         return ChatOpenAI(
             model=self._model_name(tier),
             use_responses_api=True,
             store=False,
             max_retries=1,
-            reasoning={"effort": effort},
+            reasoning={"effort": self._effort(prompt_id)},
         )
 
     async def run(self, prompt: Prompt, data: str, schema: type[T], *, node: str) -> tuple[T, dict]:
+        if self.cache is None:
+            return await self._ask(prompt, data, schema, node=node)
+        model = self._model_name(prompt.tier)
+        key = answer_key(model, self._effort(prompt.id), prompt, schema, data)
+        cached = self._from_cache(key, schema, node=node, model=model)
+        if cached is not None:
+            return cached
+        parsed, usage = await self._ask(prompt, data, schema, node=node)
+        self.cache.put(
+            key, parsed.model_dump(mode="json"), usage["input_tokens"], usage["output_tokens"]
+        )
+        return parsed, usage
+
+    def _from_cache(
+        self, key: str, schema: type[T], *, node: str, model: str
+    ) -> tuple[T, dict] | None:
+        """The stored answer as a zero-cost usage record, or None when there is no usable row."""
+        stored = self.cache.get(key)
+        if stored is None:
+            return None
+        answer, tokens_in, tokens_out = stored
+        try:
+            parsed = schema.model_validate(answer)
+        except ValidationError:
+            return None  # the row no longer fits the schema: the model is asked again
+        usage = {
+            "node": node,
+            "model": model,
+            "input_tokens": tokens_in,
+            "output_tokens": tokens_out,
+            "cost_usd": 0.0,
+            "cached": True,
+        }
+        return parsed, usage
+
+    async def _ask(
+        self, prompt: Prompt, data: str, schema: type[T], *, node: str
+    ) -> tuple[T, dict]:
         chat = self._chat(prompt.tier, prompt.id)
         runnable = chat.with_structured_output(
             schema, method="json_schema", strict=True, include_raw=True

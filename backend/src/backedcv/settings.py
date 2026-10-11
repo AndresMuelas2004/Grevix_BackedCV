@@ -25,6 +25,11 @@ class Settings(BaseSettings):
     )
     model_fast: str = "gpt-6-luna"
     model_strong: str = "gpt-6.1-sol"
+    llm_cache: bool = True  # an identical model call gets the stored answer again, for free
+
+    # Abuse and budget limits on the routes that call the model.
+    rate_limit_per_hour: int = Field(default=30, ge=1)  # per client address, rolling hour
+    daily_model_runs: int = Field(default=300, ge=1)  # all clients together, per UTC day
 
     data_dir: Path = REPO_ROOT / "data"
     frontend_dist: Path = REPO_ROOT / "frontend" / "dist"

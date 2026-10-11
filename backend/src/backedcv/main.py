@@ -1,6 +1,7 @@
 """FastAPI app factory: API routes under /api, the built frontend at /."""
 
 import asyncio
+import os
 from collections.abc import AsyncIterator
 from contextlib import AsyncExitStack, asynccontextmanager, suppress
 
@@ -12,6 +13,7 @@ from backedcv import __version__
 from backedcv.agents.cv_builder.agent import default_order_model
 from backedcv.api.errors import install_error_handlers
 from backedcv.api.locks import RunLocks
+from backedcv.api.rate_limit import RunLimiter
 from backedcv.api.retention import AnalysisLedger, purge_hourly, utc_now
 from backedcv.api.routes import analyses, downloads, health, inputs, meta, optimize, samples
 from backedcv.graph.builder import build_graph
@@ -22,6 +24,11 @@ from backedcv.settings import get_settings
 def create_app(llm: StructuredLLM | None = None, checkpointer=None) -> FastAPI:
     """`llm` and `checkpointer` are injectable so tests run without network or disk."""
     settings = get_settings()
+    if settings.env == "prod":
+        # Traces must not carry the CV or the posting. Set before any model call; values the
+        # operator has already set are kept.
+        os.environ.setdefault("LANGSMITH_HIDE_INPUTS", "true")
+        os.environ.setdefault("LANGSMITH_HIDE_OUTPUTS", "true")
 
     @asynccontextmanager
     async def lifespan(app: FastAPI) -> AsyncIterator[None]:
@@ -52,6 +59,9 @@ def create_app(llm: StructuredLLM | None = None, checkpointer=None) -> FastAPI:
             yield
 
     app = FastAPI(title="BackedCV", version=__version__, lifespan=lifespan)
+    app.state.limiter = RunLimiter(
+        per_hour=settings.rate_limit_per_hour, per_day=settings.daily_model_runs
+    )
     install_error_handlers(app)
     app.include_router(health.router, prefix="/api")
     app.include_router(analyses.router, prefix="/api")

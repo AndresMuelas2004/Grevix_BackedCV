@@ -1,5 +1,5 @@
-"""The optimize, build and verify steps. Streams resume the paused run; every refusal (404, 409,
-422) is decided before the stream opens, so it arrives as a JSON error."""
+"""The optimize, build and verify steps. Streams resume the paused run; every refusal (429, 404,
+409, 422) is decided before the stream opens, so it arrives as a JSON error."""
 
 from collections.abc import AsyncIterable, Callable
 from contextlib import aclosing
@@ -12,6 +12,7 @@ from pydantic import BaseModel, StringConstraints
 
 from backedcv.api.errors import ApiError, stream_error
 from backedcv.api.projection import project, waiting_at_report, waiting_at_review
+from backedcv.api.rate_limit import limit_model_run
 from backedcv.domain.guards import apply_guards
 from backedcv.domain.models import JobPosting, ParsedCV, ReviewDecisions, Suggestion, Verification
 from backedcv.graph.builder import run_config
@@ -48,7 +49,7 @@ async def claim_build(
 @router.post(
     "/analyses/{analysis_id}/optimize",
     response_class=EventSourceResponse,
-    dependencies=[Depends(claim_optimize)],
+    dependencies=[Depends(limit_model_run), Depends(claim_optimize)],
 )
 async def optimize(request: Request, analysis_id: str) -> AsyncIterable[ServerSentEvent]:
     """Writes the suggestions, verifies each one, and pauses for the user's review."""
@@ -61,7 +62,11 @@ async def optimize(request: Request, analysis_id: str) -> AsyncIterable[ServerSe
             yield event
 
 
-@router.post("/analyses/{analysis_id}/build", response_class=EventSourceResponse)
+@router.post(
+    "/analyses/{analysis_id}/build",
+    response_class=EventSourceResponse,
+    dependencies=[Depends(limit_model_run)],
+)
 async def build(
     request: Request,
     analysis_id: str,
@@ -76,7 +81,10 @@ async def build(
             yield event
 
 
-@router.post("/analyses/{analysis_id}/suggestions/{suggestion_id}/verify")
+@router.post(
+    "/analyses/{analysis_id}/suggestions/{suggestion_id}/verify",
+    dependencies=[Depends(limit_model_run)],
+)
 async def verify_suggestion(
     request: Request, analysis_id: str, suggestion_id: str, edit: SuggestionEdit
 ) -> dict:

@@ -151,7 +151,7 @@ def live_nodes() -> dict[str, Any]:
     settings = get_settings()
     if settings.openai_api_key is None:
         raise SystemExit("OPENAI_API_KEY is not set (add it to the repository's .env)")
-    return make_optimize_nodes(OpenAIStructuredLLM(settings))
+    return make_optimize_nodes(OpenAIStructuredLLM(settings, cache=False))  # measure, never replay
 
 
 async def _verify_all(verify_batch: Any, tasks: list[dict]) -> list[dict]:

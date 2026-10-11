@@ -31,6 +31,7 @@ def waiting_at_review(snapshot: Any) -> bool:
 def usage_total(usage: list[dict]) -> dict:
     return {
         "calls": len(usage),
+        "cached_calls": sum(1 for u in usage if u.get("cached")),
         "input_tokens": sum(u.get("input_tokens", 0) for u in usage),
         "output_tokens": sum(u.get("output_tokens", 0) for u in usage),
         "cost_usd": round(sum(u.get("cost_usd", 0.0) for u in usage), 4),
