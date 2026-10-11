@@ -1,0 +1,144 @@
+.requirements {
+  display: grid;
+  align-content: start;
+  gap: 1rem;
+}
+
+.requirements > h2 {
+  font-size: 1.25rem;
+}
+
+.banners,
+.req-list {
+  display: grid;
+  gap: 0.75rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.req-row {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  overflow: hidden;
+}
+
+.req-row.is-selected {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 1px var(--accent);
+}
+
+.req-select {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem 0.75rem;
+  width: 100%;
+  padding: 0.85rem 1.1rem;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.req-select:hover {
+  background: var(--bg);
+}
+
+.req-select[aria-pressed='true'] {
+  background: var(--accent-soft);
+}
+
+.req-label {
+  font-weight: 600;
+}
+
+.req-details {
+  display: grid;
+  gap: 0.6rem;
+  padding: 0 1.1rem 1rem;
+}
+
+.req-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+}
+
+.chip-knockout {
+  background: var(--text);
+  border-color: var(--text);
+  color: #ffffff;
+}
+
+.req-note {
+  font-size: 0.875rem;
+  color: var(--muted);
+}
+
+.req-rationale {
+  font-size: 0.9375rem;
+}
+
+.req-flag {
+  padding: 0.6rem 0.8rem;
+  border: 1px solid #f0d59a;
+  border-radius: var(--radius-sm);
+  background: var(--warn-soft);
+  color: var(--text);
+  font-size: 0.9375rem;
+}
+
+.req-flag-title {
+  font-weight: 600;
+  color: var(--warn);
+}
+
+.req-quote summary {
+  color: var(--accent);
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.req-quote blockquote {
+  margin: 0.5rem 0 0;
+  padding: 0.5rem 0.8rem;
+  border-left: 3px solid var(--border-strong);
+  border-radius: 4px;
+  background: var(--bg);
+  color: var(--muted);
+  font-size: 0.9375rem;
+}
+
+.req-evidence-title {
+  font-size: 0.9375rem;
+  font-weight: 600;
+}
+
+.req-evidence ul {
+  display: grid;
+  gap: 0.4rem;
+  margin: 0.3rem 0 0;
+  padding: 0;
+  list-style: none;
+  font-size: 0.9375rem;
+}
+
+.line-id {
+  padding: 0.05rem 0.35rem;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  background: var(--bg);
+  font-family: ui-monospace, Consolas, monospace;
+  font-size: 0.8125rem;
+}
+
+.match-type {
+  color: var(--muted);
+  font-size: 0.8125rem;
+}

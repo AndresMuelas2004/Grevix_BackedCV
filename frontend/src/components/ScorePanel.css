@@ -1,0 +1,66 @@
+.score-panel {
+  display: grid;
+  align-content: start;
+  gap: 1.25rem;
+}
+
+.meters {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 1.25rem;
+}
+
+.meter {
+  display: grid;
+  gap: 0.5rem;
+}
+
+.meter-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.25rem 0.75rem;
+}
+
+.meter-label {
+  font-weight: 600;
+  color: var(--muted);
+}
+
+.meter-value {
+  font-size: 2.5rem;
+  font-weight: 700;
+  line-height: 1;
+  color: var(--text);
+  font-variant-numeric: tabular-nums;
+}
+
+.meter-value small {
+  font-size: 1rem;
+  font-weight: 500;
+  color: var(--muted);
+}
+
+.meter-track {
+  height: 0.625rem;
+  overflow: hidden;
+  border-radius: 999px;
+  background: #e6e9ee;
+}
+
+.meter-fill {
+  height: 100%;
+  border-radius: 999px;
+  background: var(--accent);
+  transition: width 0.4s ease;
+}
+
+.score-summary {
+  font-size: 0.9375rem;
+}
+
+.score-note {
+  font-size: 0.875rem;
+  color: var(--muted);
+}
