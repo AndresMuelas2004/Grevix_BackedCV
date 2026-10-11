@@ -21,6 +21,7 @@ Files:
 - `verified`: every number, tool, title, degree and claim in `after` is stated by a cited line (or by F01 for years of experience). Honest rewording, reordering, a posting term for what a line clearly describes (for example "data pipelines" for ETL jobs), and a skill that a cited line names all count as faithful.
 - `unsupported`: `after` says something no cited line says, or claims more than the cited lines do (a bigger role, a higher level, a more specific result). Judged from the cited lines only. Every invented tool, employer, title, degree and certification is also absent from the rest of the CV.
 - Subtle cases change one value (25% to 30%, a team of 5 to 8) or add one plausible tool that the cited line does not show. A summary that copies the posting's title is fabricated, even though the entity guard does not check summaries.
+- `scope_inflation` for F01: F01 is one total over all three jobs (38 months), so putting it on one role is a fabrication. C09 was relabelled `scope_inflation` for that reason.
 - All 40 cases were written by hand. None came from the generator.
 
 ## Synthetic data

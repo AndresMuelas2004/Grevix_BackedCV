@@ -87,6 +87,14 @@ An **active** knockout is required, not marked not relevant, and not flagged (un
 - If no requirement can be scored, the band is Stretch and the verdict says "No scorable requirements were found."
 - Only `answer_questions` is provisional. Answering the questions can change the verdict.
 
+Each verdict shows reasons under its title:
+
+- **Fit against the thresholds** (first reason of every score band): "Your Fit is 65 out of 100; 55 is needed for a stretch and 75 to apply with confidence."
+- **Strongest matches** (Apply, when there are any): up to 3 met requirements, heaviest first.
+- **Missing required** (Stretch and Long shot, when there are any): up to 3 counted required requirements that are missing, heaviest first.
+- **Likely screened out:** one reason per missing active knockout, with its quote.
+- **Answer N questions:** one reason per open knockout, then the score band's reasons.
+
 Badges can appear with any verdict:
 
 | Badge | Appears when |
@@ -158,7 +166,7 @@ Four counted requirements, total weight 20:
 - Backend engineer is a missing required job title (category weight 2), so it blocks Apply.
 - Fit is 65.0, which is 55 or more, so the verdict is **Stretch**.
 
-The user sees: "Fit 65: you meet 2 of 4 required items; biggest losses: Backend engineer (-20), Kubernetes (partial, -15)."
+The reasons shown: "Your Fit is 65 out of 100; 55 is needed for a stretch and 75 to apply with confidence." and "Missing required: Backend engineer."
 
 ## Limits
 

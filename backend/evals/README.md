@@ -41,6 +41,10 @@ Each run writes `evals/results/fabrication-<offline|live>-<YYYYMMDD-HHMM>.md`. T
 
 For the headline number, use the `heldout` section and report guards and verifier counts separately.
 
+### Latest results
+
+The newest live run is `evals/results/fabrication-live-20261011-0257.md`. On the `heldout` split, the guards caught 3 of the 10 invented rewrites and the verifier 7, with none missed. The verifier blocked 1 of the 10 faithful rewrites by mistake (C29), and the guards none. The verifier took 10 calls and cost USD 0.0067, with no failed calls. Earlier runs stay in the same folder to show the variation between runs: C13 was blocked by mistake in two earlier live runs, and C09 was missed in two.
+
 ## Tests
 
 ```
