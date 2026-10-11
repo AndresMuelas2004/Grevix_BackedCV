@@ -62,6 +62,8 @@ Both reports are for the same sample (a Platform Engineer posting with a buried 
 5. **Short texts** (C). Every explanation the app writes is one plain sentence of about 20 words, without internal IDs.
 6. **The first screen shows the result** (A: "you should improve the landing page ui"). Before anyone uploads anything, a short example of the report plays at the top of the page.
 
+Once the changes were live, I answered the LinkedIn comment with what had changed because of it.
+
 Beyond these comments I also had an AI test the app. That is not real-world feedback and I don't count it for this card, but it found real bugs, which I fixed: a blank line in the posting could move the score from 55 to 72, a missing "2+ years" counted as a small partial, the same question was asked twice, a 2023 degree was marked "aging", and some suggestions only stuffed posting words into a line.
 
 ## What I did not change, and why
