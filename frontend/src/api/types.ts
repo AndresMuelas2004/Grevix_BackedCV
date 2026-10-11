@@ -52,6 +52,9 @@ export interface CvEntry {
   end: string | null
   date_source: 'parser' | 'model' | 'none'
   line_ids: string[]
+  // Card 2 date timeline. Optional: analyses saved before it have neither.
+  month_unknown?: boolean // the start or the end shows only the year: no month is invented
+  months_counted?: number | null // jobs only: the months this entry adds; null when not counted
 }
 
 export interface ContactField {
@@ -74,6 +77,10 @@ export interface ParsedCv {
   entries: CvEntry[]
   contact: Contact
   total_years: number | null
+  // Card 2 date timeline. Optional: analyses saved before it have none of these.
+  total_months?: number | null // job periods, overlaps counted once
+  total_is_minimum?: boolean // a job date shows only the year, or a job has no dates
+  dates_note?: string | null // one plain sentence saying why the total is a minimum
 }
 
 // A problem found while reading the CV (backend ParseWarning).
@@ -172,6 +179,15 @@ export interface RequirementAssessment {
   keyword_present: boolean
   source: 'cv' | 'user_answer'
   question: string | null
+  years_check?: YearsCheck | null // minimum-years requirements, when the CV has dates
+}
+
+// A minimum-years requirement against the months the CV's own job dates add up to.
+export interface YearsCheck {
+  min_years: number
+  cv_months: number // the shortest total the dates allow (overlaps counted once)
+  reliable: boolean // false when a job date shows only the year or a job has no dates
+  share: number
 }
 
 export interface CandidateFacts {

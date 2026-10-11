@@ -82,6 +82,7 @@ Max concurrency is 4 (`run_config`).
 - Reasoning effort per call comes from `config/models.toml` (default `low`).
 - `extract_job` v2 splits a list of skills joined by "and" or commas into one requirement per item, each with its own terms and the same quote. "X or Y" stays one requirement.
 - Answers are cached in `llm_cache.sqlite` (`llm/cache.py`). An identical call (same model, effort, prompt version, schema and input) gets the stored answer back at no cost, and its usage record is marked `cached`. Only successful answers are stored, and a cache error counts as a miss. The setting is `BACKEDCV_LLM_CACHE` (default `true`); the evals turn it off.
+- **Pinned sample answers.** The built-in samples replay pinned answers from a real run, so the demo is reproducible: `backend/samples/pinned_answers.json` holds the model's own answers for both samples (`GET /api/samples` sent as the PDF upload, `GET /api/samples/hidden-risk` as pasted text), for the analysis and the optimize step, recorded by `scripts/pin_samples.py` against `gpt-6-luna` (`--check` replays them on an empty cache). They are read when the app builds its model, held in memory, never expire and are never overwritten. An entry whose prompt version or model no longer matches is ignored, and any other change to the input misses its key, so the call goes live. Any other CV is cached for 24 hours.
 
 ## 4. No-invention pipeline
 

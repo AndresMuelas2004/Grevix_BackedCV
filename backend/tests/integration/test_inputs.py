@@ -78,14 +78,15 @@ def test_answering_a_knockout_changes_the_verdict_without_a_model_call(client, l
 def test_excluding_a_requirement_takes_it_out_of_fit_and_keeps_earlier_answers(client):
     report = _analysis(client)
     analysis_id = report["analysis_id"]
-    python = _contribution(report, "Python")["requirement_id"]
+    # A bullet of its own: excluding Python would leave its bullet's weight to SQL, also met.
+    frameworks = _contribution(report, "Agent frameworks")["requirement_id"]
     answered = _patch(client, analysis_id, {"facts": {"needs_sponsorship": True}}).json()
 
-    response = _patch(client, analysis_id, {"excluded_ids": [python]})
+    response = _patch(client, analysis_id, {"excluded_ids": [frameworks]})
 
     assert response.status_code == 200
     updated = response.json()
-    assert _contribution(updated, "Python")["excluded_reason"] == "not_relevant"
+    assert _contribution(updated, "Agent frameworks")["excluded_reason"] == "not_relevant"
     assert updated["score"]["fit"] != answered["score"]["fit"]
     assert updated["facts"]["needs_sponsorship"] is True
 

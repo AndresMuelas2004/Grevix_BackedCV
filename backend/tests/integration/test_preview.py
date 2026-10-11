@@ -69,10 +69,10 @@ def test_accepting_nothing_previews_the_current_coverage(client):
     response = _preview(client, analysis_id)
 
     assert response.status_code == 200
-    # Python and SQL are in the CV: 12 of 21 weight points.
+    # Python and SQL (one bullet, 6 weight points between them) are in the CV: 6 of 15.
     assert response.json() == {
-        "coverage": 57.1,
-        "coverage_now": 57.1,
+        "coverage": 40.0,
+        "coverage_now": 40.0,
         "gained_requirement_ids": [],
     }
 
@@ -83,10 +83,10 @@ def test_a_verified_suggestion_adds_its_requirement_keyword(client, accepted):
 
     response = _preview(client, analysis_id, accepted)
 
-    # "agent frameworks" (R03) appears once the suggestion is accepted: 18 of 21.
+    # "agent frameworks" (R03) appears once the suggestion is accepted: 12 of 15.
     assert response.json() == {
-        "coverage": 85.7,
-        "coverage_now": 57.1,
+        "coverage": 80.0,
+        "coverage_now": 40.0,
         "gained_requirement_ids": ["R03"],
     }
 
@@ -97,8 +97,8 @@ def test_an_unverified_suggestion_counts_for_nothing(client):
     response = _preview(client, analysis_id, ["S02"])
 
     assert response.json() == {
-        "coverage": 57.1,
-        "coverage_now": 57.1,
+        "coverage": 40.0,
+        "coverage_now": 40.0,
         "gained_requirement_ids": [],
     }
 

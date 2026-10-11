@@ -24,6 +24,7 @@ import {
   MATCH_LABELS,
   STATUS_LABELS,
 } from '../lib/labels'
+import { plainText as cleanText, dropRuleIds } from '../lib/plainText'
 import type { Saving } from '../lib/saving'
 import CitationTag, { CitedText } from './CitationTag'
 import './RequirementList.css'
@@ -120,7 +121,7 @@ export default function RequirementList({
         <ul className="banners" aria-label="Posting warnings">
           {banners.map((banner) => (
             <li key={`${banner.rule_id}-${banner.explanation}`} className="notice notice-warn">
-              <strong>Posting warning.</strong> {banner.explanation}
+              <strong>Posting warning.</strong> {cleanText(banner.explanation)}
             </li>
           ))}
         </ul>
@@ -257,9 +258,9 @@ function RequirementRow({
         {flags.map((flag) => (
           <div key={`${flag.rule_id}-${flag.explanation}`} className="req-flag">
             <p className="req-flag-title">
-              {FLAG_LABELS[flag.rule_id]} ({flag.rule_id})
+              {FLAG_LABELS[flag.rule_id]}
             </p>
-            <p>{flag.explanation}</p>
+            <p>{cleanText(flag.explanation)}</p>
           </div>
         ))}
 
@@ -268,7 +269,7 @@ function RequirementRow({
             <p className="req-flag-title">Why it may still be screened out</p>
             <ul className="req-flag-list">
               {screening.reasons.map((reason, index) => (
-                <li key={`${index}-${reason}`}>{reason}</li>
+                <li key={`${index}-${reason}`}>{cleanText(reason)}</li>
               ))}
             </ul>
           </div>
@@ -278,7 +279,7 @@ function RequirementRow({
 
         {assessment?.rationale && !repeatsNote(assessment.rationale, screening, recency) && (
           <p className="req-rationale">
-            <CitedText text={assessment.rationale} />
+            <CitedText text={dropRuleIds(assessment.rationale)} />
           </p>
         )}
 

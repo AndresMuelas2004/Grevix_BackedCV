@@ -1,4 +1,5 @@
-"""Fit and Keyword coverage from published weights. Every point traces to one requirement."""
+"""Fit and Keyword coverage from published weights. Every point traces to one requirement, and
+the requirements of one posting bullet share its weight (see `unit_weights`)."""
 
 from collections.abc import Iterable
 from dataclasses import dataclass, field
@@ -69,6 +70,21 @@ def exclusion_reason(
     return None
 
 
+def unit_weights(counted: list[Requirement], config: ScoringConfig) -> dict[str, float]:
+    """The weight of each counted requirement. A posting unit (one bullet or sentence) weighs as
+    its heaviest counted requirement, and the counted requirements that come from it share that
+    weight equally, so splitting one bullet into several requirements cannot move the score.
+    A requirement with no unit (older analyses) is a unit of its own."""
+    units: dict[str, list[Requirement]] = {}
+    for req in counted:
+        units.setdefault(req.source_unit or f"own:{req.id}", []).append(req)
+    weights: dict[str, float] = {}
+    for members in units.values():
+        share = max(config.weight(req) for req in members) / len(members)
+        weights.update({req.id: share for req in members})
+    return weights
+
+
 def compute_score(
     requirements: list[Requirement],
     assessments: dict[str, RequirementAssessment],
@@ -81,14 +97,19 @@ def compute_score(
     config = config or ScoringConfig.default()
     flagged = flagged or {}
     excluded_ids, included_flagged_ids = set(excluded_ids), set(included_flagged_ids)
+    reasons = {
+        req.id: exclusion_reason(req, config, excluded_ids, flagged, included_flagged_ids)
+        for req in requirements
+    }
+    weights = unit_weights([r for r in requirements if reasons[r.id] is None], config)
 
     rows: list[tuple[Requirement, RequirementAssessment | None, float, float, str | None]] = []
     fit_den = cov_num = cov_den = 0.0
     for req in requirements:
         assessment = assessments.get(req.id)
         status = assessment.status if assessment else "unknown"
-        reason = exclusion_reason(req, config, excluded_ids, flagged, included_flagged_ids)
-        w = config.weight(req)
+        reason = reasons[req.id]
+        w = weights.get(req.id, config.weight(req))  # an excluded row shows its own weight
         credit = config.credit[status]
         rows.append((req, assessment, w, credit, reason))
         if reason is None:

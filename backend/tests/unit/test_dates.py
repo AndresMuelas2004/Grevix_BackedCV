@@ -13,12 +13,12 @@ TODAY = date(2026, 10, 11)
         ("Data Engineer, Acme | Jan 2020 - Present", "2020-01", "present"),
         ("March 2018 – June 2019", "2018-03", "2019-06"),
         ("03/2019 - 11/2021", "2019-03", "2021-11"),
-        ("2019 - 2021", "2019-01", "2021-01"),
+        ("2019 - 2021", "2019", "2021"),  # only the year: no month is invented
         ("ene. 2022 - actualidad", "2022-01", "present"),
         ("septiembre de 2017 – marzo de 2020", "2017-09", "2020-03"),
         ("2020-05 to 2022-01", "2020-05", "2022-01"),
-        ("Since 2021", "2021-01", "present"),
-        ("BSc Computer Science, 2016", "2016-01", None),
+        ("Since 2021", "2021", "present"),
+        ("BSc Computer Science, 2016", "2016", None),
     ],
 )
 def test_parse_date_range(text, start, end):

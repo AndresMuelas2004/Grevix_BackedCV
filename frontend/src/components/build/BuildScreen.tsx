@@ -16,9 +16,9 @@ export default function BuildScreen({ analysis, onStartOver }: BuildScreenProps)
   if (!report) {
     return (
       <section className="card" aria-labelledby="missing-title">
-        <h2 id="missing-title" tabIndex={-1} data-screen-heading>
+        <h1 id="missing-title" tabIndex={-1} data-screen-heading>
           The build report is missing.
-        </h2>
+        </h1>
         <div className="downloads">
           <button type="button" className="btn btn-secondary" onClick={onStartOver}>
             Start over
@@ -38,9 +38,9 @@ export default function BuildScreen({ analysis, onStartOver }: BuildScreenProps)
     <div className="build">
       <section className="card build-summary" aria-labelledby="build-title">
         <p className="eyebrow">Built</p>
-        <h2 id="build-title" tabIndex={-1} data-screen-heading>
+        <h1 id="build-title" tabIndex={-1} data-screen-heading>
           Your new CV is ready
-        </h2>
+        </h1>
         <p className="order-note">{orderNote(report.built_by)}</p>
 
         <section className="build-fact" aria-labelledby="coverage-title">

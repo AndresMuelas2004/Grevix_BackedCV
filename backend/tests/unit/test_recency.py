@@ -340,7 +340,7 @@ def test_general_rules_reach_only_required_hard_skills_and_experience_years():
     assert checks["R03"].rule is None
     assert checks["R04"].rule is None
     assert checks["R04"].effect == "warning"  # stale on its own; the general rule did not reach it
-    assert checks["R06"].rule is None
+    assert "R06" not in checks  # a degree does not expire: no recency check at all
 
 
 def test_only_met_or_partial_requirements_with_cv_line_evidence_get_a_check():

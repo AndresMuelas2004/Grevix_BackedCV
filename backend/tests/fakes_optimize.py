@@ -10,15 +10,16 @@ from backedcv.llm.drafts_optimize import (
 from backedcv.llm.drafts_screening import BarrierDraft
 from tests.fakes import FakeLLM
 
-# Line IDs of tests/fakes.CV_TEXT: L007 is "Built a support bot with LangGraph". R03 ("agent
-# frameworks") is met only by meaning, so it is the requirement the suggestions aim at.
+# Line IDs of tests/fakes.CV_TEXT: L007 is "Built a support bot with LangGraph" and L004 is "Data
+# Engineer, Acme Corp". R03 ("agent frameworks") is met only by meaning, so it is the requirement
+# the suggestions aim at. The rewrite adds where the bot was built, not only the posting's words.
 FAITHFUL_REWORD = SuggestionDraft(
     kind="align_wording",
     target="L007",
-    after="Built a support bot with agent frameworks (LangGraph)",
-    cited_refs=["L007"],
+    after="Built a support bot at Acme Corp with agent frameworks (LangGraph)",
+    cited_refs=["L007", "L004"],
     requirement_ids=["R03"],
-    rationale="L007 shows LangGraph, which is an agent framework.",
+    rationale="The bot was built with LangGraph, an agent framework, in the Acme Corp role.",
 )
 INVENTED_NUMBER = SuggestionDraft(
     kind="align_wording",

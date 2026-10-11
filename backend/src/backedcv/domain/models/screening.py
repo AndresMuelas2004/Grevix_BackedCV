@@ -5,6 +5,8 @@ evidence is old and the posting asks for recent experience, or a buried sentence
 candidate out. These models carry those findings, always with the posting's own words.
 """
 
+import re
+from collections.abc import Mapping
 from typing import Literal
 
 from pydantic import BaseModel, Field
@@ -111,3 +113,67 @@ class Refusal(BaseModel):
     reason: str
     refs: list[str] = Field(default_factory=list)  # the old or conflicting evidence lines
     suggestion_id: str | None = None  # set when a generated suggestion was refused
+
+
+# Prose shown to the user ---------------------------------------------------------------------
+# Sentences never carry raw IDs (requirements R.., barriers H.., CV lines L.., facts F..): the IDs
+# live in their own fields (requirement_ids, refs). Each sentence is short and plain.
+
+MAX_WORDS = 20  # one sentence of about this many words; a few more are kept whole
+_SLACK_WORDS = 5
+_CITATION = r"(?:L\d{3,4}|F\d{2})"  # CV lines and computed facts: the frontend shows them as tags
+_OTHER_ID = r"(?:R\d{2,3}|HC\d{1,2}|H\d{2})"
+_ANY_ID = rf"(?:{_OTHER_ID}|{_CITATION})"
+_LEAD = r"(?:(?i:see|cf\.?|ids?|requirements?|lines?|barriers?|risks?|facts?)\s+)?"
+
+
+def _id_group(ids: str) -> re.Pattern[str]:
+    """A bracketed list of IDs, such as "(R17)" or "[R02, R05]", with the space before it."""
+    return re.compile(rf"\s*[(\[]\s*{_LEAD}{ids}(?:\s*(?:,|/|&|(?i:and|or))\s*{ids})*\s*[)\]]")
+
+
+_GROUPS = {True: _id_group(_OTHER_ID), False: _id_group(_ANY_ID)}
+_BARE = {True: re.compile(rf"\b{_OTHER_ID}\b"), False: re.compile(rf"\b{_ANY_ID}\b")}
+_EMPTY_BRACKETS = re.compile(r"\(\s*\)|\[\s*\]")
+_SPACE_RUN = re.compile(r"[ \t]{2,}")
+_SPACE_BEFORE_PUNCT = re.compile(r"\s+([.,;:!?])")
+_SENTENCE_BREAK = re.compile(r"(?<=[.!?])\s+(?=[A-Z\"'(])")
+_ENDINGS = ".!?…"
+_CLOSERS = "\"')]”’"
+
+
+def clean_prose(
+    text: str | None, labels: Mapping[str, str] | None = None, *, keep_citations: bool = False
+) -> str:
+    """The text without raw IDs. A bracketed list of IDs goes away; a bare requirement ID becomes
+    its label when `labels` knows it, and any other bare ID goes away. With `keep_citations`, CV
+    line and fact IDs (L012, F01) stay: the frontend turns them into citation tags."""
+    value = _GROUPS[keep_citations].sub("", text or "")
+    value = _BARE[keep_citations].sub(lambda m: (labels or {}).get(m.group(0), ""), value)
+    value = _EMPTY_BRACKETS.sub("", value)
+    value = _SPACE_RUN.sub(" ", value)
+    return _SPACE_BEFORE_PUNCT.sub(r"\1", value).strip()
+
+
+def short_sentence(text: str | None, max_words: int = MAX_WORDS) -> str:
+    """The first sentence of a clean text, cut to `max_words` words when it runs much longer
+    (an ellipsis marks the cut)."""
+    value = clean_prose(text)
+    first = _SENTENCE_BREAK.split(value, maxsplit=1)[0].strip()
+    words = first.split()
+    if len(words) <= max_words + _SLACK_WORDS:
+        return first
+    return " ".join(words[:max_words]).rstrip(",;:-") + "…"
+
+
+def join_sentences(*parts: str | None) -> str:
+    """Sentences joined by one space, each ending with a full stop (added when it has none)."""
+    sentences: list[str] = []
+    for part in parts:
+        sentence = (part or "").strip()
+        if not sentence:
+            continue
+        if sentence.rstrip(_CLOSERS)[-1:] not in _ENDINGS:
+            sentence += "."
+        sentences.append(sentence)
+    return " ".join(sentences)

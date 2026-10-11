@@ -131,7 +131,7 @@ def test_unlocated_quotes_are_dropped_and_located_spans_kept():
     [item] = barriers_from_draft(draft, POSTING, JOB)
     assert (item.id, item.quote, item.source) == ("H01", VISA.rstrip("."), "model")
     assert item.place == "United States"
-    assert "screener" in item.explanation  # empty text gets the plain default
+    assert "dropped" in item.explanation  # empty text gets the plain default
     assert item.action
 
 

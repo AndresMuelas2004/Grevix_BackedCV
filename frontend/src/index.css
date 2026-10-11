@@ -1,24 +1,45 @@
 /* Global styles and shared building blocks. Component-specific rules live next to each component. */
 
 :root {
-  --bg: #f4f5f7;
+  /* Design tokens (Card 2 design). */
+  --ink: #101828;
+  --ink-2: #344054;
+  --muted: #475467;
+  --line: #e4e7ec;
+  --line-strong: #d0d5dd;
+  --ground: #f6f7f9;
   --surface: #ffffff;
-  --border: #dfe3e8;
-  --border-strong: #c3c9d1;
-  --text: #1d2530;
-  --muted: #566170;
-  --accent: #0f766e;
-  --accent-hover: #0b5f58;
-  --accent-soft: #e6f2f1;
-  --danger: #b42318;
-  --danger-soft: #fdecea;
-  --warn: #7a4a00;
-  --warn-soft: #fff4dc;
-  --radius: 10px;
-  --radius-sm: 6px;
-  --shadow: 0 1px 2px rgba(16, 24, 40, 0.06);
+  --surface-2: #f9fafb;
+  --accent: #1d4ed8;
+  --accent-hover: #1e3a8a;
+  --red: #b42318;
+  --red-bg: #fef3f2;
+  --red-line: #fda29b;
+  --orange: #b54708;
+  --orange-bg: #fffaeb;
+  --orange-line: #fec84b;
+  --blue: #175cd3;
+  --blue-bg: #eff8ff;
+  --blue-line: #b2ddff;
+  --green: #067647;
+  --green-bg: #ecfdf3;
+  --green-line: #abefc6;
 
-  font-family: system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  /* Older names, kept so every screen picks up the new look. */
+  --bg: var(--ground);
+  --border: var(--line);
+  --border-strong: var(--line-strong);
+  --text: var(--ink);
+  --accent-soft: var(--blue-bg);
+  --danger: var(--red);
+  --danger-soft: var(--red-bg);
+  --warn: var(--orange);
+  --warn-soft: var(--orange-bg);
+  --radius: 14px;
+  --radius-sm: 10px;
+  --shadow: none;
+
+  font-family: 'Public Sans', system-ui, -apple-system, 'Segoe UI', Roboto, Arial, sans-serif;
   font-size: 16px;
   line-height: 1.5;
   color: var(--text);
@@ -48,6 +69,11 @@ h3 {
 
 p {
   margin: 0;
+}
+
+/* Each screen's title is its one h1. Zero specificity, so a screen's own size wins. */
+:where(h1[data-screen-heading]) {
+  font-size: 1.5rem;
 }
 
 :focus-visible {
@@ -92,7 +118,7 @@ p {
   align-items: center;
   justify-content: center;
   gap: 0.5rem;
-  min-height: 2.5rem;
+  min-height: 44px;
   padding: 0.5rem 1.1rem;
   border-radius: var(--radius-sm);
   border: 1px solid transparent;
@@ -144,9 +170,9 @@ p {
 }
 
 .chip-met {
-  background: var(--accent-soft);
-  color: #0b5f58;
-  border-color: #b7dbd7;
+  background: var(--green-bg);
+  color: var(--green);
+  border-color: var(--green-line);
 }
 
 .chip-partial {
@@ -196,9 +222,9 @@ p {
 }
 
 .notice-info {
-  background: var(--accent-soft);
-  border-color: #b7dbd7;
-  color: #0b5f58;
+  background: var(--blue-bg);
+  border-color: var(--blue-line);
+  color: var(--blue);
 }
 
 /* ---- Layout ---- */
@@ -233,10 +259,14 @@ p {
 }
 
 .brand-name {
-  font-size: 1.375rem;
-  font-weight: 700;
-  color: var(--accent);
+  font-size: 1.25rem;
+  font-weight: 800;
+  color: var(--ink);
   letter-spacing: -0.01em;
+}
+
+.brand-accent {
+  color: var(--accent);
 }
 
 .brand-tagline {
@@ -268,6 +298,26 @@ p {
   display: flex;
   justify-content: flex-end;
   margin-bottom: 1rem;
+}
+
+.toolbar-context {
+  max-width: 1040px;
+  margin: 0 auto 1.25rem;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem 1rem;
+}
+
+.toolbar-text {
+  flex: 1 1 320px;
+  min-width: 0;
+  color: var(--muted);
+  font-size: 0.875rem;
+}
+
+.toolbar .btn {
+  min-height: 44px;
 }
 
 /* ---- Report layout ---- */
@@ -316,7 +366,7 @@ p {
   border-left: 4px solid var(--danger);
 }
 
-.error-card h2 {
+.error-card h1 {
   font-size: 1.25rem;
   color: var(--danger);
 }

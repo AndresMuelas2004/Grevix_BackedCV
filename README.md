@@ -18,7 +18,7 @@ Most applicant tracking systems (ATS) do not auto-reject on keywords. Knockout q
 2. **Splits the posting into requirements.** Each one has a type (skill, job title, education, years, language) and is required or preferred. Knockouts are the questions an employer usually screens on, such as work authorization or location. Red flags catch absurd requirements, such as 3 or more years for an entry-level role, or years asked for a technology younger than that.
 3. **Finds the evidence.** Each requirement is linked to the CV lines that prove it, by exact words or by meaning.
 4. **Flags hidden screening risks.** It reads the whole posting for buried disqualifiers, such as "we are unable to sponsor work visas" in a closing note or Kubernetes "within the last 5 years", quotes them, and checks them against your CV and your answers. Each CV line inherits the dates of its job, so old evidence is marked; a requirement whose keyword is in your CV but whose evidence is too old is marked "Looks met, but...".
-5. **Scores and gives a verdict.** Two scores out of 100: Fit (do you meet the requirements?) and Keyword coverage (would an exact-term search find you?). The verdict is Likely screened out, Answer questions first, Apply, Stretch or Long shot. You can answer the open knockout and hidden-risk questions, and the scores and verdict update without a new model call.
+5. **Gives a verdict and ranks what to fix.** One headline number, the skills match (Fit: do you meet the requirements?), and in the details an exact-word match (Keyword coverage: would an exact-term search find you?). The verdict is Likely screened out, Answer questions first, Apply, Stretch or Long shot; only a legal ban (work permit, clearance, license) or a "No" to a firm rule screens you out on its own. The open yes/no questions sit right under the verdict, and answering them updates it without a new model call. Then a numbered list ranks what to fix in three tiers (could rule you out, serious gap, worth improving), each item with the posting's sentence next to your CV line and one thing to do, followed by how your CV's dates were read.
 6. **Suggests CV edits and checks each one.** "Optimize my CV" suggests rewording, skills and a summary, aimed at requirements you meet in different words. Each suggestion is checked by code, then by a separate model call. Anything the CV does not back is marked unsupported and cannot be accepted. A three-pass gate then refuses edits that are backed but not viable (evidence outside the posting's window, or a hidden barrier that no rewording can fix), with the reason.
 7. **You review.** Accept or reject each suggestion. You can edit one, and the edited version is checked again.
 8. **Builds the new CV.** Only accepted, verified changes are applied, in code. An agent may reorder sections and items, but it cannot write text. You get a DOCX and a PDF, and the report shows keyword coverage before and after.
@@ -27,15 +27,15 @@ Most applicant tracking systems (ATS) do not auto-reject on keywords. Knockout q
 
 ![Input screen](docs/screenshots/01-input.png)
 
-Input: try the sample, or upload your CV and paste the posting.
+The first screen: an example report plays on its own before you upload anything. Then try the samples, or paste a posting and add your CV.
 
 ![Report](docs/screenshots/02-report.png)
 
-Report: the verdict with its reasons, both scores, the questions an employer may ask, and your CV as screening software reads it.
+Report (the default sample): the verdict in one sentence and one number, the yes/no questions that can change it, then what to fix, most important first, in three tiers. What already works and how the CV's dates were read come next; everything else is folded into Details.
 
 ![Report after answering](docs/screenshots/03-report-answered.png)
 
-After answering the questions, the verdict changes to Stretch.
+Answering No to a firm rule (here the Austin office and the work permit) gives "Likely screened out", and the page stops offering to tailor the CV.
 
 ![Review](docs/screenshots/04-review.png)
 
@@ -55,7 +55,7 @@ The report on a phone-sized screen.
 
 ![Hidden screening risks](docs/screenshots/08-hidden-risks.png)
 
-Challenge Card 1, "Try a posting with hidden barriers": each risk quotes the posting, says why it can screen you out and what to do. The work permit sentence was buried in the posting's closing notes; the CV is located in Spain.
+Challenge Card 1, "Try a posting with hidden barriers" (shown before the Card 2 redesign, which moved these risks into the "What to fix" list): each risk quotes the posting, says why it can screen you out and what to do. The work permit sentence was buried in the posting's closing notes; the CV is located in Spain.
 
 ![Looks met, but...](docs/screenshots/09-looks-met.png)
 
@@ -72,7 +72,7 @@ In the review, the Kubernetes edit is refused as not viable instead of rewording
 - **No invented experience.** Each rewrite passes code checks, then an independent verifier that does not see the rewriter's reasoning, then your review. An unsupported rewrite cannot be accepted. The misses are reported below.
 - **A published, explainable score.** The weights and rules are in [docs/scoring.md](docs/scoring.md). Every point traces back to one requirement and its status.
 - **Matching by meaning.** A model matches requirements to CV lines by meaning, not only by exact words. If the model skips a requirement or fails, the code falls back to exact matches.
-- **Cheap and honest.** A cheaper model handles extraction and matching; a stronger one handles only rewrites and their checks. Identical model calls reuse a stored answer. In the live runs, the verifier cost under one cent per run. The score is marked indicative, and this README reports the misses.
+- **Cheap and honest.** A cheaper model handles extraction and matching; a stronger one handles only rewrites and their checks. Identical model calls reuse a stored answer, and the text is normalized first, so extra spaces or blank lines never change the result; the built-in samples replay answers pinned from a real run, so they always give the same report. In the live runs, the verifier cost under one cent per run. The score is marked indicative, and this README reports the misses.
 
 **Not a new idea.** BackedCV is inspired by Jobscan and similar tools, such as Rezi and Teal. Match scores and CV suggestions already exist in those tools. I claim only the six points above.
 
@@ -181,6 +181,7 @@ BackedCV adapts to the hackathon's Challenge Cards as they arrive. Each card is 
 
 - **Before the cards (Ignition and the night):** the full flow from CV and posting to a verified, rebuilt CV; then reliability, privacy and matching by meaning.
 - **Card 1, hidden screening barriers and recency:** a model call finds buried disqualifiers with exact quotes, code rates them against the CV and the candidate's answers (two medium risks combine into a high one), evidence outside a stated window stops counting, and a three-pass corroboration gate (backed, recent enough, not blocked) refuses edits that are backed but not viable. Everything that existed keeps working: all earlier tests and end-to-end pairs still pass.
+- **Card 2, real-world feedback:** I put a temporary live demo online and shared it on LinkedIn, X, Reddit and the participants' WhatsApp group. Three participants answered: two found the report overwhelming and too long; one asked for the posting's sentence next to the CV line, deal-breakers kept apart from preferences, and a preview of how the dates were read. The report now goes from simple to complex (the verdict in one sentence, the questions under it, what to fix first in three tiers, what already works, the dates as read, the details folded away), and the first screen plays an example of the result. An AI-run test, which I don't count as feedback, also led to fixes: the same CV and posting now give the same report whatever the whitespace. The proof, with before and after: [feedback/](feedback/README.md).
 
 ## Privacy and limits
 

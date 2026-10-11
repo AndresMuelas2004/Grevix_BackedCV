@@ -1,16 +1,126 @@
 """Knockout requirements: the screening question they likely become, and how facts answer it."""
 
+import re
+
 from backedcv.domain.models import (
     CandidateFacts,
+    CVLine,
     JobPosting,
     Requirement,
     RequirementAssessment,
 )
+from backedcv.domain.models.assessment import YearsCheck
 from backedcv.domain.text import fold_lower
 
 
 def is_knockout(requirement: Requirement) -> bool:
     return requirement.importance == "required" and requirement.knockout_type is not None
+
+
+# Language levels: CEFR A1-C2, with "native" above C2. Words map to the usual CEFR level.
+_CEFR = ("A1", "A2", "B1", "B2", "C1", "C2")
+_NATIVE_RANK = len(_CEFR) + 1
+_LEVEL_WORDS: dict[str, int] = {
+    "native": 7, "mother tongue": 7, "bilingual": 7, "nativo": 7, "nativa": 7,
+    "lengua materna": 7, "bilingüe": 7, "bilingue": 7,
+    "fluent": 5, "fluency": 5, "fluently": 5, "proficient": 5, "proficiency": 5, "advanced": 5,
+    "full professional": 5, "fluido": 5, "fluida": 5, "avanzado": 5, "avanzada": 5,
+    "upper intermediate": 4, "upper-intermediate": 4, "intermediate": 3, "intermedio": 3,
+    "elementary": 2, "basic": 2, "básico": 2, "basico": 2, "beginner": 1,
+}  # fmt: skip
+_LANGUAGES: dict[str, str] = {
+    "english": "English", "inglés": "English", "ingles": "English",
+    "spanish": "Spanish", "español": "Spanish", "espanol": "Spanish", "castellano": "Spanish",
+    "french": "French", "francés": "French", "frances": "French",
+    "german": "German", "alemán": "German", "aleman": "German",
+    "italian": "Italian", "italiano": "Italian",
+    "portuguese": "Portuguese", "portugués": "Portuguese", "portugues": "Portuguese",
+    "dutch": "Dutch", "catalan": "Catalan", "catalán": "Catalan", "basque": "Basque",
+    "euskera": "Basque", "chinese": "Chinese", "mandarin": "Chinese", "japanese": "Japanese",
+    "korean": "Korean", "arabic": "Arabic", "russian": "Russian", "polish": "Polish",
+}  # fmt: skip
+_LEVEL_RE = re.compile(
+    r"\b(?:(?P<cefr>[abc][12])|(?P<word>"
+    + "|".join(re.escape(w) for w in sorted(_LEVEL_WORDS, key=len, reverse=True))
+    + r"))\b"
+)
+_LANGUAGE_RE = re.compile(
+    r"\b(?:" + "|".join(re.escape(n) for n in sorted(_LANGUAGES, key=len, reverse=True)) + r")\b"
+)
+_SEGMENT_BREAK = re.compile(r"[,;|·•/]")
+
+
+def _levels(text: str) -> list[int]:
+    """Every level a folded text states: CEFR ranks 1-6, native 7."""
+    found = []
+    for m in _LEVEL_RE.finditer(text):
+        cefr = m.group("cefr")
+        found.append(_CEFR.index(cefr.upper()) + 1 if cefr else _LEVEL_WORDS[m.group("word")])
+    return found
+
+
+def _level_name(rank: int) -> str:
+    return "native level" if rank >= _NATIVE_RANK else _CEFR[rank - 1]
+
+
+def language_check(
+    requirement: Requirement, lines: list[CVLine]
+) -> tuple[str, list[str], str] | None:
+    """A language requirement against the level the CV states for that language: ("met" or
+    "missing", the CV lines that state it, one plain sentence). None when the requirement names
+    no single language or no level, or the CV states no level for it: the model decides then."""
+    asked = fold_lower(" ".join([requirement.label, requirement.quote, *requirement.terms]))
+    names = {_LANGUAGES[m.group(0)] for m in _LANGUAGE_RE.finditer(asked)}
+    needed = _levels(asked)
+    if len(names) != 1 or not needed:
+        return None
+    language, wanted = names.pop(), min(needed)  # "C1 or above": the lowest level accepted
+    best, refs = 0, []
+    for line in lines:
+        for segment in _SEGMENT_BREAK.split(fold_lower(line.text)):
+            named = {_LANGUAGES[m.group(0)] for m in _LANGUAGE_RE.finditer(segment)}
+            stated = _levels(segment) if named == {language} else []
+            if stated and max(stated) >= best:
+                if max(stated) > best:
+                    refs = []
+                best = max(stated)
+                refs.append(line.id)
+    if not refs:
+        return None
+    refs = list(dict.fromkeys(refs))
+    has, asks = _level_name(best), _level_name(wanted)
+    if best >= wanted:
+        return "met", refs, f"Your CV states {language} at {has}; the job asks for {asks}."
+    return "missing", refs, f"The job asks for {language} at {asks}; your CV states {has}."
+
+
+def asks_min_years(requirement: Requirement) -> bool:
+    """A minimum number of years of experience ("2+ years"), checked against the CV's dates."""
+    return bool(requirement.min_years) and "experience_years" in (
+        requirement.category,
+        requirement.knockout_type,
+    )
+
+
+def duration_text(months: int) -> str:
+    """Months in plain words: "11 months", "1 year", "2 years and 3 months"."""
+    years, rest = divmod(max(months, 0), 12)
+    month_text = f"{rest} month" + ("" if rest == 1 else "s")
+    if years == 0:
+        return month_text
+    year_text = f"{years} year" + ("" if years == 1 else "s")
+    return year_text if rest == 0 else f"{year_text} and {month_text}"
+
+
+def years_sentence(check: YearsCheck) -> str:
+    """One short sentence with the exact numbers of a minimum-years check that falls short."""
+    asked = f"The job asks for {check.min_years:g}+ years"
+    if check.reliable:
+        return f"{asked}; your CV's dates add up to about {duration_text(check.cv_months)}."
+    return (
+        f"{asked}; your CV's dates show at least {duration_text(check.cv_months)}, "
+        "but some are incomplete."
+    )
 
 
 def likely_question(requirement: Requirement, job: JobPosting) -> str:

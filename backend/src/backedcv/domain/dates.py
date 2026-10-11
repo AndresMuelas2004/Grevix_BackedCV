@@ -4,7 +4,7 @@ import re
 from dataclasses import dataclass
 from datetime import date
 
-from backedcv.domain.text import fold_lower
+from backedcv.domain.text import fold
 
 MONTHS: dict[str, int] = {
     # English
@@ -27,6 +27,17 @@ _PRESENT = (
 )
 _SINCE = r"since|desde"
 
+# Text copied from a PDF often glues a date to the word before it ("Bilbao, SpainApr 2026"). Only
+# a capitalised month name followed by a year, or a year itself, is split from a lowercase letter
+# before it, so names such as "LangGraph" or "GitHub" stay whole.
+_CAPITALISED = "|".join(
+    sorted({form for name in MONTHS for form in (name.capitalize(), name.upper())}, key=len)[::-1]
+)
+_GLUED_MONTH = re.compile(rf"(?<=[a-zà-ÿ])(?=(?:{_CAPITALISED})\.?,?\s*(?:de\s+|of\s+)?{_YEAR}\b)")
+# A glued year splits only where a date range goes on ("Spain2026 - Present") or the line ends,
+# so names such as "ES2015+" stay whole.
+_GLUED_YEAR = re.compile(rf"(?<=[^\W\d_])(?={_YEAR}\b(?:\s*-|\s+(?:to|a|hasta)\b|\s*$))")
+
 _TOKEN = re.compile(
     rf"(?P<named>\b(?P<mon>{_MONTH_ALT})\.?,?\s+(?:de\s+|of\s+)?(?P<y1>{_YEAR})\b)"
     rf"|(?P<iso>\b(?P<y2>{_YEAR})-(?P<m2>0[1-9]|1[0-2])\b)"
@@ -46,7 +57,10 @@ class YearMonth:
         return self.year * 12 + (self.month or default_month) - 1
 
     def iso(self) -> str:
-        return f"{self.year:04d}-{self.month or 1:02d}"
+        """YYYY-MM, or YYYY when only the year is known: a month is never invented."""
+        if self.month is None:
+            return f"{self.year:04d}"
+        return f"{self.year:04d}-{self.month:02d}"
 
 
 @dataclass(frozen=True)
@@ -59,6 +73,21 @@ class DateRange:
         if self.end_is_present:
             return "present"
         return self.end.iso() if self.end else None
+
+    @property
+    def is_period(self) -> bool:
+        """A start and an end (or "present"), so it covers some months."""
+        return self.end is not None or self.end_is_present
+
+    @property
+    def month_unknown(self) -> bool:
+        """The start or the end shows only the year."""
+        return self.start.month is None or (self.end is not None and self.end.month is None)
+
+
+def unglue_dates(text: str) -> str:
+    """Splits a date glued to the word before it: "SpainApr 2026" reads "Spain Apr 2026"."""
+    return _GLUED_YEAR.sub(" ", _GLUED_MONTH.sub(" ", text))
 
 
 def _tokens(text: str) -> list[YearMonth | str]:
@@ -78,8 +107,9 @@ def _tokens(text: str) -> list[YearMonth | str]:
 
 
 def parse_date_range(text: str) -> DateRange | None:
-    """Find the first date or date range in a line ("Jan 2020 - Present", "03/2019 - 2021")."""
-    folded = fold_lower(text)
+    """Find the first date or date range in a line ("Jan 2020 - Present", "03/2019 - 2021").
+    A date glued to the word before it is read too ("Bilbao, SpainApr 2026 - Present")."""
+    folded = unglue_dates(fold(text)).casefold()
     tokens = _tokens(folded)
     dates = [t for t in tokens if isinstance(t, YearMonth)]
     if not dates:
@@ -98,23 +128,44 @@ def parse_date_range(text: str) -> DateRange | None:
     return DateRange(start, None)
 
 
-def _interval(r: DateRange, today: date) -> tuple[int, int] | None:
-    """Half-open month interval [start, end) for a range; None for single dates."""
-    start = r.start.index(1)
-    if r.end_is_present:
-        end = today.year * 12 + today.month  # the current month counts
-    elif r.end is None:
+def _interval(r: DateRange, today: date, longest: bool = False) -> tuple[int, int] | None:
+    """Half-open month interval [start, end) for a period, months counted inclusively ("Jan 2020 -
+    Mar 2020" is three months; the current month counts for "present"). None for single dates.
+    A date that shows only the year takes the month that gives the shortest period ("2019 - 2021"
+    runs from December 2019 to January 2021), or the longest one with `longest`."""
+    if not r.is_period:
         return None
-    elif r.start.month is not None and r.end.month is not None:
-        end = r.end.index() + 1  # "Jan 2020 - Mar 2020" is three months
+    current = today.year * 12 + today.month - 1  # the current month's index
+    if r.start.month is not None:
+        start = r.start.index()
     else:
-        end = r.end.index(1)  # year-only: "2019 - 2021" counts as two years
-    return (start, end) if end > start else None
+        start = min(r.start.year * 12 + (0 if longest else 11), current)
+    if r.end_is_present:
+        end = current + 1
+    elif r.end.month is not None:
+        end = r.end.index() + 1
+    elif longest:
+        end = min(r.end.year * 12 + 12, current + 1)
+    else:
+        end = r.end.year * 12 + 1
+    if end > start:
+        return start, end
+    if longest or not r.month_unknown:
+        return None
+    # Shortest reading of a period inside one year ("2020 - 2020", "Mar 2020 - 2020"): one month.
+    return (end - 1, end) if r.start.month is None else (start, start + 1)
 
 
-def total_months(ranges: list[DateRange], today: date) -> int:
-    """Months covered by the union of ranges, so overlapping jobs are not counted twice."""
-    intervals = sorted(i for r in ranges if (i := _interval(r, today)))
+def months_in(r: DateRange, today: date, longest: bool = False) -> int:
+    """The months one period covers, as total_months counts them."""
+    interval = _interval(r, today, longest)
+    return interval[1] - interval[0] if interval else 0
+
+
+def total_months(ranges: list[DateRange], today: date, longest: bool = False) -> int:
+    """Months covered by the union of ranges, so overlapping jobs are not counted twice. Dates that
+    show only the year count at their shortest (or their longest with `longest`)."""
+    intervals = sorted(i for r in ranges if (i := _interval(r, today, longest)))
     total, current_start, current_end = 0, None, None
     for start, end in intervals:
         if current_end is None or start > current_end:

@@ -18,9 +18,9 @@ TermVerdict = Literal["faithful_name", "adds_claim"]
 
 class SuggestionDraft(BaseModel):
     kind: SuggestionKind = Field(
-        description="align_wording: reword one CV line toward the posting's term. "
-        "add_skill: add one posting term to the Skills section. "
-        "tailor_summary: write the summary."
+        description="align_wording: rewrite one CV line so its evidence for a requirement is "
+        "clearer and stronger. add_skill: add one posting term to the Skills section. "
+        "tailor_summary: rewrite the summary from the strongest evidence."
     )
     target: str = Field(
         description="A CV line ID (e.g. 'L012'): the line to reword for align_wording, the "
@@ -29,24 +29,26 @@ class SuggestionDraft(BaseModel):
     )
     after: str = Field(
         description="The new text, in the CV's language. For add_skill, only the skill name. "
-        "Every number, title, employer, degree and certificate must be in the cited lines."
+        "Every number, title, employer, degree and certificate must be in the cited lines. "
+        "Never the original line plus posting words or adjectives only."
     )
     cited_refs: list[str] = Field(
         description="IDs of the CV lines (L...) and facts (F...) that show everything in "
-        "`after`. At least one."
+        "`after`, including every line a detail comes from. At least one."
     )
     requirement_ids: list[str] = Field(
         description="IDs of the requirements (R...) this change addresses. At least one."
     )
     rationale: str = Field(
-        description="At most 25 words, in English, citing IDs: why the cited refs back the change."
+        description="For the user, in English: one plain sentence of at most 20 words on what "
+        "the edit makes clearer. No IDs."
     )
 
 
 class SuggestionsDraft(BaseModel):
     suggestions: list[SuggestionDraft] = Field(
-        description="At most 8, strongest first. Empty when nothing can be improved without "
-        "inventing."
+        description="At most 6, strongest first. Empty when no edit would really help without "
+        "inventing or only adding posting words."
     )
 
 
@@ -63,7 +65,8 @@ class ClaimDraft(BaseModel):
         "unsupported."
     )
     unsupported_reason: str | None = Field(
-        description="Null when supported. Otherwise one short sentence: what the CV does not show."
+        description="Null when supported. Otherwise, for the user: one plain sentence of at most "
+        "20 words on what the CV does not show. No IDs."
     )
 
 

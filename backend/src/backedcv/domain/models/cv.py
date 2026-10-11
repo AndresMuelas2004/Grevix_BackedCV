@@ -52,10 +52,14 @@ class CVEntry(BaseModel):
     title: str | None = None
     organization: str | None = None
     location: str | None = None
-    start: str | None = None  # YYYY-MM
-    end: str | None = None  # YYYY-MM or "present"
+    start: str | None = None  # YYYY-MM, or YYYY when the CV gives only the year
+    end: str | None = None  # YYYY-MM, YYYY or "present"; None for a single date
     date_source: Literal["parser", "model", "none"] = "none"
     line_ids: list[str] = Field(default_factory=list)
+    month_unknown: bool = False  # the start or the end shows only the year: no month is invented
+    # Jobs with a start and an end (or "present") only: the months this entry adds, counted
+    # inclusively and at the shortest when a date shows only the year. None: not counted.
+    months_counted: int | None = None
 
 
 class ContactField(BaseModel):
@@ -85,6 +89,10 @@ class ParsedCV(BaseModel):
     entries: list[CVEntry] = Field(default_factory=list)
     contact: Contact = Field(default_factory=Contact)
     total_years: float | None = None
+    total_months: int | None = None  # the months behind total_years: job periods, overlaps once
+    # True when a job date shows only the year or a job has no dates: the real total may be longer.
+    total_is_minimum: bool = False
+    dates_note: str | None = None  # one plain sentence saying why the total is a minimum
 
     def texts_by_ref(self) -> dict[str, str]:
         """Every citable reference (L and F IDs) mapped to its text."""
