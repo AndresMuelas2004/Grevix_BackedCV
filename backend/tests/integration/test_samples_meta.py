@@ -130,7 +130,7 @@ def test_meta_reports_version_models_and_limits(client):
     assert response.status_code == 200
     assert response.json() == {
         "version": __version__,
-        "llm_configured": settings.openai_api_key is not None,
+        "llm_configured": settings.anthropic_api_key is not None,
         "models": {"fast": settings.model_fast, "strong": settings.model_strong},
         "limits": {
             "cv_max_bytes": MAX_BYTES,
@@ -144,6 +144,6 @@ def test_meta_reports_version_models_and_limits(client):
 
 @pytest.mark.parametrize(("api_key", "configured"), [(None, False), ("test-key", True)])
 def test_meta_reports_whether_an_llm_key_is_set(client, monkeypatch, api_key, configured):
-    _set_env(monkeypatch, OPENAI_API_KEY=api_key)
+    _set_env(monkeypatch, ANTHROPIC_API_KEY=api_key)
 
     assert client.get("/api/meta").json()["llm_configured"] is configured

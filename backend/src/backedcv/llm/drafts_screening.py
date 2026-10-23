@@ -1,6 +1,6 @@
-"""LLM-facing output schema for the hidden-barrier screen (OpenAI strict mode).
+"""LLM-facing output schema for the hidden-barrier screen (Claude structured outputs).
 
-Same strict-mode rules as drafts.py. Domain models are built from these drafts in
+Same schema rules as drafts.py. Domain models are built from these drafts in
 domain/barriers.py.
 """
 

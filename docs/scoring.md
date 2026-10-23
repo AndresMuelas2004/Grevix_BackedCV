@@ -59,7 +59,7 @@ The same CV and the same posting always get the same requirements, score and ver
 - **Importance from the posting.** Wording in the bullet decides first ("must", "required" make it required; "nice to have", "a plus", "bonus", "preferred", "ideally" make it preferred). Otherwise the section heading above it does (Requirements, Must have, Qualifications... make it required; Nice to have, Preferred, Bonus, Plus... make it preferred). A bullet with both kinds of wording, or no clear section, keeps the model's reading.
 - **Units** keep the split of a bullet from moving Fit (see Weights and points).
 
-The model itself cannot be pinned: gpt-6-luna with a reasoning effort accepts no temperature, and the API takes no seed. A fresh extraction can still read a posting differently; the rules above limit what that can change.
+The model itself cannot be pinned: Claude Haiku 5.5 accepts no temperature, and the API takes no seed. A fresh extraction can still read a posting differently; the rules above limit what that can change.
 
 ## Evidence rules
 

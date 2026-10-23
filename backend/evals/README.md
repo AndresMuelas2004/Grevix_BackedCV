@@ -14,7 +14,7 @@ Measures the no-invention promise. `fabrication/` holds 40 synthetic cases (see 
 | Command | What runs | Cost |
 |---|---|---|
 | `uv run python -m evals.run_fabrication` | The guards only. No network, no API key. | Free |
-| `uv run python -m evals.run_fabrication --live` | The guards, then the app's real verifier on what the guards let through (one call per CV section). Needs `OPENAI_API_KEY` in `.env`. | Model calls |
+| `uv run python -m evals.run_fabrication --live` | The guards, then the app's real verifier on what the guards let through (one call per CV section). Needs `ANTHROPIC_API_KEY` in `.env`. | Model calls |
 | `uv run python -m evals.run_fabrication --live --langsmith` | The same, plus a LangSmith dataset and one recorded experiment. Needs `LANGSMITH_API_KEY` in `.env`. | Model calls |
 
 Options:
@@ -55,7 +55,7 @@ Four synthetic CV and posting pairs run through the real analysis, up to the rep
 
 | Command | What runs | Cost |
 |---|---|---|
-| `uv run python -m evals.run_smoke --live` | The four pairs, with the model. Needs `OPENAI_API_KEY` in `.env`. | Model calls |
+| `uv run python -m evals.run_smoke --live` | The four pairs, with the model. Needs `ANTHROPIC_API_KEY` in `.env`. | Model calls |
 | `uv run python -m evals.run_smoke --live --langsmith` | The same, plus one experiment on the LangSmith dataset `backedcv-smoke`. Needs `LANGSMITH_API_KEY` in `.env`. | Model calls |
 
 Notes:

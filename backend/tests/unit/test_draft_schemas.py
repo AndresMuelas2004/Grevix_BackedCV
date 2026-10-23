@@ -1,4 +1,4 @@
-"""OpenAI strict mode: every field required, nullable when optional, no free-form dicts."""
+"""Draft schemas: every field required, nullable when optional, no free-form dicts."""
 
 import pytest
 from pydantic import BaseModel

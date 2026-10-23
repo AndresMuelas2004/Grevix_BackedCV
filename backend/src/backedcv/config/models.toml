@@ -1,18 +1,19 @@
 # List prices in USD per million tokens, used only to show the cost of each analysis.
-[prices."gpt-6-luna"]
+# Claude Haiku 5.5 has two rate cards: prompts of up to 100K tokens, and longer prompts. The input
+# limits keep every prompt far below 100K tokens, so the long rates should never apply.
+[prices."claude-haiku-5-5"]
 input = 0.10
 output = 0.50
+long_prompt_tokens = 100_000
+long_input = 0.50
+long_output = 2.50
 
-[prices."gpt-6.1-sol"]
-input = 2.00
-output = 10.00
-
-# Reasoning effort per call.
+# Effort per call (Claude's output_config.effort): how much the model thinks before answering.
 [effort]
 structure_cv = "low"
 extract_job = "low"
 match_requirements = "low"
-suggest = "low"
-verify = "medium"
+suggest = "medium"
+verify = "high"
 review_posting = "low"
 build_cv = "low"

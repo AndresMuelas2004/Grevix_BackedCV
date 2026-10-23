@@ -13,7 +13,7 @@ from pydantic import BaseModel
 from backedcv.llm import structured
 from backedcv.llm.cache import LLMCache, answer_key
 from backedcv.llm.prompt_loader import Prompt
-from backedcv.llm.structured import LLMError, OpenAIStructuredLLM
+from backedcv.llm.structured import AnthropicStructuredLLM, LLMError
 from backedcv.settings import Settings
 
 PROMPT = Prompt(id="verify", version="1", tier="fast", text="Check the claim.")
@@ -30,7 +30,7 @@ class OtherAnswer(Answer):
 
 
 class FakeModel:
-    """Stands in for ChatOpenAI, so no call reaches the network. It counts the calls and answers
+    """Stands in for ChatAnthropic, so no call reaches the network. It counts the calls and answers
     with `answer`, or with no valid answer when `answer` is None."""
 
     def __init__(self) -> None:
@@ -67,18 +67,18 @@ class FakeRunnable:
 @pytest.fixture
 def fake(monkeypatch) -> FakeModel:
     model = FakeModel()
-    monkeypatch.setattr(structured, "ChatOpenAI", model.chat)
+    monkeypatch.setattr(structured, "ChatAnthropic", model.chat)
     return model
 
 
 def _llm(tmp_path: Path, *, llm_cache: bool = True, cache: bool | None = None):
     settings = Settings(
         data_dir=tmp_path,
-        model_fast="gpt-6-luna",
-        model_strong="gpt-6.1-sol",
+        model_fast="claude-haiku-5-5",
+        model_strong="claude-sonnet-5-5",
         llm_cache=llm_cache,
     )
-    return OpenAIStructuredLLM(settings, cache=cache)
+    return AnthropicStructuredLLM(settings, cache=cache)
 
 
 def _run(llm, prompt=PROMPT, data="the posting", schema=Answer):
@@ -198,7 +198,7 @@ def test_a_failed_answer_is_not_stored(tmp_path, fake):
 
 def _key(**changes) -> str:
     call = {
-        "model": "gpt-6-luna",
+        "model": "claude-haiku-5-5",
         "effort": "low",
         "prompt": PROMPT,
         "schema": Answer,
@@ -210,7 +210,7 @@ def _key(**changes) -> str:
 def test_the_key_changes_with_each_part_of_the_call():
     base = _key()
     variants = {
-        _key(model="gpt-6.1-sol"),
+        _key(model="claude-sonnet-5-5"),
         _key(effort="high"),
         _key(prompt=replace(PROMPT, id="other")),
         _key(prompt=replace(PROMPT, version="2")),

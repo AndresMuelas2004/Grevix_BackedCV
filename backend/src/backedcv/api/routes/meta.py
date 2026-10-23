@@ -15,7 +15,7 @@ def get_meta() -> dict:
     settings = get_settings()
     return {
         "version": __version__,
-        "llm_configured": settings.openai_api_key is not None,
+        "llm_configured": settings.anthropic_api_key is not None,
         "models": {"fast": settings.model_fast, "strong": settings.model_strong},
         "limits": {
             "cv_max_bytes": MAX_BYTES,

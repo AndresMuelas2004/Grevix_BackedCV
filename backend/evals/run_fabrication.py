@@ -142,13 +142,14 @@ def run_guards(cases: list[Case], cv: ParsedCV, job: JobPosting) -> dict[str, Su
 def live_nodes() -> dict[str, Any]:
     """The app's optimize nodes, backed by the model from settings. Imported only for --live."""
     from backedcv.graph.optimize_nodes import make_optimize_nodes
-    from backedcv.llm.structured import OpenAIStructuredLLM
+    from backedcv.llm.structured import AnthropicStructuredLLM
     from backedcv.settings import get_settings
 
     settings = get_settings()
-    if settings.openai_api_key is None:
-        raise SystemExit("OPENAI_API_KEY is not set (add it to the repository's .env)")
-    return make_optimize_nodes(OpenAIStructuredLLM(settings, cache=False))  # measure, never replay
+    if settings.anthropic_api_key is None:
+        raise SystemExit("ANTHROPIC_API_KEY is not set (add it to the repository's .env)")
+    llm = AnthropicStructuredLLM(settings, cache=False)  # measure, never replay
+    return make_optimize_nodes(llm)
 
 
 async def _verify_all(verify_batch: Any, tasks: list[dict]) -> list[dict]:

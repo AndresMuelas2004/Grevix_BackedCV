@@ -4,9 +4,9 @@ import logging
 from typing import Literal
 
 from langchain.agents import create_agent
+from langchain_anthropic import ChatAnthropic
 from langchain_core.language_models import BaseChatModel
 from langchain_core.messages import AIMessage, HumanMessage
-from langchain_openai import ChatOpenAI
 
 from backedcv.agents.cv_builder.tools import Workspace, make_tools
 from backedcv.config import load
@@ -14,7 +14,7 @@ from backedcv.domain.document_diff import standard_order
 from backedcv.domain.models import CVDocument, CVEntry, DocItem
 from backedcv.domain.redaction import redact_contact
 from backedcv.llm.prompt_loader import load_prompt
-from backedcv.llm.structured import usage_record
+from backedcv.llm.structured import MAX_TOKENS, usage_record
 from backedcv.settings import Settings
 
 log = logging.getLogger(__name__)
@@ -48,7 +48,8 @@ async def run_order_agent(
         ws.error = exc
         return standard_order(original), "fallback"
 
-    name = getattr(model, "model_name", "unknown")
+    # ChatAnthropic names its model in `model`; other chat models (the tests' fake) in `model_name`.
+    name = getattr(model, "model", None) or getattr(model, "model_name", "unknown")
     ws.usage.extend(
         usage_record("build_cv", name, m) for m in result["messages"] if isinstance(m, AIMessage)
     )
@@ -75,12 +76,11 @@ def _item_row(item: DocItem, entry: CVEntry | None) -> str:
     return f"  {item.id} | {first}{dates}"
 
 
-def default_order_model(settings: Settings) -> ChatOpenAI:
+def default_order_model(settings: Settings) -> ChatAnthropic:
     effort = load("models").get("effort", {}).get("build_cv", "low")
-    return ChatOpenAI(
+    return ChatAnthropic(
         model=settings.model_fast,
-        use_responses_api=True,
-        store=False,
+        max_tokens=MAX_TOKENS,
         max_retries=1,
-        reasoning={"effort": effort},
+        effort=effort,
     )

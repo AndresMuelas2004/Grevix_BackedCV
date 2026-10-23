@@ -18,12 +18,12 @@ from pydantic import BaseModel
 from backedcv.llm import structured
 from backedcv.llm.cache import PINNED_FILE, PINNED_FORMAT, load_pinned_answers, pinned_entry
 from backedcv.llm.prompt_loader import load_prompt
-from backedcv.llm.structured import OpenAIStructuredLLM
+from backedcv.llm.structured import AnthropicStructuredLLM
 from backedcv.main import create_app
 from backedcv.settings import Settings, get_settings
 
 PROMPT = load_prompt("verify")  # a real prompt: the loader compares entries with its version
-MODEL = "gpt-6-luna"
+MODEL = "claude-haiku-5-5"
 MODELS = {"fast": MODEL, "strong": MODEL}
 LIVE = {"label": "live", "score": 1}
 PINNED = {"label": "pinned", "score": 9}
@@ -37,7 +37,7 @@ class Answer(BaseModel):
 
 
 class FakeModel:
-    """Stands in for ChatOpenAI and its structured runnable: counts the calls, answers LIVE."""
+    """Stands in for ChatAnthropic and its structured runnable: counts the calls, answers LIVE."""
 
     def __init__(self) -> None:
         self.calls = 0
@@ -59,18 +59,18 @@ class FakeModel:
 @pytest.fixture
 def fake(monkeypatch) -> FakeModel:
     model = FakeModel()
-    monkeypatch.setattr(structured, "ChatOpenAI", model.chat)
+    monkeypatch.setattr(structured, "ChatAnthropic", model.chat)
     return model
 
 
-def _llm(data_dir: Path, pinned_file: Path | None = None) -> OpenAIStructuredLLM:
+def _llm(data_dir: Path, pinned_file: Path | None = None) -> AnthropicStructuredLLM:
     settings = Settings(data_dir=data_dir, model_fast=MODEL, model_strong=MODEL, llm_cache=True)
-    llm = OpenAIStructuredLLM(settings)
+    llm = AnthropicStructuredLLM(settings)
     llm.cache.pinned = load_pinned_answers(pinned_file, MODELS) if pinned_file else {}
     return llm
 
 
-def _run(llm: OpenAIStructuredLLM, data: str = "the sample posting"):
+def _run(llm: AnthropicStructuredLLM, data: str = "the sample posting"):
     return asyncio.run(llm.run(PROMPT, data, Answer, node="verify_batch"))
 
 
@@ -123,7 +123,7 @@ def test_a_pinned_answer_is_served_without_a_model_call(tmp_path, fake):
     assert not (tmp_path / "data" / "llm_cache.sqlite").exists()  # the disk cache is not touched
 
 
-@pytest.mark.parametrize("change", [{"version": "0"}, {"model": "gpt-6.1-sol"}])
+@pytest.mark.parametrize("change", [{"version": "0"}, {"model": "claude-sonnet-5-5"}])
 def test_a_pinned_answer_from_another_prompt_version_or_model_is_ignored(tmp_path, fake, change):
     entry = _entry(_recorded_key(tmp_path, fake), **change)  # the key itself still matches
     llm = _llm(tmp_path / "data", _write_pinned(tmp_path / PINNED_FILE, entry))

@@ -12,5 +12,5 @@ def health() -> dict[str, str | bool]:
     return {
         "status": "ok",
         "version": __version__,
-        "llm_configured": settings.openai_api_key is not None,
+        "llm_configured": settings.anthropic_api_key is not None,
     }

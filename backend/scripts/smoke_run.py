@@ -1,7 +1,7 @@
 """Run one real analysis on the bundled sample and print the result.
 
 Usage (from backend/): uv run python scripts/smoke_run.py
-Calls the real OpenAI API (a few cents at most).
+Calls the real Anthropic API (a cent or two at most).
 """
 
 import json

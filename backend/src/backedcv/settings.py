@@ -20,11 +20,11 @@ class Settings(BaseSettings):
 
     env: Literal["dev", "prod"] = "dev"
 
-    openai_api_key: SecretStr | None = Field(
-        default=None, validation_alias=AliasChoices("OPENAI_API_KEY")
+    anthropic_api_key: SecretStr | None = Field(
+        default=None, validation_alias=AliasChoices("ANTHROPIC_API_KEY")
     )
-    model_fast: str = "gpt-6-luna"
-    model_strong: str = "gpt-6.1-sol"
+    model_fast: str = "claude-haiku-5-5"
+    model_strong: str = "claude-haiku-5-5"
     llm_cache: bool = True  # an identical model call gets the stored answer again, for free
 
     # Abuse and budget limits on the routes that call the model.

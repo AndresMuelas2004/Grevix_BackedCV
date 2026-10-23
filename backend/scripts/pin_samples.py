@@ -31,7 +31,7 @@ from backedcv.domain.text import normalize_text
 from backedcv.llm import structured
 from backedcv.llm.cache import PINNED_FILE, PINNED_FORMAT, answer_key, pinned_entry
 from backedcv.llm.prompt_loader import Prompt
-from backedcv.llm.structured import OpenAIStructuredLLM
+from backedcv.llm.structured import AnthropicStructuredLLM
 from backedcv.main import create_app
 from backedcv.settings import Settings, get_settings
 
@@ -41,7 +41,7 @@ ABOUT = (
 )
 
 
-class RecordingLLM(OpenAIStructuredLLM):
+class RecordingLLM(AnthropicStructuredLLM):
     """The real model behind the usual cache; records every answer under its cache key."""
 
     def __init__(self, settings: Settings) -> None:
@@ -166,7 +166,7 @@ def generate(path: Path) -> int:
 
 
 def _offline(**_options):
-    """Stands in for ChatOpenAI in --check: an unpinned call fails instead of reaching the model."""
+    """Stands in for ChatAnthropic in --check: an unpinned call fails, never reaching the model."""
     raise RuntimeError("this call is not pinned, so it would have reached the model")
 
 
@@ -175,7 +175,7 @@ def check(path: Path, rounds: int = 2) -> int:
     every round gives the same report from pinned answers alone. Numbers that differ from the
     pinned run mean the code after the model changed: still reproducible, but pin again."""
     expected = json.loads(path.read_text(encoding="utf-8")).get("samples", {})
-    structured.ChatOpenAI = _offline
+    structured.ChatAnthropic = _offline
     seen = []
     for round_no in range(1, rounds + 1):
         with tempfile.TemporaryDirectory(ignore_cleanup_errors=True) as tmp:

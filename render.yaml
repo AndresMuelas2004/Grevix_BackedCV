@@ -1,5 +1,5 @@
 # Render Blueprint: a temporary public demo for the hackathon's feedback round (free plan).
-# The OpenAI key is entered in the Render dashboard when the Blueprint is created, never committed.
+# The Anthropic key is entered in the Render dashboard, never committed.
 services:
   - type: web
     name: backedcv
@@ -7,7 +7,7 @@ services:
     plan: free
     healthCheckPath: /api/health
     envVars:
-      - key: OPENAI_API_KEY
+      - key: ANTHROPIC_API_KEY
         sync: false
       - key: PORT # the Dockerfile serves on 8000
         value: "8000"
@@ -15,8 +15,6 @@ services:
         value: "*"
       - key: BACKEDCV_ENV
         value: prod
-      - key: BACKEDCV_MODEL_STRONG # the cheap model for every call, to fit the event's API budget
-        value: gpt-6-luna
       - key: BACKEDCV_RATE_LIMIT_PER_HOUR
         value: "20"
       - key: BACKEDCV_DAILY_MODEL_RUNS

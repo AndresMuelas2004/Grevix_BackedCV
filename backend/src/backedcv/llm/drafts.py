@@ -1,7 +1,7 @@
-"""LLM-facing output schemas (OpenAI strict mode).
+"""LLM-facing output schemas (Claude structured outputs).
 
-Strict mode: every field required, optional values nullable, no dict fields. Field descriptions
-reach the model through the schema. Domain models are built from these drafts in code.
+Every field required, optional values nullable, no dict fields. Field descriptions reach the model
+through the schema. Domain models are built from these drafts in code.
 """
 
 from typing import Literal

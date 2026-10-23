@@ -28,7 +28,7 @@ from backedcv.api.routes import (
 from backedcv.api.runs import RunManager
 from backedcv.graph.builder import build_graph
 from backedcv.llm.cache import LLMCache
-from backedcv.llm.structured import OpenAIStructuredLLM, StructuredLLM
+from backedcv.llm.structured import AnthropicStructuredLLM, StructuredLLM
 from backedcv.settings import get_settings
 
 
@@ -43,10 +43,10 @@ def create_app(llm: StructuredLLM | None = None, checkpointer=None) -> FastAPI:
 
     @asynccontextmanager
     async def lifespan(app: FastAPI) -> AsyncIterator[None]:
-        model = llm or OpenAIStructuredLLM(settings)
+        model = llm or AnthropicStructuredLLM(settings)
         # The ordering agent needs a real chat model; injected test models keep the fallback.
         order_model = (
-            default_order_model(settings) if llm is None and settings.openai_api_key else None
+            default_order_model(settings) if llm is None and settings.anthropic_api_key else None
         )
         app.state.llm = model
         app.state.locks = RunLocks()

@@ -1,9 +1,10 @@
 """One interface for every structured LLM call, so tests can swap in canned answers."""
 
+import logging
 from typing import Literal, Protocol, TypeVar
 
+from langchain_anthropic import ChatAnthropic
 from langchain_core.messages import AIMessage, HumanMessage, SystemMessage
-from langchain_openai import ChatOpenAI
 from pydantic import BaseModel, ValidationError
 
 from backedcv.config import load
@@ -12,8 +13,13 @@ from backedcv.llm.cache import LLMCache, answer_key
 from backedcv.llm.prompt_loader import Prompt
 from backedcv.settings import Settings
 
+log = logging.getLogger(__name__)
+
 T = TypeVar("T", bound=BaseModel)
 Tier = Literal["fast", "strong"]
+# Room for the model's thinking plus the longest answer. It also keeps calls non-streaming: the SDK
+# refuses a non-streaming call whose max_tokens could take more than 10 minutes.
+MAX_TOKENS = 16_000
 
 
 class LLMError(Exception):
@@ -29,8 +35,14 @@ class StructuredLLM(Protocol):
 def usage_record(node: str, model: str, message: AIMessage | None) -> dict:
     meta = (message.usage_metadata if message is not None else None) or {}
     tokens_in, tokens_out = meta.get("input_tokens", 0), meta.get("output_tokens", 0)
-    price = load("models").get("prices", {}).get(model, {"input": 0, "output": 0})
-    cost = (tokens_in * price["input"] + tokens_out * price["output"]) / 1_000_000
+    price = load("models").get("prices", {}).get(model, {})
+    threshold = price.get("long_prompt_tokens")
+    long_prompt = threshold is not None and tokens_in > threshold
+    if long_prompt:
+        log.warning("%s: a %d-token prompt is billed at the long-prompt rates", node, tokens_in)
+    rate_in = price.get("long_input" if long_prompt else "input", 0)
+    rate_out = price.get("long_output" if long_prompt else "output", 0)
+    cost = (tokens_in * rate_in + tokens_out * rate_out) / 1_000_000
     return {
         "node": node,
         "model": model,
@@ -41,7 +53,7 @@ def usage_record(node: str, model: str, message: AIMessage | None) -> dict:
     }
 
 
-class OpenAIStructuredLLM:
+class AnthropicStructuredLLM:
     def __init__(self, settings: Settings, cache: bool | None = None):
         """`cache` overrides `settings.llm_cache` when it is given (the evals pass False)."""
         self.settings = settings
@@ -54,17 +66,16 @@ class OpenAIStructuredLLM:
     def _effort(self, prompt_id: str) -> str:
         return load("models").get("effort", {}).get(prompt_id, "low")
 
-    def _chat(self, tier: str, prompt_id: str) -> ChatOpenAI:
-        # No temperature and no seed on purpose. Checked live on 2026-10-11: gpt-6-luna with a
-        # reasoning effort answers "Unsupported parameter: 'temperature' is not supported with
-        # this model", and the Responses API has no seed parameter. Stability comes from the
-        # canonical input, the answer cache, the extraction rules and the code after the model.
-        return ChatOpenAI(
+    def _chat(self, tier: str, prompt_id: str) -> ChatAnthropic:
+        # No temperature and no seed on purpose: Claude Haiku 5.5 rejects sampling parameters, and
+        # the Messages API has no seed. Thinking is adaptive (on by default) and the effort level
+        # sets how much the model thinks. Stability comes from the canonical input, the answer
+        # cache, the extraction rules and the code after the model.
+        return ChatAnthropic(
             model=self._model_name(tier),
-            use_responses_api=True,
-            store=False,
+            max_tokens=MAX_TOKENS,
             max_retries=1,
-            reasoning={"effort": self._effort(prompt_id)},
+            effort=self._effort(prompt_id),
         )
 
     async def run(self, prompt: Prompt, data: str, schema: type[T], *, node: str) -> tuple[T, dict]:
@@ -109,17 +120,18 @@ class OpenAIStructuredLLM:
     async def _ask(
         self, prompt: Prompt, data: str, schema: type[T], *, node: str
     ) -> tuple[T, dict]:
+        model = self._model_name(prompt.tier)
         chat = self._chat(prompt.tier, prompt.id)
-        runnable = chat.with_structured_output(
-            schema, method="json_schema", strict=True, include_raw=True
-        )
+        # Claude's structured outputs: the answer is constrained to the schema's JSON.
+        runnable = chat.with_structured_output(schema, method="json_schema", include_raw=True)
         messages = [SystemMessage(prompt.text), HumanMessage(data)]
         config = {"run_name": node, "metadata": prompt.metadata, "tags": [prompt.id]}
 
         result = await runnable.ainvoke(messages, config=config)
-        usage = usage_record(node, chat.model_name, result.get("raw"))
+        usage = usage_record(node, model, result.get("raw"))
         if result.get("parsed") is not None:
             return result["parsed"], usage
+        _raise_if_refused(node, result.get("raw"))
 
         # One repair attempt with the validation error, then give up.
         error = result.get("parsing_error")
@@ -131,7 +143,7 @@ class OpenAIStructuredLLM:
             ),
         ]
         retry = await runnable.ainvoke(repair, config=config)
-        retry_usage = usage_record(node, chat.model_name, retry.get("raw"))
+        retry_usage = usage_record(node, model, retry.get("raw"))
         usage = {
             **usage,
             "input_tokens": usage["input_tokens"] + retry_usage["input_tokens"],
@@ -141,3 +153,9 @@ class OpenAIStructuredLLM:
         if retry.get("parsed") is None:
             raise LLMError(f"{node}: invalid structured output ({retry.get('parsing_error')})")
         return retry["parsed"], usage
+
+
+def _raise_if_refused(node: str, message: AIMessage | None) -> None:
+    """A request the model declined is not repaired: the same input would be declined again."""
+    if message is not None and message.response_metadata.get("stop_reason") == "refusal":
+        raise LLMError(f"{node}: the model declined the request")

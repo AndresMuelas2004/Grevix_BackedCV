@@ -201,7 +201,7 @@ def test_the_messy_posting_gets_the_same_cache_key():
     prompt = load_prompt("extract_job")
 
     def key(data: str) -> str:
-        return answer_key("gpt-6-luna", "low", prompt, JobExtractionDraft, data)
+        return answer_key("claude-haiku-5-5", "low", prompt, JobExtractionDraft, data)
 
     def as_sent(posting: str) -> str:  # the extraction input, as prepare_job builds it
         return f"<job_posting>\n{normalize_text(posting)}\n</job_posting>"
